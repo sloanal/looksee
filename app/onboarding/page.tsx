@@ -158,7 +158,7 @@ export default function OnboardingPage() {
                 />
               </div>
             )}
-            <h2 className="text-2xl font-bold mb-2">{currentItem.title}</h2>
+            <h2 className="text-2xl font-bold mb-2 text-gray-900">{currentItem.title}</h2>
             <p className="text-sm text-gray-600 capitalize mb-1">{currentItem.type}</p>
             {currentItem.genres.length > 0 && (
               <div className="flex flex-wrap justify-center gap-1 mb-2">

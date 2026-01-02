@@ -201,7 +201,7 @@ export default function AddPage() {
           </button>
         </div>
 
-        <h1 className="text-2xl font-bold mb-4">Confirm Details</h1>
+        <h1 className="text-2xl font-bold mb-4 text-gray-900">Confirm Details</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -211,7 +211,7 @@ export default function AddPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
             />
           </div>
 
@@ -220,7 +220,7 @@ export default function AddPage() {
             <select
               value={type}
               onChange={(e) => setType(e.target.value as any)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
             >
               <option value="movie">Movie</option>
               <option value="show">Show</option>
@@ -234,7 +234,7 @@ export default function AddPage() {
               type="url"
               value={externalUrl}
               onChange={(e) => setExternalUrl(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
               placeholder="https://..."
             />
           </div>
@@ -245,7 +245,7 @@ export default function AddPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
             />
           </div>
 
@@ -255,7 +255,7 @@ export default function AddPage() {
               type="text"
               value={genres}
               onChange={(e) => setGenres(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
             />
           </div>
 
@@ -265,7 +265,7 @@ export default function AddPage() {
               type="text"
               value={recommendedByName}
               onChange={(e) => setRecommendedByName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
               placeholder="Name"
             />
           </div>
@@ -276,7 +276,7 @@ export default function AddPage() {
               value={recommendationContext}
               onChange={(e) => setRecommendationContext(e.target.value)}
               rows={2}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
               placeholder="Why was this recommended?"
             />
           </div>
@@ -286,7 +286,7 @@ export default function AddPage() {
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
             >
               <option value="not_seen_want">Haven&apos;t seen, want to watch</option>
               <option value="not_seen_dont_want">Haven&apos;t seen, don&apos;t want to watch</option>
@@ -330,7 +330,7 @@ export default function AddPage() {
           </button>
         </div>
 
-        <h1 className="text-2xl font-bold mb-4">Add Manually</h1>
+        <h1 className="text-2xl font-bold mb-4 text-gray-900">Add Manually</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -340,7 +340,7 @@ export default function AddPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
             />
           </div>
 
@@ -349,7 +349,7 @@ export default function AddPage() {
             <select
               value={type}
               onChange={(e) => setType(e.target.value as any)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
             >
               <option value="movie">Movie</option>
               <option value="show">Show</option>
@@ -363,7 +363,7 @@ export default function AddPage() {
               type="url"
               value={externalUrl}
               onChange={(e) => setExternalUrl(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
               placeholder="https://..."
             />
           </div>
@@ -374,7 +374,7 @@ export default function AddPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
             />
           </div>
 
@@ -384,7 +384,7 @@ export default function AddPage() {
               type="text"
               value={genres}
               onChange={(e) => setGenres(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
             />
           </div>
 
@@ -394,7 +394,7 @@ export default function AddPage() {
               type="text"
               value={recommendedByName}
               onChange={(e) => setRecommendedByName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
             />
           </div>
 
@@ -404,7 +404,7 @@ export default function AddPage() {
               value={recommendationContext}
               onChange={(e) => setRecommendationContext(e.target.value)}
               rows={2}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
             />
           </div>
 
@@ -413,7 +413,7 @@ export default function AddPage() {
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md text-gray-900"
             >
               <option value="not_seen_want">Haven&apos;t seen, want to watch</option>
               <option value="not_seen_dont_want">Haven&apos;t seen, don&apos;t want to watch</option>
@@ -450,7 +450,7 @@ export default function AddPage() {
 
   return (
     <div className="max-w-2xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Add Title</h1>
+      <h1 className="text-2xl font-bold mb-4 text-gray-900">Add Title</h1>
 
       <div className="mb-4">
         <div className="flex gap-2">
@@ -460,7 +460,7 @@ export default function AddPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-md"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-900"
           />
           <button
             onClick={handleSearch}
@@ -501,7 +501,7 @@ export default function AddPage() {
                   />
                 )}
                 <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{result.title}</h3>
+                  <h3 className="font-semibold text-lg text-gray-900">{result.title}</h3>
                   <p className="text-sm text-gray-600 capitalize">{result.type}</p>
                   {result.releaseDate && (
                     <p className="text-sm text-gray-500">

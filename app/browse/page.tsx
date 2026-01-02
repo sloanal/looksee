@@ -233,7 +233,7 @@ export default function BrowsePage() {
     <div className="max-w-4xl mx-auto">
       <div className="sticky top-0 bg-white border-b z-10 p-4">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold">Browse</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Browse</h1>
           <RoomSelector />
         </div>
 
@@ -243,14 +243,14 @@ export default function BrowsePage() {
             placeholder="Search titles..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
           />
 
           <div className="flex gap-2 flex-wrap">
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900"
             >
               <option value="all">All Types</option>
               <option value="movie">Movies</option>
@@ -262,7 +262,7 @@ export default function BrowsePage() {
             <select
               value={myStatusFilter}
               onChange={(e) => setMyStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900"
             >
               <option value="unrated">All Items</option>
               <option value="not_seen_want">Want to see</option>
@@ -401,7 +401,7 @@ export default function BrowsePage() {
                   </div>
                 )}
                 <div className="flex-1 min-w-0 pr-12">
-                  <h3 className="font-semibold text-base mb-1">{item.title}</h3>
+                  <h3 className="font-semibold text-base mb-1 text-gray-900">{item.title}</h3>
                   <p className="text-sm text-gray-600 mb-2 capitalize">{item.type}</p>
                   {item.description && (
                     <p className="text-sm text-gray-500 mb-2 line-clamp-2">{item.description}</p>
@@ -575,7 +575,7 @@ function ItemDetailModal({
       <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-start mb-4">
-            <h2 className="text-2xl font-bold">{item.title}</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{item.title}</h2>
             <button onClick={onClose} className="text-gray-500 text-2xl">
               ×
             </button>
@@ -736,7 +736,7 @@ function EditItemModal({
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-start mb-4">
-            <h2 className="text-2xl font-bold">Edit {item.title}</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Edit {item.title}</h2>
             <button onClick={onClose} className="text-gray-500 text-2xl">
               ×
             </button>

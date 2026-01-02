@@ -409,7 +409,7 @@ export default function ProfilePage() {
     <div className="max-w-4xl mx-auto pb-20">
       <div className="sticky top-0 bg-white border-b z-10">
         <div className="p-4">
-          <h1 className="text-2xl font-bold mb-4">Profile</h1>
+          <h1 className="text-2xl font-bold mb-4 text-gray-900">Profile</h1>
           <div className="flex gap-2 border-b">
             <button
               onClick={() => setActiveTab('details')}
@@ -450,7 +450,7 @@ export default function ProfilePage() {
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-start justify-between mb-4">
-                <h2 className="text-xl font-bold">Personal Details</h2>
+                <h2 className="text-xl font-bold text-gray-900">Personal Details</h2>
                 {!editing && (
                   <button
                     onClick={() => setEditing(true)}
@@ -569,7 +569,7 @@ export default function ProfilePage() {
                       </div>
                     )}
                     <div>
-                      <h3 className="text-xl font-semibold">{user?.name}</h3>
+                      <h3 className="text-xl font-semibold text-gray-900">{user?.name}</h3>
                       <p className="text-gray-600">{user?.email}</p>
                     </div>
                   </div>
@@ -578,7 +578,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
-              <h2 className="text-xl font-bold mb-4">Account</h2>
+              <h2 className="text-xl font-bold mb-4 text-gray-900">Account</h2>
               <button
                 onClick={handleLogout}
                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"
@@ -616,7 +616,7 @@ export default function ProfilePage() {
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-lg mb-1">{item.title}</h3>
+                      <h3 className="font-semibold text-lg mb-1 text-gray-900">{item.title}</h3>
                       <p className="text-sm text-gray-600 mb-2 capitalize">{item.type}</p>
                       <p className="text-sm text-gray-500">In: {item.roomName}</p>
                       {item.genres.length > 0 && (
@@ -674,7 +674,7 @@ export default function ProfilePage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-lg">{room.name}</h3>
+                        <h3 className="font-semibold text-lg text-gray-900">{room.name}</h3>
                         {room.role === 'owner' && (
                           <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
                             Owner
@@ -729,7 +729,7 @@ export default function ProfilePage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <div className="flex justify-between items-start mb-4">
-              <h2 className="text-2xl font-bold">Invite to {showInviteModal.name}</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Invite to {showInviteModal.name}</h2>
               <button
                 onClick={() => setShowInviteModal(null)}
                 className="text-gray-500 text-2xl"
@@ -774,7 +774,7 @@ export default function ProfilePage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <div className="flex justify-between items-start mb-4">
-              <h2 className="text-2xl font-bold">Join a Room</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Join a Room</h2>
               <button
                 onClick={() => {
                   setShowJoinModal(false)
@@ -800,7 +800,7 @@ export default function ProfilePage() {
                   onChange={(e) => setJoinInviteCode(e.target.value.toUpperCase())}
                   required
                   maxLength={6}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-2xl font-mono tracking-widest uppercase"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-2xl font-mono tracking-widest uppercase text-gray-900"
                   placeholder="ABC123"
                   autoFocus
                 />
@@ -834,7 +834,7 @@ export default function ProfilePage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <div className="flex justify-between items-start mb-4">
-              <h2 className="text-2xl font-bold">Create a Room</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Create a Room</h2>
               <button
                 onClick={() => {
                   setShowCreateModal(false)
@@ -952,7 +952,7 @@ function QueueItemModal({
       <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex justify-between items-start mb-4">
-            <h2 className="text-2xl font-bold">{item.title}</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{item.title}</h2>
             <button onClick={onClose} className="text-gray-500 text-2xl">
               ×
             </button>

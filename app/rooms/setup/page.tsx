@@ -112,7 +112,7 @@ export default function RoomSetupPage() {
       <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Welcome to Looksee</h1>
+            <h1 className="text-3xl font-bold mb-2 text-gray-900">Welcome to Looksee</h1>
             <p className="text-gray-600">Get started by creating or joining a room</p>
           </div>
 
@@ -140,7 +140,7 @@ export default function RoomSetupPage() {
       <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold mb-2">Create a Room</h1>
+            <h1 className="text-2xl font-bold mb-2 text-gray-900">Create a Room</h1>
             <p className="text-gray-600">Give your room a name</p>
           </div>
 
@@ -161,7 +161,7 @@ export default function RoomSetupPage() {
                 value={roomName}
                 onChange={(e) => setRoomName(e.target.value)}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                 placeholder="e.g., Our Apartment"
               />
             </div>
@@ -192,7 +192,7 @@ export default function RoomSetupPage() {
     <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold mb-2">Join a Room</h1>
+          <h1 className="text-2xl font-bold mb-2 text-gray-900">Join a Room</h1>
           <p className="text-gray-600">Enter the invite code</p>
         </div>
 
@@ -214,7 +214,7 @@ export default function RoomSetupPage() {
               onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
               required
               maxLength={6}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-2xl font-mono tracking-widest uppercase"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-2xl font-mono tracking-widest uppercase text-gray-900"
               placeholder="ABC123"
             />
           </div>

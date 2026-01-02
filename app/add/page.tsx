@@ -288,8 +288,8 @@ export default function AddPage() {
               onChange={(e) => setStatus(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-md"
             >
-              <option value="not_seen_want">Haven't seen, want to watch</option>
-              <option value="not_seen_dont_want">Haven't seen, don't want to watch</option>
+              <option value="not_seen_want">Haven&apos;t seen, want to watch</option>
+              <option value="not_seen_dont_want">Haven&apos;t seen, don&apos;t want to watch</option>
               <option value="seen_would_rewatch">Seen, would rewatch</option>
               <option value="seen_wont_rewatch">Seen, would not rewatch</option>
             </select>
@@ -415,8 +415,8 @@ export default function AddPage() {
               onChange={(e) => setStatus(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-md"
             >
-              <option value="not_seen_want">Haven't seen, want to watch</option>
-              <option value="not_seen_dont_want">Haven't seen, don't want to watch</option>
+              <option value="not_seen_want">Haven&apos;t seen, want to watch</option>
+              <option value="not_seen_dont_want">Haven&apos;t seen, don&apos;t want to watch</option>
               <option value="seen_would_rewatch">Seen, would rewatch</option>
               <option value="seen_wont_rewatch">Seen, would not rewatch</option>
             </select>

@@ -182,8 +182,8 @@ export default function OnboardingPage() {
               <label className="block text-sm font-medium mb-3">Status</label>
               <div className="space-y-2">
                 {[
-                  { value: 'not_seen_want', label: "Haven't seen, want to watch" },
-                  { value: 'not_seen_dont_want', label: "Haven't seen, don't want to watch" },
+                  { value: 'not_seen_want', label: "Haven&apos;t seen, want to watch" },
+                  { value: 'not_seen_dont_want', label: "Haven&apos;t seen, don&apos;t want to watch" },
                   { value: 'seen_would_rewatch', label: 'Seen, would rewatch' },
                   { value: 'seen_wont_rewatch', label: 'Seen, would not rewatch' },
                 ].map((opt) => (

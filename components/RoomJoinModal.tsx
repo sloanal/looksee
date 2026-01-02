@@ -26,7 +26,7 @@ export function RoomJoinModal({
             There {mediaCount === 1 ? 'is' : 'are'} <strong>{mediaCount}</strong> movie{mediaCount !== 1 ? 's' : ''} in this room! Take a moment to weigh in on your status and excitement for each one.
           </p>
           <p className="text-gray-700">
-            This way other people will know what you're into and watch recommendations will be more fun and accurate.
+            This way other people will know what you&apos;re into and watch recommendations will be more fun and accurate.
           </p>
           <p className="text-gray-600 text-sm">
             You can skip this for now if you want and come back to your queue later.

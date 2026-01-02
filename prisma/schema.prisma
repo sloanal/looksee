@@ -60,6 +60,8 @@ model MediaItem {
   description   String?
   genres        String // JSON array stored as string
   runtimeMinutes Int?
+  rating        Float? // TMDB rating (vote_average)
+  releaseDate   String? // Release date from TMDB
   createdByUserId String
   createdAt     DateTime    @default(now())
 

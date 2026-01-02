@@ -159,6 +159,8 @@ export async function GET(request: NextRequest) {
       description: item.description,
       genres,
       runtimeMinutes: item.runtimeMinutes,
+      rating: item.rating,
+      releaseDate: item.releaseDate,
       createdBy: item.createdBy.name,
       createdByUserId: item.createdByUserId,
       createdAt: item.createdAt,

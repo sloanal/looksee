@@ -76,6 +76,8 @@ export async function GET() {
       description: item.description,
       genres,
       runtimeMinutes: item.runtimeMinutes,
+      rating: item.rating,
+      releaseDate: item.releaseDate,
       createdBy: item.createdBy.name,
       roomId: item.room.id,
       roomName: item.room.name,

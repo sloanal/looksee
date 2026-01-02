@@ -158,6 +158,8 @@ export async function GET(
       description: item.description,
       genres,
       runtimeMinutes: item.runtimeMinutes,
+      rating: item.rating,
+      releaseDate: item.releaseDate,
       createdBy: item.createdBy.name,
       createdByUserId: item.createdByUserId,
       createdAt: item.createdAt,
@@ -229,6 +231,8 @@ export async function POST(
       description,
       genres,
       runtimeMinutes,
+      rating,
+      releaseDate,
       // Preference data
       status,
       excitement,
@@ -272,6 +276,8 @@ export async function POST(
           description: description || null,
           genres: genres ? JSON.stringify(genres) : '[]',
           runtimeMinutes: runtimeMinutes || null,
+          rating: rating ? parseFloat(rating) : null,
+          releaseDate: releaseDate || null,
           createdByUserId: session.user.id,
         },
       })

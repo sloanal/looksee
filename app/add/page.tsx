@@ -22,6 +22,7 @@ interface TMDBDetails {
   posterUrl?: string
   genres: string[]
   runtimeMinutes?: number
+  rating?: number
   releaseDate?: string
 }
 
@@ -144,6 +145,8 @@ export default function AddPage() {
         description: description || null,
         genres: genreArray,
         runtimeMinutes: selectedResult?.runtimeMinutes || null,
+        rating: selectedResult?.rating || null,
+        releaseDate: selectedResult?.releaseDate || null,
         status,
         excitement: parseInt(excitement.toString()),
         notes: null,

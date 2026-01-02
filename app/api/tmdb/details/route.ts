@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
 
     const genres = data.genres?.map((g: any) => g.name) || []
     const runtime = type === 'movie' ? data.runtime : data.episode_run_time?.[0] || null
+    const rating = data.vote_average || null
+    const releaseDate = type === 'movie' ? data.release_date : data.first_air_date
 
     return NextResponse.json({
       id: data.id,
@@ -41,7 +43,8 @@ export async function GET(request: NextRequest) {
       posterUrl: data.poster_path ? `${TMDB_IMAGE_BASE}${data.poster_path}` : null,
       genres,
       runtimeMinutes: runtime,
-      releaseDate: type === 'movie' ? data.release_date : data.first_air_date,
+      rating,
+      releaseDate: releaseDate || null,
     })
   } catch (error) {
     console.error('TMDB details error:', error)

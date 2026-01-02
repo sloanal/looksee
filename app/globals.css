@@ -22,21 +22,41 @@ body {
     sans-serif;
 }
 
-/* Ensure form elements have visible text on mobile */
-input,
-select,
-textarea {
-  color: #111827; /* gray-900 */
-}
-
-/* Ensure headings have visible text on mobile */
-h1, h2, h3, h4, h5, h6 {
-  color: #111827; /* gray-900 */
-}
-
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+/* iOS Safari fix for invisible text - must be after Tailwind layers */
+/* Force dark text on all form elements and headings */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]),
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="url"],
+input[type="search"],
+input[type="number"],
+select,
+textarea,
+h1, h2, h3, h4, h5, h6 {
+  color: #111827 !important; /* gray-900 */
+  -webkit-text-fill-color: #111827 !important; /* iOS Safari specific */
+}
+
+/* Additional iOS-specific fix using webkit appearance detection */
+@supports (-webkit-appearance: none) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]),
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="url"],
+  input[type="search"],
+  input[type="number"],
+  select,
+  textarea {
+    -webkit-text-fill-color: #111827 !important;
+    color: #111827 !important;
   }
 }
 

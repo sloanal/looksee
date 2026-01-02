@@ -123,7 +123,7 @@ export default function BrowsePage() {
 
     loadItems()
     loadMyAvatar()
-  }, [session, status, loadItems])
+  }, [session, status, loadItems, router])
 
   // Handle clicks outside menu
   useEffect(() => {

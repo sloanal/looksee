@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
@@ -30,23 +30,7 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (sessionStatus === 'loading') return
-
-    if (!session) {
-      router.push('/auth/signin')
-      return
-    }
-
-    if (!roomId) {
-      router.push('/rooms/setup')
-      return
-    }
-
-    loadUnratedItems()
-  }, [session, sessionStatus, roomId, router])
-
-  const loadUnratedItems = async () => {
+  const loadUnratedItems = useCallback(async () => {
     if (!roomId) return
 
     setLoading(true)
@@ -65,7 +49,23 @@ export default function OnboardingPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [roomId, router])
+
+  useEffect(() => {
+    if (sessionStatus === 'loading') return
+
+    if (!session) {
+      router.push('/auth/signin')
+      return
+    }
+
+    if (!roomId) {
+      router.push('/rooms/setup')
+      return
+    }
+
+    loadUnratedItems()
+  }, [session, sessionStatus, roomId, router, loadUnratedItems])
 
   const handleNext = async () => {
     if (currentIndex >= items.length) return

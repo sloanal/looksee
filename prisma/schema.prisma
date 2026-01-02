@@ -1,0 +1,94 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String // hashed password
+  imageUrl  String?
+  createdAt DateTime @default(now())
+
+  roomMemberships RoomMembership[]
+  mediaItems      MediaItem[]           @relation("CreatedBy")
+  preferences     UserMediaPreference[]
+}
+
+model Room {
+  id         String   @id @default(cuid())
+  name       String
+  inviteCode String   @unique
+  createdAt  DateTime @default(now())
+
+  memberships RoomMembership[]
+  mediaItems  MediaItem[]
+}
+
+model RoomMembership {
+  id        String   @id @default(cuid())
+  userId    String
+  roomId    String
+  role      String   @default("member") // "owner" or "member"
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roomId])
+  @@index([roomId])
+  @@index([userId])
+}
+
+model MediaItem {
+  id            String   @id @default(cuid())
+  roomId        String
+  title         String
+  type          String   // MOVIE, SHOW, VIDEO, LINK
+  tmdbId        String?
+  sourceType    String   // TMDB, MANUAL
+  externalUrl   String?
+  posterUrl     String?
+  description   String?
+  genres        String // JSON array stored as string
+  runtimeMinutes Int?
+  createdByUserId String
+  createdAt     DateTime    @default(now())
+
+  room      Room                  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  createdBy User                  @relation("CreatedBy", fields: [createdByUserId], references: [id])
+  preferences UserMediaPreference[]
+
+  @@index([roomId])
+  @@index([createdByUserId])
+  @@index([tmdbId])
+}
+
+model UserMediaPreference {
+  id                    String   @id @default(cuid())
+  userId                String
+  mediaItemId           String
+  status                String   // NOT_SEEN_WANT, NOT_SEEN_DONT_WANT, SEEN_WOULD_REWATCH, SEEN_WONT_REWATCH
+  excitement            Int // 1-5
+  notes                 String?
+  recommendedByName     String?
+  recommendationContext String?
+  updatedAt             DateTime          @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mediaItem MediaItem @relation(fields: [mediaItemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, mediaItemId])
+  @@index([userId])
+  @@index([mediaItemId])
+  @@index([status])
+}
+

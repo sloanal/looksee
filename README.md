@@ -143,12 +143,34 @@ This app is configured for deployment on Vercel with PostgreSQL and Blob Storage
    - Click **Deploy** (or push to your main branch for automatic deployment)
    - Vercel will build and deploy your app
 
-7. **Run Database Migrations**
-   - After the first deployment, you need to run migrations
-   - In Vercel dashboard, go to **Deployments** → Click on your deployment → **Functions** tab
-   - Or run locally with the production DATABASE_URL:
+7. **Run Database Migrations** (IMPORTANT - Do this after creating the database!)
+   
+   **Option A: Using Vercel CLI (Recommended)**
+   ```bash
+   # Install Vercel CLI if you haven't
+   npm i -g vercel
+   
+   # Link your project
+   vercel link
+   
+   # Pull environment variables
+   vercel env pull .env.local
+   
+   # Run migrations
+   npx prisma migrate deploy
+   ```
+   
+   **Option B: Using the API endpoint**
+   - After deployment, call: `POST https://your-app.vercel.app/api/admin/migrate`
+   - Include header: `Authorization: Bearer setup-migration-2024`
+   - Or set `MIGRATION_TOKEN` environment variable in Vercel for custom token
+   
+   **Option C: Manual via Vercel Dashboard**
+   - Go to your Postgres database in Vercel Storage
+   - Click "Connect" or use the Query tab
+   - Copy the connection string and run locally:
      ```bash
-     DATABASE_URL="your-vercel-postgres-url" npx prisma migrate deploy
+     DATABASE_URL="your-connection-string" npx prisma migrate deploy
      ```
 
 ### Automatic Deployments

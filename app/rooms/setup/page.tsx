@@ -109,23 +109,23 @@ export default function RoomSetupPage() {
 
   if (mode === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center px-4 bg-background">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2 text-gray-900">Welcome to Looksee</h1>
-            <p className="text-gray-600">Get started by creating or joining a room</p>
+            <h1 className="text-3xl font-bold mb-2 text-foreground">Welcome to Looksee</h1>
+            <p className="text-muted-foreground">Get started by creating or joining a room</p>
           </div>
 
           <div className="space-y-4">
             <button
               onClick={() => setMode('create')}
-              className="w-full bg-blue-600 text-white py-4 rounded-lg font-medium hover:bg-blue-700 transition-colors text-lg"
+              className="w-full bg-primary text-primary-foreground py-4 rounded-lg font-medium hover:bg-primary/90 transition-colors text-lg"
             >
               Create a Room
             </button>
             <button
               onClick={() => setMode('join')}
-              className="w-full bg-white border-2 border-gray-300 text-gray-700 py-4 rounded-lg font-medium hover:bg-gray-50 transition-colors text-lg"
+              className="w-full bg-card border-2 border-border text-foreground py-4 rounded-lg font-medium hover:bg-accent transition-colors text-lg"
             >
               Join a Room
             </button>
@@ -137,22 +137,22 @@ export default function RoomSetupPage() {
 
   if (mode === 'create') {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center px-4 bg-background">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold mb-2 text-gray-900">Create a Room</h1>
-            <p className="text-gray-600">Give your room a name</p>
+            <h1 className="text-2xl font-bold mb-2 text-foreground">Create a Room</h1>
+            <p className="text-muted-foreground">Give your room a name</p>
           </div>
 
-          <form onSubmit={handleCreateRoom} className="bg-white rounded-lg shadow-md p-6">
+          <form onSubmit={handleCreateRoom} className="bg-card rounded-lg shadow-md p-6 border border-border">
             {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+              <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 text-destructive rounded">
                 {error}
               </div>
             )}
 
             <div className="mb-6">
-              <label htmlFor="roomName" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="roomName" className="block text-sm font-medium text-foreground mb-1">
                 Room Name
               </label>
               <input
@@ -161,7 +161,7 @@ export default function RoomSetupPage() {
                 value={roomName}
                 onChange={(e) => setRoomName(e.target.value)}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 placeholder="e.g., Our Apartment"
               />
             </div>
@@ -170,14 +170,14 @@ export default function RoomSetupPage() {
               <button
                 type="button"
                 onClick={() => setMode(null)}
-                className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-md font-medium hover:bg-gray-200 transition-colors"
+                className="flex-1 bg-secondary text-secondary-foreground py-3 rounded-md font-medium hover:bg-secondary/80 transition-colors"
               >
                 Back
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-blue-600 text-white py-3 rounded-md font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 bg-primary text-primary-foreground py-3 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? 'Creating...' : 'Create'}
               </button>
@@ -189,22 +189,22 @@ export default function RoomSetupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-background">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold mb-2 text-gray-900">Join a Room</h1>
-          <p className="text-gray-600">Enter the invite code</p>
+          <h1 className="text-2xl font-bold mb-2 text-foreground">Join a Room</h1>
+          <p className="text-muted-foreground">Enter the invite code</p>
         </div>
 
-        <form onSubmit={handleJoinRoom} className="bg-white rounded-lg shadow-md p-6">
+        <form onSubmit={handleJoinRoom} className="bg-card rounded-lg shadow-md p-6 border border-border">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 text-destructive rounded">
               {error}
             </div>
           )}
 
           <div className="mb-6">
-            <label htmlFor="inviteCode" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="inviteCode" className="block text-sm font-medium text-foreground mb-1">
               Invite Code
             </label>
             <input
@@ -214,7 +214,7 @@ export default function RoomSetupPage() {
               onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
               required
               maxLength={6}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-2xl font-mono tracking-widest uppercase text-gray-900"
+              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-center text-2xl font-mono tracking-widest uppercase"
               placeholder="ABC123"
             />
           </div>
@@ -223,14 +223,14 @@ export default function RoomSetupPage() {
             <button
               type="button"
               onClick={() => setMode(null)}
-              className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-md font-medium hover:bg-gray-200 transition-colors"
+              className="flex-1 bg-secondary text-secondary-foreground py-3 rounded-md font-medium hover:bg-secondary/80 transition-colors"
             >
               Back
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-blue-600 text-white py-3 rounded-md font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 bg-primary text-primary-foreground py-3 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? 'Joining...' : 'Join'}
             </button>

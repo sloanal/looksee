@@ -39,10 +39,33 @@ npm install
 Create a `.env` file in the root directory:
 
 ```env
-DATABASE_URL="file:./dev.db"
+# Postgres connection string (local or hosted)
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/looksee?schema=public"
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="your-secret-key-here-change-in-production"
 TMDB_API_KEY="your-tmdb-api-key-here"
+```
+
+Note: This project uses PostgreSQL. A sqlite `file:./dev.db` URL will not work with the current Prisma schema.
+
+### Local Postgres (Docker)
+
+If you don't have Postgres running locally, you can start one with Docker:
+
+```bash
+npm run db:up
+```
+
+This uses `docker-compose.yml` and exposes Postgres on `localhost:5432` with:
+
+- user: `postgres`
+- password: `postgres`
+- database: `looksee`
+
+Stop it with:
+
+```bash
+npm run db:down
 ```
 
 3. Set up the database:

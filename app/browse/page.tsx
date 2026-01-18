@@ -5,7 +5,41 @@ import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import { Film, Tv, Video, Link as LinkIcon, Calendar, Star, Edit } from 'lucide-react'
 import { RoomSelector } from '@/components/RoomSelector'
+import { RoomMembersAvatars } from '@/components/RoomMembersAvatars'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { DuotoneIcon } from '@/components/DuotoneIcon'
+import { useModalAnimation } from '@/lib/useModalAnimation'
+import {
+  MediaCard,
+  CardLayout,
+  CardPoster,
+  CardContent,
+  CardTitle,
+  CardSubtitle,
+  CardDescription,
+  CardGenres,
+  CardMenu,
+  CardHeader,
+} from '@/components/MediaCard'
+import { EditRoomsModal } from '@/components/EditRoomsModal'
+
+function getTypeIcon(type: string) {
+  const normalizedType = type.toLowerCase()
+  if (normalizedType === 'movie' || normalizedType === 'movies') {
+    return Film
+  } else if (normalizedType === 'show' || normalizedType === 'tv' || normalizedType === 'shows') {
+    return Tv
+  } else if (normalizedType === 'video' || normalizedType === 'videos') {
+    return Video
+  } else if (normalizedType === 'link' || normalizedType === 'links') {
+    return LinkIcon
+  }
+  return Film // default
+}
 
 interface MediaItem {
   id: string
@@ -17,6 +51,8 @@ interface MediaItem {
   genres: string[]
   externalUrl?: string
   runtimeMinutes?: number
+  releaseDate?: string
+  tmdbId?: string | null
   myPreference?: {
     status: string
     excitement: number
@@ -35,6 +71,12 @@ interface MediaItem {
   }>
   createdBy: string
   createdByUserId?: string
+  rooms?: Array<{
+    id: string
+    name: string
+    addedByUserId: string
+    addedByName: string
+  }>
 }
 
 export default function BrowsePage() {
@@ -55,6 +97,10 @@ export default function BrowsePage() {
   const [myAvatar, setMyAvatar] = useState<string | null>(null)
   const [tooltipItemId, setTooltipItemId] = useState<string | null>(null)
   const [tooltipTimeout, setTooltipTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [detailModalItem, setDetailModalItem] = useState<MediaItem | null>(null)
+  const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
+  const [loadingTrailer, setLoadingTrailer] = useState(false)
+  const [editingRoomsItem, setEditingRoomsItem] = useState<MediaItem | null>(null)
 
   const loadItems = useCallback(async () => {
     setLoading(true)
@@ -65,7 +111,10 @@ export default function BrowsePage() {
 
     try {
       let url: string
-      if (roomId) {
+      if (roomId === 'all-rooms') {
+        params.set('allRooms', 'true')
+        url = `/api/media?${params}`
+      } else if (roomId) {
         url = `/api/rooms/${roomId}/media?${params}`
       } else {
         url = `/api/media?${params}`
@@ -229,28 +278,53 @@ export default function BrowsePage() {
     setTooltipItemId(null)
   }
 
+  async function loadTrailer(item: MediaItem) {
+    if (!item.tmdbId || !item.sourceType || item.sourceType.toLowerCase() !== 'tmdb') {
+      return
+    }
+
+    setLoadingTrailer(true)
+    try {
+      const type = item.type.toLowerCase() === 'movie' ? 'movie' : 'tv'
+      const res = await fetch(`/api/tmdb/videos?id=${item.tmdbId}&type=${type}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.trailer?.url) {
+          setTrailerUrl(data.trailer.url)
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load trailer:', err)
+    } finally {
+      setLoadingTrailer(false)
+    }
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="sticky top-0 bg-white border-b z-10 p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">Browse</h1>
-          <RoomSelector />
+      <div className="sticky top-0 bg-background border-b border-border z-10 p-4">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-foreground">Browse</h1>
+            <RoomSelector />
+          </div>
+          <RoomMembersAvatars />
         </div>
 
         <div className="space-y-3">
-          <input
+          <Input
             type="text"
-            placeholder="Search titles..."
+            placeholder="Search your titles..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+            className="w-full"
           />
 
           <div className="flex gap-2 flex-wrap">
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900"
+              className="px-3 py-2 border border-input rounded-md text-sm text-foreground bg-background"
             >
               <option value="all">All Types</option>
               <option value="movie">Movies</option>
@@ -262,7 +336,7 @@ export default function BrowsePage() {
             <select
               value={myStatusFilter}
               onChange={(e) => setMyStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900"
+              className="px-3 py-2 border border-input rounded-md text-sm text-foreground bg-background"
             >
               <option value="unrated">All Items</option>
               <option value="not_seen_want">Want to see</option>
@@ -275,23 +349,46 @@ export default function BrowsePage() {
       </div>
 
       {loading ? (
-        <div className="p-4 text-center text-gray-500">Loading...</div>
+        <div className="p-4 text-center text-muted-foreground">Loading...</div>
       ) : items.length === 0 ? (
-        <div className="p-4 text-center text-gray-500">No items found</div>
+        <div className="p-4 text-center text-muted-foreground">No items found</div>
       ) : (
-        <div className="p-4 space-y-4">
+        <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
+          <div className="p-4 space-y-4 bg-content">
           {items.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow relative"
-            >
-              <div className="absolute top-2 right-2 z-0" data-menu-container>
+            <MediaCard key={item.id} variant="default" className="relative">
+              {item.rooms && item.rooms.length > 0 && (
+                <CardHeader className="flex items-center justify-between -mx-4 -mt-4 px-4 pt-3 pb-2 mb-2 border-b border-border relative">
+                  <div className="flex items-center gap-2 flex-wrap flex-1 pr-12">
+                    <span className="text-xs text-muted-foreground">Rooms:</span>
+                    {item.rooms.map((room) => (
+                      <span
+                        key={room.id}
+                        className="px-2 py-0.5 bg-secondary text-muted-foreground text-xs rounded"
+                      >
+                        {room.name}
+                      </span>
+                    ))}
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setEditingRoomsItem(item)
+                    }}
+                    className="absolute right-2 top-3 p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
+                    aria-label="Edit rooms"
+                  >
+                    <Edit size={14} />
+                  </button>
+                </CardHeader>
+              )}
+              <CardMenu className={item.rooms && item.rooms.length > 0 ? "!top-12" : ""}>
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                     setOpenMenuId(openMenuId === item.id ? null : item.id)
                   }}
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-full transition-colors"
                   aria-label="Menu"
                 >
                   <svg
@@ -311,10 +408,8 @@ export default function BrowsePage() {
                   </svg>
                 </button>
                 {openMenuId === item.id && (
-                  <div 
-                    className="absolute right-0 mt-1 w-32 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-[9]"
-                  >
-                    <button
+                  <div className="absolute right-0 mt-1 w-32 bg-popover rounded-md shadow-lg border border-border py-1 z-[9]">
+                    <Button
                       type="button"
                       onClick={(e) => {
                         e.preventDefault()
@@ -322,7 +417,9 @@ export default function BrowsePage() {
                         setOpenMenuId(null)
                         setEditingItem(item)
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start px-4"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -339,7 +436,7 @@ export default function BrowsePage() {
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                       </svg>
                       Edit
-                    </button>
+                    </Button>
                     <div className="relative">
                       <button
                         type="button"
@@ -357,8 +454,8 @@ export default function BrowsePage() {
                         disabled={item.createdByUserId !== session?.user?.id}
                         className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${
                           item.createdByUserId === session?.user?.id
-                            ? 'text-red-600 hover:bg-gray-100'
-                            : 'text-gray-400 cursor-not-allowed'
+                            ? 'text-destructive hover:bg-accent'
+                            : 'text-muted-foreground cursor-not-allowed'
                         }`}
                       >
                         <svg
@@ -379,146 +476,140 @@ export default function BrowsePage() {
                         Delete
                       </button>
                       {tooltipItemId === item.id && item.createdByUserId !== session?.user?.id && (
-                        <div className="absolute bottom-full left-0 mb-2 z-50 bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap shadow-lg">
+                        <div className="absolute bottom-full left-0 mb-2 z-50 bg-foreground text-background text-xs rounded px-2 py-1 whitespace-nowrap shadow-lg">
                           You can only delete items you created
-                          <div className="absolute top-full left-4 border-4 border-transparent border-t-gray-900"></div>
+                          <div className="absolute top-full left-4 border-4 border-transparent border-t-foreground"></div>
                         </div>
                       )}
                     </div>
                   </div>
                 )}
-              </div>
-              <div className="flex gap-4">
-                {item.posterUrl && (
-                  <div className="flex-shrink-0">
-                    <Image
-                      src={item.posterUrl}
-                      alt={item.title}
-                      width={80}
-                      height={120}
-                      className="rounded object-cover"
-                    />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0 pr-12">
-                  <h3 className="font-semibold text-base mb-1 text-gray-900">{item.title}</h3>
-                  <p className="text-sm text-gray-600 mb-2 capitalize">{item.type}</p>
-                  {item.description && (
-                    <p className="text-sm text-gray-500 mb-2 line-clamp-2">{item.description}</p>
-                  )}
-                  {item.genres.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-2">
-                      {item.genres.slice(0, 3).map((genre, i) => (
-                        <span
-                          key={i}
-                          className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded"
-                        >
-                          {genre}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      {item.myPreference ? (
+              </CardMenu>
+              <CardLayout>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setDetailModalItem(item)
+                    loadTrailer(item)
+                  }}
+                  className="cursor-pointer"
+                >
+                  <CardPoster src={item.posterUrl} alt={item.title} width={80} height={120} />
+                </div>
+                <CardContent className="pr-0">
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setDetailModalItem(item)
+                      loadTrailer(item)
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <CardTitle>{item.title}</CardTitle>
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <DuotoneIcon icon={getTypeIcon(item.type)} size={12} />
+                      <CardSubtitle className="mb-0">{item.type}</CardSubtitle>
+                      {item.releaseDate && (
                         <>
-                          <div className="flex items-center gap-2">
-                            {myAvatar ? (
-                              <div className="w-6 h-6 flex-shrink-0">
-                                <Image
-                                  src={myAvatar}
-                                  alt={session?.user?.name || 'You'}
-                                  width={24}
-                                  height={24}
-                                  className="rounded-full object-cover w-full h-full"
-                                  unoptimized
-                                />
-                              </div>
-                            ) : (
-                              <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-xs flex-shrink-0">
-                                {(session?.user?.name?.[0] || '?').toUpperCase()}
-                              </div>
-                            )}
-                            <span className="text-gray-500 font-medium">My Vibe:</span>
-                            <span className="text-gray-600">
-                              {getStatusLabel(item.myPreference.status)} •{' '}
-                              {'⭐'.repeat(item.myPreference.excitement)}
-                            </span>
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedItem(item)
-                            }}
-                            className="ml-1 p-1 text-gray-500 hover:text-blue-600 transition-colors"
-                            aria-label="Edit preference"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                            </svg>
-                          </button>
-                          {item.myPreference.recommendedByName && (
-                            <span className="text-gray-500">
-                              • Recommended by {item.myPreference.recommendedByName}
-                            </span>
-                          )}
+                          <DuotoneIcon icon={Calendar} size={12} />
+                          <p className="text-xs text-muted-foreground mb-0">
+                            {new Date(item.releaseDate).getFullYear()}
+                          </p>
                         </>
-                      ) : (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedItem(item)
-                          }}
-                          className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                        >
-                          Edit
-                        </button>
                       )}
                     </div>
-                    {item.otherPreferences && item.otherPreferences.length > 0 && (
-                      <div className="flex flex-wrap items-center gap-3 text-sm">
-                        {item.otherPreferences.map((pref) => (
-                          <div key={pref.user.id} className="flex items-center gap-2">
-                            {pref.user.imageUrl ? (
-                              <div className="w-6 h-6 flex-shrink-0">
-                                <Image
-                                  src={pref.user.imageUrl}
-                                  alt={pref.user.name}
-                                  width={24}
-                                  height={24}
-                                  className="rounded-full object-cover w-full h-full"
-                                  unoptimized
-                                />
-                              </div>
-                            ) : (
-                              <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-xs flex-shrink-0">
-                                {(pref.user.name[0] || '?').toUpperCase()}
-                              </div>
-                            )}
-                            <span className="text-gray-600">
-                              {pref.user.name}: {getStatusLabel(pref.status)} •{' '}
-                              {'⭐'.repeat(pref.excitement)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                    <CardGenres genres={item.genres} maxDisplay={3} />
+                    {item.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                        {item.description}
+                      </p>
                     )}
                   </div>
-                </div>
+                </CardContent>
+              </CardLayout>
+              <div className="space-y-2 -mx-4 -mb-4 px-4 pt-1 pb-1 border-t border-border mt-2 bg-muted/50">
+                {item.myPreference ? (
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedItem(item)
+                    }}
+                    className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/70 transition-colors -mx-4 px-4 py-2 rounded"
+                  >
+                    <div className="flex items-center gap-2 flex-1">
+                      {myAvatar ? (
+                        <div className="w-6 h-6 flex-shrink-0">
+                          <Image
+                            src={myAvatar}
+                            alt={session?.user?.name || 'You'}
+                            width={24}
+                            height={24}
+                            className="rounded-full object-cover w-full h-full"
+                            unoptimized
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-background flex items-center justify-center text-xs flex-shrink-0 text-foreground">
+                          {(session?.user?.name?.[0] || '?').toUpperCase()}
+                        </div>
+                      )}
+                      <span className="text-foreground font-medium">My Vibe:</span>
+                      <span className="text-foreground flex items-center gap-0.5">
+                        {getStatusLabel(item.myPreference.status)} •{' '}
+                        {Array.from({ length: item.myPreference.excitement }).map((_, i) => (
+                          <DuotoneIcon key={i} icon={Star} size={14} active />
+                        ))}
+                      </span>
+                    </div>
+                    <DuotoneIcon icon={Edit} size={14} active />
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedItem(item)
+                      }}
+                      size="sm"
+                    >
+                      Edit
+                    </Button>
+                  </div>
+                )}
+                {item.otherPreferences && item.otherPreferences.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-3 text-sm pt-1">
+                    {item.otherPreferences.map((pref) => (
+                      <div key={pref.user.id} className="flex items-center gap-2">
+                        {pref.user.imageUrl ? (
+                          <div className="w-6 h-6 flex-shrink-0">
+                            <Image
+                              src={pref.user.imageUrl}
+                              alt={pref.user.name}
+                              width={24}
+                              height={24}
+                              className="rounded-full object-cover w-full h-full"
+                              unoptimized
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-background flex items-center justify-center text-xs flex-shrink-0 text-foreground">
+                            {(pref.user.name[0] || '?').toUpperCase()}
+                          </div>
+                        )}
+                        <span className="text-foreground flex items-center gap-0.5">
+                          {pref.user.name.split(' ')[0]}: {getStatusLabel(pref.status)} •{' '}
+                          {Array.from({ length: pref.excitement }).map((_, i) => (
+                            <DuotoneIcon key={i} icon={Star} size={14} active />
+                          ))}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
+            </MediaCard>
           ))}
+          </div>
         </div>
       )}
 
@@ -532,6 +623,30 @@ export default function BrowsePage() {
           onClose={() => setEditingItem(null)}
           onSave={() => {
             setEditingItem(null)
+            loadItems()
+          }}
+        />
+      )}
+
+      {detailModalItem && (
+        <DetailModal
+          item={detailModalItem}
+          trailerUrl={trailerUrl}
+          loadingTrailer={loadingTrailer}
+          onClose={() => {
+            setDetailModalItem(null)
+            setTrailerUrl(null)
+          }}
+        />
+      )}
+
+      {editingRoomsItem && (
+        <EditRoomsModal
+          mediaItemId={editingRoomsItem.id}
+          currentRooms={editingRoomsItem.rooms || []}
+          onClose={() => setEditingRoomsItem(null)}
+          onSave={() => {
+            setEditingRoomsItem(null)
             loadItems()
           }}
         />
@@ -552,6 +667,7 @@ function ItemDetailModal({
   const [status, setStatus] = useState(item.myPreference?.status || 'not_seen_want')
   const [excitement, setExcitement] = useState(item.myPreference?.excitement || 3)
   const [saving, setSaving] = useState(false)
+  const { isClosing, handleClose } = useModalAnimation(onClose)
 
   const handleSave = async () => {
     setSaving(true)
@@ -561,7 +677,7 @@ function ItemDetailModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status, excitement }),
       })
-      onClose()
+      handleClose()
       window.location.reload()
     } catch (err) {
       console.error('Failed to save preference:', err)
@@ -571,40 +687,25 @@ function ItemDetailModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
+      <div 
+        className={`bg-card rounded-lg max-w-md w-full modal-content ${isClosing ? 'closing' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-6">
           <div className="flex justify-between items-start mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">{item.title}</h2>
-            <button onClick={onClose} className="text-gray-500 text-2xl">
+            <h2 className="text-2xl font-bold text-foreground">{item.title}</h2>
+            <button onClick={onClose} className="text-muted-foreground text-2xl hover:text-foreground">
               ×
             </button>
           </div>
-
-          {item.posterUrl && (
-            <div className="mb-4">
-              <Image
-                src={item.posterUrl}
-                alt={item.title}
-                width={200}
-                height={300}
-                className="rounded mx-auto"
-              />
-            </div>
-          )}
-
-          {item.description && (
-            <div className="mb-4">
-              <p className="text-sm text-gray-700 leading-relaxed">{item.description}</p>
-            </div>
-          )}
 
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">Status</label>
             <div className="space-y-2">
               {[
-                { value: 'not_seen_want', label: "Haven&apos;t seen, want to watch" },
-                { value: 'not_seen_dont_want', label: "Haven&apos;t seen, don&apos;t want to watch" },
+                { value: 'not_seen_want', label: "Haven't seen, want to watch" },
+                { value: 'not_seen_dont_want', label: "Haven't seen, don't want to watch" },
                 { value: 'seen_would_rewatch', label: 'Seen, would rewatch' },
                 { value: 'seen_wont_rewatch', label: 'Seen, would not rewatch' },
               ].map((opt) => (
@@ -633,21 +734,17 @@ function ItemDetailModal({
               max="5"
               value={excitement}
               onChange={(e) => setExcitement(parseInt(e.target.value))}
-              className="w-full"
+              className="w-full accent-primary"
             />
-            <div className="flex justify-between text-xs text-gray-500">
+            <div className="flex justify-between text-xs text-muted-foreground">
               <span>1</span>
               <span>5</span>
             </div>
           </div>
 
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full bg-blue-600 text-white py-3 rounded-md font-medium hover:bg-blue-700 disabled:opacity-50"
-          >
+          <Button onClick={handleSave} disabled={saving} className="w-full">
             {saving ? 'Saving...' : 'Save'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -665,6 +762,7 @@ function EditItemModal({
 }) {
   const isManual = item.sourceType?.toLowerCase() === 'manual'
   const [saving, setSaving] = useState(false)
+  const { isClosing, handleClose } = useModalAnimation(onClose)
 
   // For manual items
   const [title, setTitle] = useState(item.title)
@@ -722,6 +820,7 @@ function EditItemModal({
         })
       }
 
+      handleClose()
       onSave()
     } catch (err) {
       console.error('Failed to save:', err)
@@ -732,12 +831,12 @@ function EditItemModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}>
+      <div className={`bg-card rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto modal-content ${isClosing ? 'closing' : ''}`}>
         <div className="p-6">
           <div className="flex justify-between items-start mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">Edit {item.title}</h2>
-            <button onClick={onClose} className="text-gray-500 text-2xl">
+            <h2 className="text-2xl font-bold text-foreground">Edit {item.title}</h2>
+            <button onClick={handleClose} className="text-muted-foreground text-2xl">
               ×
             </button>
           </div>
@@ -746,11 +845,10 @@ function EditItemModal({
             <>
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-2">Title *</label>
-                <input
+                <Input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
@@ -760,7 +858,7 @@ function EditItemModal({
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground"
                 >
                   <option value="movie">Movie</option>
                   <option value="show">Show</option>
@@ -771,61 +869,56 @@ function EditItemModal({
 
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-2">Description</label>
-                <textarea
+                <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-2">Genres (comma-separated)</label>
-                <input
+                <Input
                   type="text"
                   value={genres}
                   onChange={(e) => setGenres(e.target.value)}
                   placeholder="Action, Drama, Comedy"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-2">Poster URL</label>
-                <input
+                <Input
                   type="url"
                   value={posterUrl}
                   onChange={(e) => setPosterUrl(e.target.value)}
                   placeholder="https://..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-2">External URL</label>
-                <input
+                <Input
                   type="url"
                   value={externalUrl}
                   onChange={(e) => setExternalUrl(e.target.value)}
                   placeholder="https://..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-2">Runtime (minutes)</label>
-                <input
+                <Input
                   type="number"
                   value={runtimeMinutes}
                   onChange={(e) => setRuntimeMinutes(e.target.value)}
                   placeholder="120"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </>
           ) : (
-            <div className="mb-4 p-4 bg-blue-50 rounded-md">
-              <p className="text-sm text-blue-800">
+            <div className="mb-4 p-4 bg-secondary rounded-md">
+              <p className="text-sm text-secondary-foreground">
                 This item was added via TMDB search. You can only edit recommendation and notes information.
               </p>
             </div>
@@ -833,44 +926,167 @@ function EditItemModal({
 
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">Notes</label>
-            <textarea
+            <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Add your notes about this item..."
             />
           </div>
 
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">Recommended By</label>
-            <input
+            <Input
               type="text"
               value={recommendedByName}
               onChange={(e) => setRecommendedByName(e.target.value)}
               placeholder="Name of person who recommended this"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">Recommendation Context</label>
-            <textarea
+            <Textarea
               value={recommendationContext}
               onChange={(e) => setRecommendationContext(e.target.value)}
               rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Why was this recommended? When? Where?"
             />
           </div>
 
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full bg-blue-600 text-white py-3 rounded-md font-medium hover:bg-blue-700 disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
+          <div className="flex gap-2">
+            <Button onClick={handleClose} variant="outline" className="flex-1">
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={saving} className="flex-1">
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DetailModal({
+  item,
+  trailerUrl,
+  loadingTrailer,
+  onClose,
+}: {
+  item: MediaItem
+  trailerUrl: string | null
+  loadingTrailer: boolean
+  onClose: () => void
+}) {
+  const { isClosing, handleClose } = useModalAnimation(onClose)
+
+  return (
+    <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center pt-4 px-4 pb-20 modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
+      <div 
+        className={`bg-card rounded-lg max-w-4xl w-full h-[calc(100vh-6rem)] flex flex-col modal-content ${isClosing ? 'closing' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 pt-4 overflow-y-auto flex-1">
+          <div className="flex justify-between items-start mb-4">
+            <h2 className="text-2xl font-bold text-foreground">{item.title}</h2>
+            <button onClick={handleClose} className="text-muted-foreground text-2xl hover:text-foreground">
+              ×
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {item.posterUrl && (
+              <div className="flex-shrink-0">
+                <Image
+                  src={item.posterUrl}
+                  alt={item.title}
+                  width={300}
+                  height={450}
+                  className="rounded object-cover w-full"
+                />
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {item.description && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 text-foreground">Description</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
+                </div>
+              )}
+
+              {item.genres.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 text-foreground">Genres</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {item.genres.map((genre, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-1 bg-secondary text-muted-foreground text-xs rounded"
+                      >
+                        {genre}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {item.releaseDate && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 text-foreground">Release Date</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(item.releaseDate).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </p>
+                </div>
+              )}
+
+              {item.myPreference?.recommendedByName && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 text-foreground">Recommended By</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {item.myPreference.recommendedByName}
+                    {item.myPreference.recommendationContext && (
+                      <span className="block mt-1 text-xs italic">
+                        {item.myPreference.recommendationContext}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {loadingTrailer ? (
+            <div className="mb-6">
+              <div className="bg-muted rounded-lg aspect-video flex items-center justify-center">
+                <p className="text-muted-foreground">Loading trailer...</p>
+              </div>
+            </div>
+          ) : trailerUrl ? (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-2 text-foreground">Trailer</h3>
+              <div className="bg-black rounded-lg overflow-hidden aspect-video">
+                <iframe
+                  src={trailerUrl}
+                  title={`${item.title} Trailer`}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          ) : item.tmdbId && item.sourceType?.toLowerCase() === 'tmdb' ? (
+            <div className="mb-6">
+              <div className="bg-muted rounded-lg aspect-video flex items-center justify-center">
+                <p className="text-muted-foreground">No trailer available</p>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

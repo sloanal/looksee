@@ -6,7 +6,7 @@ export default function ProfileLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-background bottom-nav-spacing safe-x">
       {children}
       <BottomNav />
     </div>

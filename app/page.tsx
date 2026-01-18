@@ -37,12 +37,12 @@ export default function Home() {
   }, [session, status, router])
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold mb-4 text-gray-900">Looksee</h1>
-        <p className="text-gray-600">Loading...</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4 text-foreground">Looksee</h1>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
       </div>
-    </div>
   )
 }
 

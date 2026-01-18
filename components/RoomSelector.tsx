@@ -8,6 +8,7 @@ interface Room {
   name: string
   inviteCode: string
   role: string
+  memberCount: number
 }
 
 export function RoomSelector() {
@@ -46,11 +47,12 @@ export function RoomSelector() {
   }, [isOpen])
 
   if (loading) {
-    return <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
+    return <div className="px-3 py-2 text-sm text-muted-foreground">Loading...</div>
   }
 
   const currentRoom = rooms.find((r) => r.id === currentRoomId)
-  const displayName = currentRoom ? currentRoom.name : 'My Stuff'
+  const isAllRooms = currentRoomId === 'all-rooms'
+  const displayName = isAllRooms ? 'Everything' : currentRoom ? currentRoom.name : 'Just My Stuff'
 
   const handleSelect = (roomId: string | null) => {
     setIsOpen(false)
@@ -65,7 +67,7 @@ export function RoomSelector() {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+        className="flex items-center gap-1 pl-3 pr-1.5 py-2 text-sm font-medium text-foreground rounded-md transition-all duration-200 neumorphic-button"
       >
         <span>{displayName}</span>
         <svg
@@ -79,27 +81,43 @@ export function RoomSelector() {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50">
+        <div className="absolute top-full left-0 mt-1 w-48 bg-popover border border-border rounded-md shadow-lg z-50">
           <div className="py-1">
             <button
               onClick={() => handleSelect(null)}
-              className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${
-                !currentRoomId ? 'bg-gray-50 font-medium' : ''
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-accent ${
+                !currentRoomId ? 'bg-accent font-medium' : ''
               }`}
             >
-              My Stuff
+              <div>Just My Stuff</div>
+              <div className="text-xs text-muted-foreground">Everything you've added</div>
             </button>
-            {rooms.map((room) => (
-              <button
-                key={room.id}
-                onClick={() => handleSelect(room.id)}
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${
-                  currentRoomId === room.id ? 'bg-gray-50 font-medium' : ''
-                }`}
-              >
-                {room.name}
-              </button>
-            ))}
+            <button
+              onClick={() => handleSelect('all-rooms')}
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-accent ${
+                isAllRooms ? 'bg-accent font-medium' : ''
+              }`}
+            >
+              <div>Everything</div>
+              <div className="text-xs text-muted-foreground">Your rooms plus your stuff</div>
+            </button>
+            {rooms.map((room) => {
+              const otherCount = room.memberCount - 1
+              return (
+                <button
+                  key={room.id}
+                  onClick={() => handleSelect(room.id)}
+                  className={`w-full text-left px-4 py-2 text-sm hover:bg-accent ${
+                    currentRoomId === room.id ? 'bg-accent font-medium' : ''
+                  }`}
+                >
+                  <div>{room.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Shared with {otherCount} other{otherCount !== 1 ? 's' : ''}
+                  </div>
+                </button>
+              )
+            })}
           </div>
         </div>
       )}

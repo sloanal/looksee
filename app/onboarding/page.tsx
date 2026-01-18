@@ -107,7 +107,7 @@ export default function OnboardingPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     )
@@ -121,23 +121,23 @@ export default function OnboardingPage() {
   const progress = ((currentIndex + 1) / items.length) * 100
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="bg-white border-b p-4">
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="bg-background border-b border-border p-4">
         <div className="max-w-2xl mx-auto">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-muted-foreground">
               {currentIndex + 1} of {items.length}
             </span>
             <button
               onClick={handleSkip}
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-primary hover:underline"
             >
               Skip for now
             </button>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-secondary rounded-full h-2">
             <div
-              className="bg-blue-600 h-2 rounded-full transition-all"
+              className="bg-primary h-2 rounded-full transition-all"
               style={{ width: `${progress}%` }}
             />
           </div>
@@ -145,7 +145,7 @@ export default function OnboardingPage() {
       </div>
 
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
+        <div className="max-w-md w-full bg-card rounded-lg shadow-lg p-6 border border-border">
           <div className="text-center mb-6">
             {currentItem.posterUrl && (
               <div className="mb-4 flex justify-center">
@@ -158,14 +158,14 @@ export default function OnboardingPage() {
                 />
               </div>
             )}
-            <h2 className="text-2xl font-bold mb-2 text-gray-900">{currentItem.title}</h2>
-            <p className="text-sm text-gray-600 capitalize mb-1">{currentItem.type}</p>
+            <h2 className="text-2xl font-bold mb-2 text-foreground">{currentItem.title}</h2>
+            <p className="text-sm text-muted-foreground capitalize mb-1">{currentItem.type}</p>
             {currentItem.genres.length > 0 && (
               <div className="flex flex-wrap justify-center gap-1 mb-2">
                 {currentItem.genres.slice(0, 3).map((genre, i) => (
                   <span
                     key={i}
-                    className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded"
+                    className="px-2 py-1 bg-secondary text-secondary-foreground text-xs rounded"
                   >
                     {genre}
                   </span>
@@ -173,7 +173,9 @@ export default function OnboardingPage() {
               </div>
             )}
             {currentItem.description && (
-              <p className="text-sm text-gray-600 mt-2 line-clamp-3">{currentItem.description}</p>
+              <p className="text-sm text-muted-foreground mt-2 line-clamp-3">
+                {currentItem.description}
+              </p>
             )}
           </div>
 
@@ -182,18 +184,18 @@ export default function OnboardingPage() {
               <label className="block text-sm font-medium mb-3">Status</label>
               <div className="space-y-2">
                 {[
-                  { value: 'not_seen_want', label: "Haven&apos;t seen, want to watch" },
-                  { value: 'not_seen_dont_want', label: "Haven&apos;t seen, don&apos;t want to watch" },
+                  { value: 'not_seen_want', label: "Haven't seen, want to watch" },
+                  { value: 'not_seen_dont_want', label: "Haven't seen, don't want to watch" },
                   { value: 'seen_would_rewatch', label: 'Seen, would rewatch' },
                   { value: 'seen_wont_rewatch', label: 'Seen, would not rewatch' },
                 ].map((opt) => (
                   <label
                     key={opt.value}
-                    className="flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors"
-                    style={{
-                      borderColor: status === opt.value ? '#2563eb' : '#e5e7eb',
-                      backgroundColor: status === opt.value ? '#eff6ff' : 'white',
-                    }}
+                    className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                      status === opt.value
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border bg-background'
+                    }`}
                   >
                     <input
                       type="radio"
@@ -219,9 +221,9 @@ export default function OnboardingPage() {
                 max="5"
                 value={excitement}
                 onChange={(e) => setExcitement(parseInt(e.target.value))}
-                className="w-full"
+                className="w-full accent-primary"
               />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <div className="flex justify-between text-xs text-muted-foreground mt-1">
                 <span>1</span>
                 <span>5</span>
               </div>
@@ -230,7 +232,7 @@ export default function OnboardingPage() {
             <button
               onClick={handleNext}
               disabled={saving}
-              className="w-full bg-blue-600 text-white py-3 rounded-md font-medium hover:bg-blue-700 disabled:opacity-50"
+              className="w-full bg-primary text-primary-foreground py-3 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50"
             >
               {saving
                 ? 'Saving...'

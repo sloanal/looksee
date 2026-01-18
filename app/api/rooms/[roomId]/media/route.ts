@@ -30,8 +30,14 @@ export async function GET(
     return NextResponse.json({ error: 'Not a member of this room' }, { status: 403 })
   }
 
-  // Build query filters
-  let where: any = { roomId }
+  // Build query filters - find items that belong to this room via MediaItemRoom
+  let where: any = {
+    mediaItemRooms: {
+      some: {
+        roomId,
+      },
+    },
+  }
 
   // Search by title
   const search = searchParams.get('search')
@@ -121,6 +127,16 @@ export async function GET(
       createdBy: {
         select: { id: true, name: true },
       },
+      mediaItemRooms: {
+        include: {
+          room: {
+            select: { id: true, name: true },
+          },
+          addedBy: {
+            select: { id: true, name: true },
+          },
+        },
+      },
       _count: {
         select: { preferences: true },
       },
@@ -163,6 +179,12 @@ export async function GET(
       createdBy: item.createdBy.name,
       createdByUserId: item.createdByUserId,
       createdAt: item.createdAt,
+      rooms: item.mediaItemRooms.map((mir) => ({
+        id: mir.room.id,
+        name: mir.room.name,
+        addedByUserId: mir.addedByUserId,
+        addedByName: mir.addedBy.name,
+      })),
       myPreference: myPref
         ? {
             status: myPref.status.toLowerCase(),
@@ -252,14 +274,23 @@ export async function POST(
       return NextResponse.json({ error: 'Excitement must be between 1 and 5' }, { status: 400 })
     }
 
-    // Check if item already exists (by tmdbId if provided, or by title in room)
+    // Check if item already exists (by tmdbId if provided)
     let mediaItem = null
     if (tmdbId) {
       // Convert tmdbId to string as Prisma schema expects String
       const tmdbIdString = String(tmdbId)
-      mediaItem = await prisma.mediaItem.findFirst({
-        where: { roomId, tmdbId: tmdbIdString },
+      // Find item by tmdbId (globally, not just in this room)
+      const itemsWithTmdbId = await prisma.mediaItem.findMany({
+        where: { tmdbId: tmdbIdString },
+        include: {
+          mediaItemRooms: {
+            where: { roomId },
+          },
+        },
       })
+      
+      // Check if any of these items are already in this room
+      mediaItem = itemsWithTmdbId.find((item) => item.mediaItemRooms.length > 0) || itemsWithTmdbId[0] || null
     }
 
     if (!mediaItem) {
@@ -279,8 +310,35 @@ export async function POST(
           rating: rating ? parseFloat(rating) : null,
           releaseDate: releaseDate || null,
           createdByUserId: session.user.id,
+          mediaItemRooms: {
+            create: {
+              roomId,
+              addedByUserId: session.user.id,
+            },
+          },
         },
       })
+    } else {
+      // Check if this item is already in this room
+      const existingRoom = await prisma.mediaItemRoom.findUnique({
+        where: {
+          mediaItemId_roomId: {
+            mediaItemId: mediaItem.id,
+            roomId,
+          },
+        },
+      })
+
+      // If not in this room, add it
+      if (!existingRoom) {
+        await prisma.mediaItemRoom.create({
+          data: {
+            mediaItemId: mediaItem.id,
+            roomId,
+            addedByUserId: session.user.id,
+          },
+        })
+      }
     }
 
     // Create or update user preference

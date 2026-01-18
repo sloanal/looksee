@@ -36,7 +36,7 @@ export function RoomSwitcher() {
   const currentRoom = rooms.find((r) => r.id === currentRoomId)
 
   return (
-    <div className="px-4 py-2 bg-gray-50 border-b">
+    <div className="px-4 py-2 bg-background border-b border-border">
       <select
         value={currentRoomId || ''}
         onChange={(e) => {
@@ -45,7 +45,7 @@ export function RoomSwitcher() {
             router.push(`${pathname}?roomId=${roomId}`)
           }
         }}
-        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-white"
+        className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background text-foreground"
       >
         {rooms.map((room) => (
           <option key={room.id} value={room.id}>

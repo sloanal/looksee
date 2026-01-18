@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { RoomJoinModal } from '@/components/RoomJoinModal'
+import { RoomSelector } from '@/components/RoomSelector'
+import { DuotoneIcon } from '@/components/DuotoneIcon'
+import { useModalAnimation } from '@/lib/useModalAnimation'
 
 interface User {
   id: string
@@ -67,6 +70,39 @@ export default function ProfilePage() {
   const [showRoomJoinModal, setShowRoomJoinModal] = useState(false)
   const [joinedRoomId, setJoinedRoomId] = useState<string | null>(null)
   const [joinedMediaCount, setJoinedMediaCount] = useState(0)
+  
+  // Modal closing states
+  const [inviteModalClosing, setInviteModalClosing] = useState(false)
+  const [joinModalClosing, setJoinModalClosing] = useState(false)
+  const [createModalClosing, setCreateModalClosing] = useState(false)
+  
+  const handleCloseInviteModal = () => {
+    setInviteModalClosing(true)
+    setTimeout(() => {
+      setShowInviteModal(null)
+      setInviteModalClosing(false)
+    }, 200)
+  }
+  
+  const handleCloseJoinModal = () => {
+    setJoinModalClosing(true)
+    setTimeout(() => {
+      setShowJoinModal(false)
+      setJoinInviteCode('')
+      setJoinError('')
+      setJoinModalClosing(false)
+    }, 200)
+  }
+  
+  const handleCloseCreateModal = () => {
+    setCreateModalClosing(true)
+    setTimeout(() => {
+      setShowCreateModal(false)
+      setRoomName('')
+      setCreateError('')
+      setCreateModalClosing(false)
+    }, 200)
+  }
 
   useEffect(() => {
     if (status === 'loading') return
@@ -725,13 +761,13 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {showInviteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
+      {(showInviteModal || inviteModalClosing) && (
+        <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${inviteModalClosing ? 'closing' : ''}`} onClick={handleCloseInviteModal}>
+          <div className={`bg-white rounded-lg max-w-md w-full p-6 modal-content ${inviteModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-4">
-              <h2 className="text-2xl font-bold text-gray-900">Invite to {showInviteModal.name}</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Invite to {showInviteModal?.name}</h2>
               <button
-                onClick={() => setShowInviteModal(null)}
+                onClick={handleCloseInviteModal}
                 className="text-gray-500 text-2xl"
               >
                 ×
@@ -760,7 +796,7 @@ export default function ProfilePage() {
                 rooms setup page.
               </p>
               <button
-                onClick={() => setShowInviteModal(null)}
+                onClick={handleCloseInviteModal}
                 className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
               >
                 Close
@@ -770,17 +806,13 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {showJoinModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
+      {(showJoinModal || joinModalClosing) && (
+        <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${joinModalClosing ? 'closing' : ''}`} onClick={handleCloseJoinModal}>
+          <div className={`bg-white rounded-lg max-w-md w-full p-6 modal-content ${joinModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-4">
               <h2 className="text-2xl font-bold text-gray-900">Join a Room</h2>
               <button
-                onClick={() => {
-                  setShowJoinModal(false)
-                  setJoinInviteCode('')
-                  setJoinError('')
-                }}
+                onClick={handleCloseJoinModal}
                 className="text-gray-500 text-2xl"
               >
                 ×
@@ -808,11 +840,7 @@ export default function ProfilePage() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowJoinModal(false)
-                    setJoinInviteCode('')
-                    setJoinError('')
-                  }}
+                  onClick={handleCloseJoinModal}
                   className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
                 >
                   Cancel
@@ -830,17 +858,13 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
+      {(showCreateModal || createModalClosing) && (
+        <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${createModalClosing ? 'closing' : ''}`} onClick={handleCloseCreateModal}>
+          <div className={`bg-white rounded-lg max-w-md w-full p-6 modal-content ${createModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-4">
               <h2 className="text-2xl font-bold text-gray-900">Create a Room</h2>
               <button
-                onClick={() => {
-                  setShowCreateModal(false)
-                  setRoomName('')
-                  setCreateError('')
-                }}
+                onClick={handleCloseCreateModal}
                 className="text-gray-500 text-2xl"
               >
                 ×
@@ -867,11 +891,7 @@ export default function ProfilePage() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowCreateModal(false)
-                    setRoomName('')
-                    setCreateError('')
-                  }}
+                  onClick={handleCloseCreateModal}
                   className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
                 >
                   Cancel
@@ -923,6 +943,7 @@ function QueueItemModal({
   const [status, setStatus] = useState('not_seen_want')
   const [excitement, setExcitement] = useState(3)
   const [saving, setSaving] = useState(false)
+  const { isClosing, handleClose } = useModalAnimation(onClose)
 
   const handleSave = async () => {
     setSaving(true)
@@ -934,6 +955,7 @@ function QueueItemModal({
       })
 
       if (res.ok) {
+        handleClose()
         onSave()
       } else {
         const error = await res.json()
@@ -948,12 +970,12 @@ function QueueItemModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
+      <div className={`bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto modal-content ${isClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
         <div className="p-6">
           <div className="flex justify-between items-start mb-4">
             <h2 className="text-2xl font-bold text-gray-900">{item.title}</h2>
-            <button onClick={onClose} className="text-gray-500 text-2xl">
+            <button onClick={handleClose} className="text-gray-500 text-2xl">
               ×
             </button>
           </div>
@@ -991,8 +1013,8 @@ function QueueItemModal({
             <label className="block text-sm font-medium mb-2">Status</label>
             <div className="space-y-2">
               {[
-                { value: 'not_seen_want', label: "Haven&apos;t seen, want to watch" },
-                { value: 'not_seen_dont_want', label: "Haven&apos;t seen, don&apos;t want to watch" },
+                { value: 'not_seen_want', label: "Haven't seen, want to watch" },
+                { value: 'not_seen_dont_want', label: "Haven't seen, don't want to watch" },
                 { value: 'seen_would_rewatch', label: 'Seen, would rewatch' },
                 { value: 'seen_wont_rewatch', label: 'Seen, would not rewatch' },
               ].map((opt) => (

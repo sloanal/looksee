@@ -25,10 +25,51 @@ export async function GET(request: NextRequest) {
   }
 
   // Build query filters
-  // For "My stuff", only show items created by the current user
-  let where: any = {
-    roomId: { in: roomIds },
-    createdByUserId: session.user.id,
+  // Check if allRooms mode is requested (show everything: all rooms plus Just My Stuff)
+  const allRooms = searchParams.get('allRooms') === 'true'
+  let where: any
+  
+  if (allRooms) {
+    // "Everything" mode: show all items from rooms the user is a member of
+    // PLUS items created by the user with no room associations (Just My Stuff)
+    where = {
+      OR: [
+        {
+          mediaItemRooms: {
+            some: {
+              roomId: { in: roomIds },
+            },
+          },
+        },
+        {
+          createdByUserId: session.user.id,
+          mediaItemRooms: {
+            none: {}, // Items with no room associations
+          },
+        },
+      ],
+    }
+  } else {
+    // "My stuff" mode: show items created by the user that either:
+    // 1. Have no MediaItemRoom entries (items added via "Just My Stuff")
+    // 2. Or have MediaItemRoom entries in rooms the user is a member of
+    where = {
+      createdByUserId: session.user.id,
+      OR: [
+        {
+          mediaItemRooms: {
+            none: {}, // Items with no room associations
+          },
+        },
+        {
+          mediaItemRooms: {
+            some: {
+              roomId: { in: roomIds },
+            },
+          },
+        },
+      ],
+    }
   }
 
   // Search by title
@@ -122,6 +163,16 @@ export async function GET(request: NextRequest) {
       room: {
         select: { id: true, name: true },
       },
+      mediaItemRooms: {
+        include: {
+          room: {
+            select: { id: true, name: true },
+          },
+          addedBy: {
+            select: { id: true, name: true },
+          },
+        },
+      },
       _count: {
         select: { preferences: true },
       },
@@ -165,6 +216,12 @@ export async function GET(request: NextRequest) {
       createdByUserId: item.createdByUserId,
       createdAt: item.createdAt,
       roomName: item.room.name,
+      rooms: item.mediaItemRooms.map((mir) => ({
+        id: mir.room.id,
+        name: mir.room.name,
+        addedByUserId: mir.addedByUserId,
+        addedByName: mir.addedBy.name,
+      })),
       myPreference: myPref
         ? {
             status: myPref.status.toLowerCase(),
@@ -192,5 +249,134 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({ items })
+}
+
+// POST /api/media - Create a new media item without adding it to any room (for "Just My Stuff")
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+
+    const {
+      title,
+      type,
+      tmdbId,
+      sourceType,
+      externalUrl,
+      posterUrl,
+      description,
+      genres,
+      runtimeMinutes,
+      rating,
+      releaseDate,
+      // Preference data
+      status,
+      excitement,
+      notes,
+      recommendedByName,
+      recommendationContext,
+    } = body
+
+    if (!title || !type || !status || !excitement) {
+      return NextResponse.json(
+        { error: 'Title, type, status, and excitement are required' },
+        { status: 400 }
+      )
+    }
+
+    if (excitement < 1 || excitement > 5) {
+      return NextResponse.json({ error: 'Excitement must be between 1 and 5' }, { status: 400 })
+    }
+
+    // Get user's first room for the required roomId field (backward compatibility)
+    // The item won't be added to any room because we don't create a MediaItemRoom entry
+    const memberships = await prisma.roomMembership.findMany({
+      where: { userId: session.user.id },
+      select: { roomId: true },
+      take: 1,
+    })
+
+    if (memberships.length === 0) {
+      return NextResponse.json(
+        { error: 'You must be a member of at least one room' },
+        { status: 400 }
+      )
+    }
+
+    const roomId = memberships[0].roomId
+
+    // Check if item already exists (by tmdbId if provided)
+    let mediaItem = null
+    if (tmdbId) {
+      const tmdbIdString = String(tmdbId)
+      const existingItem = await prisma.mediaItem.findFirst({
+        where: { tmdbId: tmdbIdString },
+      })
+      mediaItem = existingItem
+    }
+
+    if (!mediaItem) {
+      // Create new media item without adding it to any room
+      // We set roomId for backward compatibility, but don't create a MediaItemRoom entry
+      mediaItem = await prisma.mediaItem.create({
+        data: {
+          roomId,
+          title: title.trim(),
+          type: type.toUpperCase(),
+          tmdbId: tmdbId ? String(tmdbId) : null,
+          sourceType: sourceType.toUpperCase(),
+          externalUrl: externalUrl || null,
+          posterUrl: posterUrl || null,
+          description: description || null,
+          genres: genres ? JSON.stringify(genres) : '[]',
+          runtimeMinutes: runtimeMinutes || null,
+          rating: rating ? parseFloat(rating) : null,
+          releaseDate: releaseDate || null,
+          createdByUserId: session.user.id,
+          // Note: We intentionally do NOT create a MediaItemRoom entry
+          // This means the item won't appear in any room's media list
+        },
+      })
+    }
+
+    // Create or update user preference
+    await prisma.userMediaPreference.upsert({
+      where: {
+        userId_mediaItemId: {
+          userId: session.user.id,
+          mediaItemId: mediaItem.id,
+        },
+      },
+      create: {
+        userId: session.user.id,
+        mediaItemId: mediaItem.id,
+        status: status.toUpperCase(),
+        excitement: parseInt(excitement),
+        notes: notes || null,
+        recommendedByName: recommendedByName || null,
+        recommendationContext: recommendationContext || null,
+      },
+      update: {
+        status: status.toUpperCase(),
+        excitement: parseInt(excitement),
+        notes: notes || null,
+        recommendedByName: recommendedByName || null,
+        recommendationContext: recommendationContext || null,
+        updatedAt: new Date(),
+      },
+    })
+
+    return NextResponse.json({ mediaItem })
+  } catch (error: any) {
+    console.error('Error creating media item:', error)
+    return NextResponse.json(
+      { error: error.message || 'Failed to create media item' },
+      { status: 500 }
+    )
+  }
 }
 

@@ -1,17 +1,98 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY
+const TMDB_READ_ACCESS_TOKEN = process.env.TMDB_API_READ_ACCESS_TOKEN
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3'
+
+const normalizeToken = (value?: string | null) => {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (trimmed.toLowerCase().startsWith('bearer ')) {
+    return trimmed.slice(7).trim()
+  }
+  return trimmed
+}
+
+const isBearerToken = (value?: string | null) => {
+  const normalized = normalizeToken(value)
+  if (!normalized) return false
+  const segments = normalized.split('.')
+  return segments.length === 3 && segments.every(Boolean)
+}
+
+const shouldTreatAsBearer = (value: string) => {
+  if (isBearerToken(value)) return true
+  // v3 API keys are 32 chars; longer values are likely v4 tokens.
+  return value.length > 40
+}
+
+const getTmdbAuth = () => {
+  const readAccessToken = normalizeToken(TMDB_READ_ACCESS_TOKEN)
+  if (readAccessToken) {
+    return { type: 'bearer' as const, value: readAccessToken }
+  }
+  const apiKey = normalizeToken(TMDB_API_KEY)
+  if (apiKey) {
+    const authType = shouldTreatAsBearer(apiKey) ? 'bearer' : 'apiKey'
+    return { type: authType as const, value: apiKey }
+  }
+  return { type: 'none' as const, value: '' }
+}
+
+const extractApiKeyFromToken = (token: string): string | null => {
+  try {
+    // JWT format: header.payload.signature
+    const parts = token.split('.')
+    if (parts.length !== 3) return null
+    
+    // Decode payload (base64url)
+    const payload = parts[1]
+    const decoded = Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8')
+    const parsed = JSON.parse(decoded)
+    
+    // The 'aud' field contains the API key
+    return parsed.aud || null
+  } catch (error) {
+    console.error('[TMDB Search] Failed to extract API key from token:', error)
+    return null
+  }
+}
+
+const getFallbackApiKey = () => {
+  // First try explicit API key
+  const apiKey = normalizeToken(TMDB_API_KEY)
+  if (apiKey && !shouldTreatAsBearer(apiKey)) {
+    return apiKey
+  }
+  
+  // If we have a bearer token, try extracting API key from it
+  const readAccessToken = normalizeToken(TMDB_READ_ACCESS_TOKEN)
+  if (readAccessToken && isBearerToken(readAccessToken)) {
+    const extractedKey = extractApiKeyFromToken(readAccessToken)
+    if (extractedKey) {
+      console.log('[TMDB Search] Extracted API key from token')
+      return extractedKey
+    }
+  }
+  
+  return null
+}
 
 // GET /api/tmdb/search?query=...&type=movie|tv|mixed
 export async function GET(request: NextRequest) {
-  if (!TMDB_API_KEY) {
+  const auth = getTmdbAuth()
+  const fallbackApiKey = auth.type === 'bearer' ? getFallbackApiKey() : null
+
+  if (auth.type === 'none') {
     console.error('[TMDB Search] API key not configured')
     return NextResponse.json({ error: 'TMDB API key not configured' }, { status: 500 })
   }
-  
-  if (TMDB_API_KEY.length < 10) {
-    console.error('[TMDB Search] API key appears invalid (too short):', TMDB_API_KEY.substring(0, 5) + '...')
+
+  if (auth.type === 'apiKey' && auth.value.length < 10) {
+    console.error(
+      '[TMDB Search] API key appears invalid (too short):',
+      auth.value.substring(0, 5) + '...'
+    )
     return NextResponse.json({ error: 'TMDB API key appears invalid' }, { status: 500 })
   }
 
@@ -19,22 +100,60 @@ export async function GET(request: NextRequest) {
   const query = searchParams.get('query')
   const type = searchParams.get('type') || 'mixed'
 
-  console.log('[TMDB Search] Request:', { query, type, hasApiKey: !!TMDB_API_KEY })
+  console.log('[TMDB Search] Request:', {
+    query,
+    type,
+    authType: auth.type,
+  })
 
   if (!query || query.trim().length === 0) {
     return NextResponse.json({ error: 'Query parameter is required' }, { status: 400 })
   }
 
   try {
+    const fetchFromTmdb = async (url: URL) => {
+      // For v4 bearer tokens, need accept header
+      const headers: HeadersInit = auth.type === 'bearer' 
+        ? { 
+            'Authorization': `Bearer ${auth.value}`,
+            'accept': 'application/json'
+          }
+        : {}
+      
+      const response = await fetch(url.toString(), { headers })
+      const text = await response.text()
+
+      if (auth.type === 'bearer' && fallbackApiKey && response.status === 401) {
+        const retryUrl = new URL(url.toString())
+        retryUrl.searchParams.set('api_key', fallbackApiKey)
+        console.log('[TMDB Search] Bearer auth failed; retrying with api_key:', fallbackApiKey.substring(0, 8) + '...')
+        const retryResponse = await fetch(retryUrl.toString(), {
+          headers: { 'accept': 'application/json' }
+        })
+        const retryText = await retryResponse.text()
+        console.log('[TMDB Search] Fallback response status:', retryResponse.status)
+        if (!retryResponse.ok) {
+          console.log('[TMDB Search] Fallback response body:', retryText.substring(0, 200))
+        }
+        return { response: retryResponse, text: retryText, usedFallback: true }
+      }
+
+      return { response, text, usedFallback: false }
+    }
+
     const results: any[] = []
 
     if (type === 'movie' || type === 'mixed') {
       try {
-        const movieUrl = `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&page=1`
-        console.log('[TMDB Search] Fetching movies from:', movieUrl.replace(TMDB_API_KEY!, '***'))
+        const movieUrl = new URL(`${TMDB_BASE_URL}/search/movie`)
+        movieUrl.searchParams.set('query', query)
+        movieUrl.searchParams.set('page', '1')
+        if (auth.type === 'apiKey') {
+          movieUrl.searchParams.set('api_key', auth.value)
+        }
+        console.log('[TMDB Search] Fetching movies from:', movieUrl.toString().replace(auth.value, '***'))
         
-        const movieResponse = await fetch(movieUrl)
-        const movieResponseText = await movieResponse.text()
+        const { response: movieResponse, text: movieResponseText } = await fetchFromTmdb(movieUrl)
         
         console.log('[TMDB Search] Movie response status:', movieResponse.status)
         console.log('[TMDB Search] Movie response body:', movieResponseText.substring(0, 500))
@@ -70,6 +189,7 @@ export async function GET(request: NextRequest) {
                 posterPath: item.poster_path,
                 type: 'movie',
                 overview: item.overview,
+                genreIds: item.genre_ids || [],
               }))
               results.push(...mapped)
               console.log('[TMDB Search] Added', mapped.length, 'movie results')
@@ -87,11 +207,15 @@ export async function GET(request: NextRequest) {
 
     if (type === 'tv' || type === 'mixed') {
       try {
-        const tvUrl = `${TMDB_BASE_URL}/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&page=1`
-        console.log('[TMDB Search] Fetching TV from:', tvUrl.replace(TMDB_API_KEY!, '***'))
+        const tvUrl = new URL(`${TMDB_BASE_URL}/search/tv`)
+        tvUrl.searchParams.set('query', query)
+        tvUrl.searchParams.set('page', '1')
+        if (auth.type === 'apiKey') {
+          tvUrl.searchParams.set('api_key', auth.value)
+        }
+        console.log('[TMDB Search] Fetching TV from:', tvUrl.toString().replace(auth.value, '***'))
         
-        const tvResponse = await fetch(tvUrl)
-        const tvResponseText = await tvResponse.text()
+        const { response: tvResponse, text: tvResponseText } = await fetchFromTmdb(tvUrl)
         
         console.log('[TMDB Search] TV response status:', tvResponse.status)
         console.log('[TMDB Search] TV response body:', tvResponseText.substring(0, 500))
@@ -127,6 +251,7 @@ export async function GET(request: NextRequest) {
                 posterPath: item.poster_path,
                 type: 'show',
                 overview: item.overview,
+                genreIds: item.genre_ids || [],
               }))
               results.push(...mapped)
               console.log('[TMDB Search] Added', mapped.length, 'TV results')

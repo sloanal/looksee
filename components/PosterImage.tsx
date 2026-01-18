@@ -17,10 +17,10 @@ export function PosterImage({ src, alt, width, height, className }: PosterImageP
   if (!src || error) {
     return (
       <div
-        className={`bg-gray-200 flex items-center justify-center ${className || ''}`}
+        className={`bg-muted flex items-center justify-center ${className || ''}`}
         style={{ width, height }}
       >
-        <span className="text-gray-400 text-xs">No image</span>
+        <span className="text-muted-foreground text-xs">No image</span>
       </div>
     )
   }

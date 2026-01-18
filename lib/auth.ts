@@ -3,6 +3,13 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import { prisma } from './prisma'
 import bcrypt from 'bcryptjs'
 
+const isDev = process.env.NODE_ENV !== 'production'
+const nextAuthSecret = process.env.NEXTAUTH_SECRET ?? (isDev ? 'dev-local-secret' : undefined)
+
+if (isDev && !process.env.NEXTAUTH_SECRET) {
+  console.warn('[AUTH] NEXTAUTH_SECRET not set; using dev fallback secret.')
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -45,23 +52,11 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: nextAuthSecret,
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
     updateAge: 24 * 60 * 60, // Update session every 24 hours
-  },
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 30 * 24 * 60 * 60, // 30 days
-      },
-    },
   },
   pages: {
     signIn: '/auth/signin',

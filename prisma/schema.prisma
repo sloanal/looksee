@@ -21,6 +21,7 @@ model User {
   roomMemberships RoomMembership[]
   mediaItems      MediaItem[]           @relation("CreatedBy")
   preferences     UserMediaPreference[]
+  addedToRooms    MediaItemRoom[]       @relation("AddedToRoom")
 }
 
 model Room {
@@ -31,6 +32,7 @@ model Room {
 
   memberships RoomMembership[]
   mediaItems  MediaItem[]
+  mediaItemRooms MediaItemRoom[]
 }
 
 model RoomMembership {
@@ -50,7 +52,7 @@ model RoomMembership {
 
 model MediaItem {
   id            String   @id @default(cuid())
-  roomId        String
+  roomId        String   // Kept for backward compatibility - represents the original room
   title         String
   type          String   // MOVIE, SHOW, VIDEO, LINK
   tmdbId        String?
@@ -68,6 +70,7 @@ model MediaItem {
   room      Room                  @relation(fields: [roomId], references: [id], onDelete: Cascade)
   createdBy User                  @relation("CreatedBy", fields: [createdByUserId], references: [id])
   preferences UserMediaPreference[]
+  mediaItemRooms MediaItemRoom[]
 
   @@index([roomId])
   @@index([createdByUserId])
@@ -92,5 +95,22 @@ model UserMediaPreference {
   @@index([userId])
   @@index([mediaItemId])
   @@index([status])
+}
+
+model MediaItemRoom {
+  id            String   @id @default(cuid())
+  mediaItemId   String
+  roomId        String
+  addedByUserId String   // Track who added this item to this room
+  createdAt     DateTime @default(now())
+
+  mediaItem MediaItem @relation(fields: [mediaItemId], references: [id], onDelete: Cascade)
+  room      Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  addedBy   User      @relation("AddedToRoom", fields: [addedByUserId], references: [id])
+
+  @@unique([mediaItemId, roomId])
+  @@index([mediaItemId])
+  @@index([roomId])
+  @@index([addedByUserId])
 }
 

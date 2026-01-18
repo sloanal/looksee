@@ -111,7 +111,7 @@ export function CardHeader({ children, className = '' }: CardHeaderProps) {
 
 export function CardTitle({ children, className = '' }: CardTitleProps) {
   return (
-    <h3 className={`font-semibold text-base mb-0.5 text-foreground ${className}`}>{children}</h3>
+    <h3 className={`font-semibold text-lg mb-0.5 text-foreground ${className}`}>{children}</h3>
   )
 }
 

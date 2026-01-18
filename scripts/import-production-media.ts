@@ -443,12 +443,12 @@ async function main() {
         },
       })
 
-      // Create default preference (NOT_SEEN_WANT with excitement 3)
+      // Create default preference (HAVE_NOT_SEEN with excitement 3)
       await prisma.userMediaPreference.create({
         data: {
           userId: finalUserId,
           mediaItemId: mediaItem.id,
-          status: 'NOT_SEEN_WANT',
+          status: 'HAVE_NOT_SEEN',
           excitement: 3,
         },
       })

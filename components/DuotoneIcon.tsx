@@ -8,9 +8,13 @@ interface DuotoneIconProps {
   className?: string
   active?: boolean
   size?: number
+  strokeWidth?: number
 }
 
-export function DuotoneIcon({ icon: Icon, className, active = false, size = 24 }: DuotoneIconProps) {
+export function DuotoneIcon({ icon: Icon, className, active = false, size = 24, strokeWidth }: DuotoneIconProps) {
+  const baseStrokeWidth = strokeWidth ?? 2
+  const topStrokeWidth = strokeWidth ? strokeWidth * 1.25 : 2.5
+  
   return (
     <div className={cn('relative inline-flex items-center justify-center', className)}>
       {/* Base layer - lighter color */}
@@ -22,7 +26,7 @@ export function DuotoneIcon({ icon: Icon, className, active = false, size = 24 }
             : 'text-muted-foreground opacity-30'
         )}
         size={size}
-        strokeWidth={2}
+        strokeWidth={baseStrokeWidth}
       />
       {/* Top layer - darker color */}
       <Icon
@@ -33,7 +37,7 @@ export function DuotoneIcon({ icon: Icon, className, active = false, size = 24 }
             : 'text-muted-foreground opacity-60'
         )}
         size={size}
-        strokeWidth={2.5}
+        strokeWidth={topStrokeWidth}
       />
     </div>
   )

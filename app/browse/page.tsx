@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Film, Tv, Video, Link as LinkIcon, Calendar, Star, Edit } from 'lucide-react'
+import { Film, Tv, Video, Link as LinkIcon, Calendar, Star, Edit, Sofa, Frown, Meh, Smile, Plus } from 'lucide-react'
 import { RoomSelector } from '@/components/RoomSelector'
 import { RoomMembersAvatars } from '@/components/RoomMembersAvatars'
 import { Button } from '@/components/ui/button'
@@ -218,10 +218,8 @@ export default function BrowsePage() {
   const getStatusLabel = (status?: string) => {
     if (!status) return 'Unrated'
     const labels: Record<string, string> = {
-      not_seen_want: 'Want to see',
-      not_seen_dont_want: 'Not interested',
-      seen_would_rewatch: 'Seen / rewatch',
-      seen_wont_rewatch: 'Seen, would not rewatch',
+      have_not_seen: 'Have not seen',
+      already_seen: 'Already seen',
     }
     return labels[status] || status
   }
@@ -339,10 +337,8 @@ export default function BrowsePage() {
               className="px-3 py-2 border border-input rounded-md text-sm text-foreground bg-background"
             >
               <option value="unrated">All Items</option>
-              <option value="not_seen_want">Want to see</option>
-              <option value="seen_would_rewatch">Seen / rewatch</option>
-              <option value="seen_wont_rewatch">Seen, would not rewatch</option>
-              <option value="not_seen_dont_want">Not interested</option>
+              <option value="have_not_seen">Have not seen</option>
+              <option value="already_seen">Already seen</option>
             </select>
           </div>
         </div>
@@ -358,29 +354,28 @@ export default function BrowsePage() {
           {items.map((item) => (
             <MediaCard key={item.id} variant="default" className="relative">
               {item.rooms && item.rooms.length > 0 && (
-                <CardHeader className="flex items-center justify-between -mx-4 -mt-4 px-4 pt-3 pb-2 mb-2 border-b border-border relative">
-                  <div className="flex items-center gap-2 flex-wrap flex-1 pr-12">
-                    <span className="text-xs text-muted-foreground">Rooms:</span>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setEditingRoomsItem(item)
+                  }}
+                  className="flex items-center justify-between -mx-4 -mt-4 px-4 pt-3 pb-2 mb-2 border-b border-border bg-muted/50 cursor-pointer hover:bg-muted/70 transition-colors relative"
+                >
+                  <div className="flex items-center gap-2 flex-wrap flex-1 pr-8">
+                    <DuotoneIcon icon={Sofa} size={14} />
                     {item.rooms.map((room) => (
                       <span
                         key={room.id}
-                        className="px-2 py-0.5 bg-secondary text-muted-foreground text-xs rounded"
+                        className="px-2 py-0.5 bg-foreground/10 text-foreground text-xs rounded"
                       >
                         {room.name}
                       </span>
                     ))}
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setEditingRoomsItem(item)
-                    }}
-                    className="absolute right-2 top-3 p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
-                    aria-label="Edit rooms"
-                  >
-                    <Edit size={14} />
-                  </button>
-                </CardHeader>
+                  <div className="absolute right-[14px] top-2 w-5 h-5 rounded-full border border-muted-foreground/30 flex items-center justify-center text-muted-foreground pointer-events-none">
+                    <Plus size={10} strokeWidth={3} />
+                  </div>
+                </div>
               )}
               <CardMenu className={item.rooms && item.rooms.length > 0 ? "!top-12" : ""}>
                 <button
@@ -553,15 +548,17 @@ export default function BrowsePage() {
                           {(session?.user?.name?.[0] || '?').toUpperCase()}
                         </div>
                       )}
-                      <span className="text-foreground font-medium">My Vibe:</span>
-                      <span className="text-foreground flex items-center gap-0.5">
-                        {getStatusLabel(item.myPreference.status)} •{' '}
-                        {Array.from({ length: item.myPreference.excitement }).map((_, i) => (
-                          <DuotoneIcon key={i} icon={Star} size={14} active />
-                        ))}
+                      <span className="text-foreground flex items-center gap-2">
+                        <DuotoneIcon 
+                          icon={item.myPreference.excitement === 1 ? Frown : item.myPreference.excitement === 3 ? Meh : Smile} 
+                          size={18} 
+                          active
+                          strokeWidth={1.5}
+                        />
+                        {getStatusLabel(item.myPreference.status)}
                       </span>
                     </div>
-                    <DuotoneIcon icon={Edit} size={14} active />
+                    <DuotoneIcon icon={Edit} size={14} />
                   </div>
                 ) : (
                   <div className="flex items-center">
@@ -664,7 +661,7 @@ function ItemDetailModal({
   onClose: () => void
   roomId: string | null
 }) {
-  const [status, setStatus] = useState(item.myPreference?.status || 'not_seen_want')
+  const [status, setStatus] = useState(item.myPreference?.status || 'have_not_seen')
   const [excitement, setExcitement] = useState(item.myPreference?.excitement || 3)
   const [saving, setSaving] = useState(false)
   const { isClosing, handleClose } = useModalAnimation(onClose)
@@ -704,10 +701,8 @@ function ItemDetailModal({
             <label className="block text-sm font-medium mb-2">Status</label>
             <div className="space-y-2">
               {[
-                { value: 'not_seen_want', label: "Haven&apos;t seen, want to watch" },
-                { value: 'not_seen_dont_want', label: "Haven&apos;t seen, don&apos;t want to watch" },
-                { value: 'seen_would_rewatch', label: 'Seen, would rewatch' },
-                { value: 'seen_wont_rewatch', label: 'Seen, would not rewatch' },
+                { value: 'have_not_seen', label: 'Have not seen' },
+                { value: 'already_seen', label: 'Already seen' },
               ].map((opt) => (
                 <label key={opt.value} className="flex items-center">
                   <input
@@ -726,19 +721,26 @@ function ItemDetailModal({
 
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">
-              Excitement: {excitement}/5
+              Excitement
             </label>
-            <input
-              type="range"
-              min="1"
-              max="5"
-              value={excitement}
-              onChange={(e) => setExcitement(parseInt(e.target.value))}
-              className="w-full accent-primary"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>1</span>
-              <span>5</span>
+            <div className="space-y-2">
+              {[
+                { value: 1, label: 'Not excited' },
+                { value: 3, label: 'Neutral' },
+                { value: 5, label: 'Excited' },
+              ].map((opt) => (
+                <label key={opt.value} className="flex items-center">
+                  <input
+                    type="radio"
+                    name="excitement"
+                    value={opt.value}
+                    checked={excitement === opt.value}
+                    onChange={(e) => setExcitement(parseInt(e.target.value))}
+                    className="mr-2"
+                  />
+                  {opt.label}
+                </label>
+              ))}
             </div>
           </div>
 

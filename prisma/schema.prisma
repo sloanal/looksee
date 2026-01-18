@@ -81,8 +81,8 @@ model UserMediaPreference {
   id                    String   @id @default(cuid())
   userId                String
   mediaItemId           String
-  status                String   // NOT_SEEN_WANT, NOT_SEEN_DONT_WANT, SEEN_WOULD_REWATCH, SEEN_WONT_REWATCH
-  excitement            Int // 1-5
+  status                String   // HAVE_NOT_SEEN, ALREADY_SEEN
+  excitement            Int // 1, 3, or 5 (Not excited, Neutral, Excited)
   notes                 String?
   recommendedByName     String?
   recommendationContext String?

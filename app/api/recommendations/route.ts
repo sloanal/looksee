@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       const myPref = item.preferences.find((p) => p.userId === session.user.id)
       return (
         myPref &&
-        (myPref.status === 'NOT_SEEN_WANT' || myPref.status === 'SEEN_WOULD_REWATCH')
+        myPref.status === 'HAVE_NOT_SEEN'
       )
     })
 
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
       const roomItems = mediaItemsWithAllPrefs
         .map((item) => {
           const interested = item.preferences.filter(
-            (p) => p.status === 'NOT_SEEN_WANT' || p.status === 'SEEN_WOULD_REWATCH'
+            (p) => p.status === 'HAVE_NOT_SEEN'
           )
 
           if (interested.length === 0) return null
@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
       const roomItems = mediaItems
         .map((item) => {
           const interested = item.preferences.filter(
-            (p) => p.status === 'NOT_SEEN_WANT' || p.status === 'SEEN_WOULD_REWATCH'
+            (p) => p.status === 'HAVE_NOT_SEEN'
           )
 
           if (interested.length === 0) return null

@@ -77,7 +77,7 @@ export default function AddPage() {
   const [genres, setGenres] = useState('')
   const [recommendedByName, setRecommendedByName] = useState('')
   const [recommendationContext, setRecommendationContext] = useState('')
-  const [status, setStatus] = useState('not_seen_want')
+  const [status, setStatus] = useState('have_not_seen')
   const [excitement, setExcitement] = useState(3)
 
   useEffect(() => {
@@ -385,25 +385,24 @@ export default function AddPage() {
               onChange={(e) => setStatus(e.target.value)}
               className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground"
             >
-              <option value="not_seen_want">Haven&apos;t seen, want to watch</option>
-              <option value="not_seen_dont_want">Haven&apos;t seen, don&apos;t want to watch</option>
-              <option value="seen_would_rewatch">Seen, would rewatch</option>
-              <option value="seen_wont_rewatch">Seen, would not rewatch</option>
+              <option value="have_not_seen">Have not seen</option>
+              <option value="already_seen">Already seen</option>
             </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-1">
-              My Excitement: {excitement}/5 *
+              My Excitement *
             </label>
-            <input
-              type="range"
-              min="1"
-              max="5"
+            <select
               value={excitement}
               onChange={(e) => setExcitement(parseInt(e.target.value))}
-              className="w-full accent-primary"
-            />
+              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground"
+            >
+              <option value={1}>Not excited</option>
+              <option value={3}>Neutral</option>
+              <option value={5}>Excited</option>
+            </select>
           </div>
 
           <button
@@ -519,25 +518,24 @@ export default function AddPage() {
               onChange={(e) => setStatus(e.target.value)}
               className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground"
             >
-              <option value="not_seen_want">Haven&apos;t seen, want to watch</option>
-              <option value="not_seen_dont_want">Haven&apos;t seen, don&apos;t want to watch</option>
-              <option value="seen_would_rewatch">Seen, would rewatch</option>
-              <option value="seen_wont_rewatch">Seen, would not rewatch</option>
+              <option value="have_not_seen">Have not seen</option>
+              <option value="already_seen">Already seen</option>
             </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-1">
-              My Excitement: {excitement}/5 *
+              My Excitement *
             </label>
-            <input
-              type="range"
-              min="1"
-              max="5"
+            <select
               value={excitement}
               onChange={(e) => setExcitement(parseInt(e.target.value))}
-              className="w-full accent-primary"
-            />
+              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground"
+            >
+              <option value={1}>Not excited</option>
+              <option value={3}>Neutral</option>
+              <option value={5}>Excited</option>
+            </select>
           </div>
 
           <button

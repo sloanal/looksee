@@ -944,7 +944,7 @@ function QueueItemModal({
   onClose: () => void
   onSave: () => void
 }) {
-  const [status, setStatus] = useState('not_seen_want')
+  const [status, setStatus] = useState('have_not_seen')
   const [excitement, setExcitement] = useState(3)
   const [saving, setSaving] = useState(false)
   const { isClosing, handleClose } = useModalAnimation(onClose)
@@ -1017,10 +1017,8 @@ function QueueItemModal({
             <label className="block text-sm font-medium mb-2">Status</label>
             <div className="space-y-2">
               {[
-                { value: 'not_seen_want', label: "Haven&apos;t seen, want to watch" },
-                { value: 'not_seen_dont_want', label: "Haven&apos;t seen, don&apos;t want to watch" },
-                { value: 'seen_would_rewatch', label: 'Seen, would rewatch' },
-                { value: 'seen_wont_rewatch', label: 'Seen, would not rewatch' },
+                { value: 'have_not_seen', label: 'Have not seen' },
+                { value: 'already_seen', label: 'Already seen' },
               ].map((opt) => (
                 <label key={opt.value} className="flex items-center">
                   <input
@@ -1039,19 +1037,26 @@ function QueueItemModal({
 
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">
-              Excitement: {excitement}/5
+              Excitement
             </label>
-            <input
-              type="range"
-              min="1"
-              max="5"
-              value={excitement}
-              onChange={(e) => setExcitement(parseInt(e.target.value))}
-              className="w-full"
-            />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>1</span>
-              <span>5</span>
+            <div className="space-y-2">
+              {[
+                { value: 1, label: 'Not excited' },
+                { value: 3, label: 'Neutral' },
+                { value: 5, label: 'Excited' },
+              ].map((opt) => (
+                <label key={opt.value} className="flex items-center">
+                  <input
+                    type="radio"
+                    name="excitement"
+                    value={opt.value}
+                    checked={excitement === opt.value}
+                    onChange={(e) => setExcitement(parseInt(e.target.value))}
+                    className="mr-2"
+                  />
+                  {opt.label}
+                </label>
+              ))}
             </div>
           </div>
 

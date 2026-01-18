@@ -90,6 +90,17 @@ export async function GET(request: NextRequest) {
   const auth = getTmdbAuth()
   const fallbackApiKey = auth.type === 'bearer' ? getFallbackApiKey() : null
 
+  // Enhanced logging for debugging
+  const envVars = getEnvVars()
+  console.log('[TMDB Search] Auth check:', {
+    authType: auth.type,
+    hasApiKey: !!envVars.TMDB_API_KEY,
+    hasReadToken: !!envVars.TMDB_READ_ACCESS_TOKEN,
+    apiKeyLength: envVars.TMDB_API_KEY?.length || 0,
+    readTokenLength: envVars.TMDB_READ_ACCESS_TOKEN?.length || 0,
+    hasFallback: !!fallbackApiKey,
+  })
+
   if (auth.type === 'none') {
     console.error('[TMDB Search] API key not configured. TMDB_API_KEY:', !!process.env.TMDB_API_KEY, 'TMDB_READ_ACCESS_TOKEN:', !!process.env.TMDB_API_READ_ACCESS_TOKEN)
     return NextResponse.json({ error: 'TMDB API key not configured' }, { status: 500 })
@@ -111,6 +122,7 @@ export async function GET(request: NextRequest) {
     query,
     type,
     authType: auth.type,
+    authValuePrefix: auth.value.substring(0, 8) + '...',
   })
 
   if (!query || query.trim().length === 0) {
@@ -120,20 +132,34 @@ export async function GET(request: NextRequest) {
   try {
     const fetchFromTmdb = async (url: URL) => {
       // For v4 bearer tokens, need accept header
+      // For API key auth, also include accept header
       const headers: HeadersInit = auth.type === 'bearer' 
         ? { 
             'Authorization': `Bearer ${auth.value}`,
             'accept': 'application/json'
           }
-        : {}
+        : { 'accept': 'application/json' }
+      
+      console.log('[TMDB Search] Fetching from TMDB:', {
+        url: url.toString().replace(auth.value, '***').replace(fallbackApiKey || '', '***'),
+        method: 'GET',
+        headers: Object.keys(headers),
+        authType: auth.type,
+      })
       
       const response = await fetch(url.toString(), { headers })
       const text = await response.text()
 
+      console.log('[TMDB Search] Initial response:', {
+        status: response.status,
+        statusText: response.statusText,
+        bodyPreview: text.substring(0, 200),
+      })
+
       if (auth.type === 'bearer' && fallbackApiKey && response.status === 401) {
         const retryUrl = new URL(url.toString())
         retryUrl.searchParams.set('api_key', fallbackApiKey)
-        console.log('[TMDB Search] Bearer auth failed; retrying with api_key:', fallbackApiKey.substring(0, 8) + '...')
+        console.log('[TMDB Search] Bearer auth failed (401); retrying with api_key fallback:', fallbackApiKey.substring(0, 8) + '...')
         const retryResponse = await fetch(retryUrl.toString(), {
           headers: { 'accept': 'application/json' }
         })
@@ -143,6 +169,37 @@ export async function GET(request: NextRequest) {
           console.log('[TMDB Search] Fallback response body:', retryText.substring(0, 200))
         }
         return { response: retryResponse, text: retryText, usedFallback: true }
+      }
+
+      // If API key auth fails with 401, try bearer token if available
+      if (auth.type === 'apiKey' && response.status === 401) {
+        console.error('[TMDB Search] API key auth failed with 401:', {
+          url: url.toString().replace(auth.value, '***'),
+          apiKeyLength: auth.value.length,
+          apiKeyPrefix: auth.value.substring(0, 8),
+          responseBody: text.substring(0, 500),
+        })
+        
+        // Try bearer token if available
+        const envVars = getEnvVars()
+        const bearerToken = normalizeToken(envVars.TMDB_READ_ACCESS_TOKEN)
+        if (bearerToken) {
+          console.log('[TMDB Search] Attempting bearer token fallback for API key failure')
+          const bearerUrl = new URL(url.toString())
+          // Remove api_key param if present
+          bearerUrl.searchParams.delete('api_key')
+          const bearerResponse = await fetch(bearerUrl.toString(), {
+            headers: {
+              'Authorization': `Bearer ${bearerToken}`,
+              'accept': 'application/json'
+            }
+          })
+          const bearerText = await bearerResponse.text()
+          console.log('[TMDB Search] Bearer token fallback status:', bearerResponse.status)
+          if (bearerResponse.ok) {
+            return { response: bearerResponse, text: bearerText, usedFallback: true }
+          }
+        }
       }
 
       return { response, text, usedFallback: false }
@@ -166,7 +223,13 @@ export async function GET(request: NextRequest) {
         console.log('[TMDB Search] Movie response body:', movieResponseText.substring(0, 500))
         
         if (!movieResponse.ok) {
-          console.error('TMDB movie search failed:', movieResponse.status, movieResponseText)
+          console.error('[TMDB Search] Movie search failed:', {
+            status: movieResponse.status,
+            statusText: movieResponse.statusText,
+            body: movieResponseText.substring(0, 500),
+            authType: auth.type,
+            usedFallback: movieResponse.status === 401 && fallbackApiKey ? 'attempted' : 'none',
+          })
           try {
             const errorData = JSON.parse(movieResponseText)
             if (errorData.status_message) {
@@ -174,7 +237,11 @@ export async function GET(request: NextRequest) {
             }
           } catch (parseError) {
             // If we can't parse the error, throw with the status
-            throw new Error(`TMDB API returned status ${movieResponse.status}`)
+            const errorMsg = `TMDB API returned status ${movieResponse.status}`
+            if (movieResponse.status === 401) {
+              throw new Error(`${errorMsg}. Please check your TMDB API key configuration.`)
+            }
+            throw new Error(errorMsg)
           }
         } else {
           const movieData = JSON.parse(movieResponseText)
@@ -228,7 +295,13 @@ export async function GET(request: NextRequest) {
         console.log('[TMDB Search] TV response body:', tvResponseText.substring(0, 500))
         
         if (!tvResponse.ok) {
-          console.error('TMDB TV search failed:', tvResponse.status, tvResponseText)
+          console.error('[TMDB Search] TV search failed:', {
+            status: tvResponse.status,
+            statusText: tvResponse.statusText,
+            body: tvResponseText.substring(0, 500),
+            authType: auth.type,
+            usedFallback: tvResponse.status === 401 && fallbackApiKey ? 'attempted' : 'none',
+          })
           try {
             const errorData = JSON.parse(tvResponseText)
             if (errorData.status_message) {
@@ -236,7 +309,11 @@ export async function GET(request: NextRequest) {
             }
           } catch (parseError) {
             // If we can't parse the error, throw with the status
-            throw new Error(`TMDB API returned status ${tvResponse.status}`)
+            const errorMsg = `TMDB API returned status ${tvResponse.status}`
+            if (tvResponse.status === 401) {
+              throw new Error(`${errorMsg}. Please check your TMDB API key configuration.`)
+            }
+            throw new Error(errorMsg)
           }
         } else {
           const tvData = JSON.parse(tvResponseText)

@@ -270,8 +270,15 @@ export async function POST(
       )
     }
 
-    if (excitement < 1 || excitement > 5) {
-      return NextResponse.json({ error: 'Excitement must be between 1 and 5' }, { status: 400 })
+    const validExcitementValues = [1, 3, 5]
+    if (!validExcitementValues.includes(parseInt(excitement))) {
+      return NextResponse.json({ error: 'Excitement must be 1 (Not excited), 3 (Neutral), or 5 (Excited)' }, { status: 400 })
+    }
+
+    const validStatusValues = ['HAVE_NOT_SEEN', 'ALREADY_SEEN']
+    const statusUpper = status.toUpperCase()
+    if (!validStatusValues.includes(statusUpper)) {
+      return NextResponse.json({ error: 'Status must be "have_not_seen" or "already_seen"' }, { status: 400 })
     }
 
     // Check if item already exists (by tmdbId if provided)

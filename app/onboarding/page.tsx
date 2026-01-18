@@ -25,7 +25,7 @@ export default function OnboardingPage() {
 
   const [items, setItems] = useState<UnratedItem[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [status, setStatus] = useState('not_seen_want')
+  const [status, setStatus] = useState('have_not_seen')
   const [excitement, setExcitement] = useState(3)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -89,7 +89,7 @@ export default function OnboardingPage() {
         router.push(`/browse?roomId=${roomId}`)
       } else {
         setCurrentIndex(currentIndex + 1)
-        setStatus('not_seen_want')
+        setStatus('have_not_seen')
         setExcitement(3)
       }
     } catch (err) {
@@ -184,10 +184,8 @@ export default function OnboardingPage() {
               <label className="block text-sm font-medium mb-3">Status</label>
               <div className="space-y-2">
                 {[
-                  { value: 'not_seen_want', label: "Haven&apos;t seen, want to watch" },
-                  { value: 'not_seen_dont_want', label: "Haven&apos;t seen, don&apos;t want to watch" },
-                  { value: 'seen_would_rewatch', label: 'Seen, would rewatch' },
-                  { value: 'seen_wont_rewatch', label: 'Seen, would not rewatch' },
+                  { value: 'have_not_seen', label: 'Have not seen' },
+                  { value: 'already_seen', label: 'Already seen' },
                 ].map((opt) => (
                   <label
                     key={opt.value}
@@ -213,19 +211,33 @@ export default function OnboardingPage() {
 
             <div>
               <label className="block text-sm font-medium mb-2">
-                Excitement: {excitement}/5
+                Excitement
               </label>
-              <input
-                type="range"
-                min="1"
-                max="5"
-                value={excitement}
-                onChange={(e) => setExcitement(parseInt(e.target.value))}
-                className="w-full accent-primary"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                <span>1</span>
-                <span>5</span>
+              <div className="space-y-2">
+                {[
+                  { value: 1, label: 'Not excited' },
+                  { value: 3, label: 'Neutral' },
+                  { value: 5, label: 'Excited' },
+                ].map((opt) => (
+                  <label
+                    key={opt.value}
+                    className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                      excitement === opt.value
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border bg-background'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="excitement"
+                      value={opt.value}
+                      checked={excitement === opt.value}
+                      onChange={(e) => setExcitement(parseInt(e.target.value))}
+                      className="mr-3"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
               </div>
             </div>
 

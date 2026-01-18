@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const TMDB_API_KEY = process.env.TMDB_API_KEY
-const TMDB_READ_ACCESS_TOKEN = process.env.TMDB_API_READ_ACCESS_TOKEN
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3'
+
+const getEnvVars = () => ({
+  TMDB_API_KEY: process.env.TMDB_API_KEY,
+  TMDB_READ_ACCESS_TOKEN: process.env.TMDB_API_READ_ACCESS_TOKEN,
+})
 
 const normalizeToken = (value?: string | null) => {
   if (!value) return null
@@ -27,6 +30,7 @@ const shouldTreatAsBearer = (value: string) => {
 }
 
 const getTmdbAuth = () => {
+  const { TMDB_API_KEY, TMDB_READ_ACCESS_TOKEN } = getEnvVars()
   const readAccessToken = normalizeToken(TMDB_READ_ACCESS_TOKEN)
   if (readAccessToken) {
     return { type: 'bearer' as const, value: readAccessToken }
@@ -61,6 +65,7 @@ const extractApiKeyFromToken = (token: string): string | null => {
 }
 
 const getFallbackApiKey = () => {
+  const { TMDB_API_KEY, TMDB_READ_ACCESS_TOKEN } = getEnvVars()
   // First try explicit API key
   const apiKey = normalizeToken(TMDB_API_KEY)
   if (apiKey && !shouldTreatAsBearer(apiKey)) {
@@ -86,7 +91,7 @@ export async function GET(request: NextRequest) {
   const fallbackApiKey = auth.type === 'bearer' ? getFallbackApiKey() : null
 
   if (auth.type === 'none') {
-    console.error('[TMDB Search] API key not configured')
+    console.error('[TMDB Search] API key not configured. TMDB_API_KEY:', !!process.env.TMDB_API_KEY, 'TMDB_READ_ACCESS_TOKEN:', !!process.env.TMDB_API_READ_ACCESS_TOKEN)
     return NextResponse.json({ error: 'TMDB API key not configured' }, { status: 500 })
   }
 

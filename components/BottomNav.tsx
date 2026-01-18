@@ -27,7 +27,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border safe-bottom safe-x z-50">
-      <div className="flex justify-around items-center h-16 max-w-full overflow-hidden">
+      <div className="flex justify-around items-center h-20 max-w-full overflow-hidden pb-4">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
           return (
@@ -35,7 +35,7 @@ export function BottomNav() {
               key={item.href}
               href={getHref(item.href)}
               className={cn(
-                'flex flex-col items-center justify-center flex-1 h-full min-w-0 px-1',
+                'flex flex-col items-center justify-center flex-1 min-w-0 px-1 pt-2',
                 'transition-colors active:opacity-70 touch-manipulation',
                 isActive ? 'text-foreground' : 'text-muted-foreground'
               )}

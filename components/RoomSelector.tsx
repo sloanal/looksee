@@ -90,7 +90,7 @@ export function RoomSelector() {
               }`}
             >
               <div>Just My Stuff</div>
-              <div className="text-xs text-muted-foreground">Everything you've added</div>
+              <div className="text-xs text-muted-foreground">Everything you&apos;ve added</div>
             </button>
             <button
               onClick={() => handleSelect('all-rooms')}

@@ -34,10 +34,10 @@ const getTmdbAuth = () => {
   }
   const apiKey = normalizeToken(TMDB_API_KEY)
   if (apiKey) {
-    return { 
-      type: (shouldTreatAsBearer(apiKey) ? 'bearer' : 'apiKey') as const, 
-      value: apiKey 
+    if (shouldTreatAsBearer(apiKey)) {
+      return { type: 'bearer' as const, value: apiKey }
     }
+    return { type: 'apiKey' as const, value: apiKey }
   }
   return { type: 'none' as const, value: '' }
 }

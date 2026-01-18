@@ -764,44 +764,48 @@ export default function ProfilePage() {
       {(showInviteModal || inviteModalClosing) && (
         <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${inviteModalClosing ? 'closing' : ''}`} onClick={handleCloseInviteModal}>
           <div className={`bg-white rounded-lg max-w-md w-full p-6 modal-content ${inviteModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-start mb-4">
-              <h2 className="text-2xl font-bold text-gray-900">Invite to {showInviteModal?.name}</h2>
-              <button
-                onClick={handleCloseInviteModal}
-                className="text-gray-500 text-2xl"
-              >
-                ×
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Invite Code</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={showInviteModal.inviteCode}
-                    readOnly
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md bg-gray-100 font-mono"
-                  />
+            {showInviteModal && (
+              <>
+                <div className="flex justify-between items-start mb-4">
+                  <h2 className="text-2xl font-bold text-gray-900">Invite to {showInviteModal.name}</h2>
                   <button
-                    onClick={() => copyInviteCode(showInviteModal.inviteCode)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    onClick={handleCloseInviteModal}
+                    className="text-gray-500 text-2xl"
                   >
-                    Copy
+                    ×
                   </button>
                 </div>
-              </div>
-              <p className="text-sm text-gray-600">
-                Share this code with others so they can join your room. They can enter it on the
-                rooms setup page.
-              </p>
-              <button
-                onClick={handleCloseInviteModal}
-                className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-              >
-                Close
-              </button>
-            </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Invite Code</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={showInviteModal.inviteCode}
+                        readOnly
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-md bg-gray-100 font-mono"
+                      />
+                      <button
+                        onClick={() => copyInviteCode(showInviteModal.inviteCode)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Share this code with others so they can join your room. They can enter it on the
+                    rooms setup page.
+                  </p>
+                  <button
+                    onClick={handleCloseInviteModal}
+                    className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                  >
+                    Close
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

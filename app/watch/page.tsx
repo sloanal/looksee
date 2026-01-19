@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
-import { Film, Tv, Video, Link as LinkIcon, Calendar, Star } from 'lucide-react'
+import { Film, Tv, Video, Link as LinkIcon, Calendar, Star, ArrowLeft } from 'lucide-react'
 import { RoomSelector } from '@/components/RoomSelector'
 import { RoomMembersAvatars } from '@/components/RoomMembersAvatars'
 import { DuotoneIcon } from '@/components/DuotoneIcon'
@@ -16,6 +16,7 @@ import {
   CardContent,
   CardTitle,
   CardSubtitle,
+  CardDescription,
   CardGenres,
   CardBadge,
   CardActions,
@@ -41,8 +42,11 @@ interface Recommendation {
   title: string
   type: string
   posterUrl?: string
+  description?: string
   genres: string[]
   releaseDate?: string
+  tmdbId?: string | null
+  sourceType?: string
   myExcitement?: number
   myStatus?: string
   interestedCount: number
@@ -64,6 +68,9 @@ export default function WatchPage() {
   const [loading, setLoading] = useState(false)
   const [selectedItem, setSelectedItem] = useState<Recommendation | null>(null)
   const [showWarning, setShowWarning] = useState(false)
+  const [detailModalItem, setDetailModalItem] = useState<Recommendation | null>(null)
+  const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
+  const [loadingTrailer, setLoadingTrailer] = useState(false)
   const { isClosing: isWarningClosing, handleClose: handleWarningClose } = useModalAnimation(() => {
     setShowWarning(false)
     setSelectedItem(null)
@@ -77,18 +84,9 @@ export default function WatchPage() {
       return
     }
 
-    // Check if user has rooms (needed for recommendations)
-    if (roomId === null || roomId === 'all-rooms') {
-      fetch('/api/rooms')
-        .then((res) => res.json())
-        .then((data) => {
-          if (!data.rooms || data.rooms.length === 0) {
-            router.push('/rooms/setup')
-          }
-          // Otherwise, allow null roomId or "all-rooms" to persist
-        })
-    }
-  }, [session, status, roomId, router])
+    // Allow users to access watch page even without rooms
+    // Recommendations API will return empty array if no rooms, which is fine
+  }, [session, status, router])
 
   const handleGetRecommendations = async () => {
     setLoading(true)
@@ -144,6 +142,28 @@ export default function WatchPage() {
     setSelectedItem(null)
   }
 
+  async function loadTrailer(item: Recommendation) {
+    if (!item.tmdbId || !item.sourceType || item.sourceType.toLowerCase() !== 'tmdb') {
+      return
+    }
+
+    setLoadingTrailer(true)
+    try {
+      const type = item.type.toLowerCase() === 'movie' ? 'movie' : 'tv'
+      const res = await fetch(`/api/tmdb/videos?id=${item.tmdbId}&type=${type}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.trailer?.url) {
+          setTrailerUrl(data.trailer.url)
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load trailer:', err)
+    } finally {
+      setLoadingTrailer(false)
+    }
+  }
+
   // Show loading while checking rooms if needed
   // Allow null roomId (Just My Stuff) and "all-rooms" to proceed
 
@@ -157,6 +177,7 @@ export default function WatchPage() {
           </div>
         </div>
         <div className="p-4">
+          <p className="text-muted-foreground mb-4">We&apos;ll do our best to suggest something you&apos;ll like.</p>
           <h2 className="text-2xl font-bold mb-6 text-foreground">Who&apos;s watching?</h2>
 
           <div className="space-y-4">
@@ -189,11 +210,15 @@ export default function WatchPage() {
       <div className="max-w-4xl mx-auto">
         <div className="sticky top-0 bg-background border-b border-border z-10 p-4">
           <div className="flex items-center gap-3 mb-4">
-            <div className="flex items-center gap-4">
-              <button onClick={() => setStep('who')} className="text-primary">
-                ← Back
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setStep('who')}
+                className="flex items-center justify-center p-1.5 -ml-1 rounded-md hover:bg-accent transition-colors"
+                aria-label="Back"
+              >
+                <DuotoneIcon icon={ArrowLeft} size={20} />
               </button>
-              <h1 className="text-2xl font-bold text-foreground">Watch from</h1>
+              <h1 className="text-2xl font-bold text-foreground whitespace-nowrap leading-tight">Watch from</h1>
             </div>
             <RoomSelector />
           </div>
@@ -238,12 +263,16 @@ export default function WatchPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="sticky top-0 bg-background border-b border-border z-10 p-4">
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-4">
-            <button onClick={() => setStep('preferences')} className="text-primary">
-              ← Back
+          <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setStep('preferences')}
+              className="flex items-center justify-center p-1.5 -ml-1 rounded-md hover:bg-accent transition-colors"
+              aria-label="Back"
+            >
+              <DuotoneIcon icon={ArrowLeft} size={20} />
             </button>
-            <h1 className="text-2xl font-bold text-foreground">Watch from</h1>
+            <h1 className="text-2xl font-bold text-foreground whitespace-nowrap leading-tight">Watch from</h1>
             <RoomSelector />
           </div>
           <RoomMembersAvatars />
@@ -251,7 +280,10 @@ export default function WatchPage() {
       </div>
 
       <div className="p-4">
-        <h2 className="text-2xl font-bold mb-6 text-foreground">Recommendations</h2>
+        <h2 className="text-2xl font-bold mb-2 text-foreground">Recommendations</h2>
+        {recommendations.length > 0 && (
+          <p className="text-muted-foreground mb-4">Based on the excitement levels and who&apos;s seen what, these are our recommendations for what you should watch.</p>
+        )}
       </div>
 
       {recommendations.length === 0 ? (
@@ -265,13 +297,14 @@ export default function WatchPage() {
           </button>
         </div>
       ) : (
-        <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
+        <>
+          <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
           <div className="space-y-4 bg-content p-4">
             {recommendations.map((rec, index) => (
             <MediaCard
               key={rec.id}
               variant={index === 0 ? 'highlighted' : 'default'}
-              className="p-6"
+              className="relative"
             >
               {index === 0 && (
                 <CardHeader>
@@ -280,22 +313,43 @@ export default function WatchPage() {
               )}
 
               <CardLayout>
-                <CardPoster src={rec.posterUrl} alt={rec.title} width={80} height={120} />
-                <CardContent>
-                  <CardTitle className="text-xl">{rec.title}</CardTitle>
-                  <div className="flex items-center gap-1 mb-0.5">
-                    <DuotoneIcon icon={getTypeIcon(rec.type)} size={12} />
-                    <CardSubtitle className="mb-0">{rec.type}</CardSubtitle>
-                    {rec.releaseDate && (
-                      <>
-                        <DuotoneIcon icon={Calendar} size={12} />
-                        <p className="text-xs text-muted-foreground mb-0">
-                          {new Date(rec.releaseDate).getFullYear()}
-                        </p>
-                      </>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setDetailModalItem(rec)
+                    loadTrailer(rec)
+                  }}
+                  className="cursor-pointer pt-2"
+                >
+                  <CardPoster src={rec.posterUrl} alt={rec.title} width={80} height={120} />
+                </div>
+                <CardContent className="pr-0 py-2">
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setDetailModalItem(rec)
+                      loadTrailer(rec)
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <CardTitle>{rec.title}</CardTitle>
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <DuotoneIcon icon={getTypeIcon(rec.type)} size={12} />
+                      <CardSubtitle className="mb-0">{rec.type}</CardSubtitle>
+                      {rec.releaseDate && (
+                        <>
+                          <DuotoneIcon icon={Calendar} size={12} />
+                          <p className="text-xs text-muted-foreground mb-0">
+                            {new Date(rec.releaseDate).getFullYear()}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    <CardGenres genres={rec.genres} maxDisplay={3} />
+                    {rec.description && (
+                      <CardDescription>{rec.description}</CardDescription>
                     )}
                   </div>
-                  <CardGenres genres={rec.genres} maxDisplay={3} />
                 </CardContent>
               </CardLayout>
 
@@ -337,6 +391,7 @@ export default function WatchPage() {
             ))}
           </div>
         </div>
+        </>
       )}
 
       {showWarning && selectedItem && (
@@ -370,6 +425,129 @@ export default function WatchPage() {
           </div>
         </div>
       )}
+
+      {detailModalItem && (
+        <DetailModal
+          item={detailModalItem}
+          trailerUrl={trailerUrl}
+          loadingTrailer={loadingTrailer}
+          onClose={() => {
+            setDetailModalItem(null)
+            setTrailerUrl(null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function DetailModal({
+  item,
+  trailerUrl,
+  loadingTrailer,
+  onClose,
+}: {
+  item: Recommendation
+  trailerUrl: string | null
+  loadingTrailer: boolean
+  onClose: () => void
+}) {
+  const { isClosing, handleClose } = useModalAnimation(onClose)
+
+  return (
+    <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center pt-4 px-4 pb-20 modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
+      <div 
+        className={`bg-card rounded-lg max-w-4xl w-full h-[calc(100vh-6rem)] flex flex-col modal-content ${isClosing ? 'closing' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 pt-4 overflow-y-auto flex-1">
+          <div className="flex justify-between items-start mb-4">
+            <h2 className="text-2xl font-bold text-foreground">{item.title}</h2>
+            <button onClick={handleClose} className="text-muted-foreground text-2xl hover:text-foreground">
+              ×
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {item.posterUrl && (
+              <div className="flex-shrink-0">
+                <Image
+                  src={item.posterUrl}
+                  alt={item.title}
+                  width={300}
+                  height={450}
+                  className="rounded object-cover w-full"
+                />
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {item.description && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 text-foreground">Description</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
+                </div>
+              )}
+
+              {item.genres.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 text-foreground">Genres</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {item.genres.map((genre, i) => (
+                      <span
+                        key={i}
+                        className="px-2 py-1 bg-secondary text-muted-foreground text-xs rounded"
+                      >
+                        {genre}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {item.releaseDate && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 text-foreground">Release Date</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(item.releaseDate).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {loadingTrailer ? (
+            <div className="mb-6">
+              <div className="bg-muted rounded-lg aspect-video flex items-center justify-center">
+                <p className="text-muted-foreground">Loading trailer...</p>
+              </div>
+            </div>
+          ) : trailerUrl ? (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-2 text-foreground">Trailer</h3>
+              <div className="bg-black rounded-lg overflow-hidden aspect-video">
+                <iframe
+                  src={trailerUrl}
+                  title={`${item.title} Trailer`}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          ) : item.tmdbId && item.sourceType?.toLowerCase() === 'tmdb' ? (
+            <div className="mb-6">
+              <div className="bg-muted rounded-lg aspect-video flex items-center justify-center">
+                <p className="text-muted-foreground">No trailer available</p>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
     </div>
   )
 }

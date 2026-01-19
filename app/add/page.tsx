@@ -71,12 +71,14 @@ export default function AddPage() {
   const [selectedResult, setSelectedResult] = useState<TMDBDetails | null>(null)
   const [loading, setLoading] = useState(false)
   const [hasAutoSearched, setHasAutoSearched] = useState(false)
+  const [lastSearchedQuery, setLastSearchedQuery] = useState<string>('')
 
   // Sync search param to search query
   useEffect(() => {
     if (searchParam) {
       setSearchQuery(searchParam)
       setHasAutoSearched(false) // Reset so we can auto-search again if param changes
+      setLastSearchedQuery('') // Reset last searched query when search param changes
     }
   }, [searchParam])
 
@@ -99,26 +101,16 @@ export default function AddPage() {
       return
     }
 
-    // Only auto-redirect if we're on the add page with no roomId and user hasn't explicitly selected "Just My Stuff"
-    // We check if roomId is explicitly null (not "all-rooms") and if so, allow it to stay
-    // The check for rooms.length === 0 still applies to ensure user has at least one room
-    if (roomId === null) {
-      fetch('/api/rooms')
-        .then((res) => res.json())
-        .then((data) => {
-          if (!data.rooms || data.rooms.length === 0) {
-            router.push('/rooms/setup')
-          }
-          // Otherwise, allow null roomId to persist (user selected "Just My Stuff")
-        })
-    }
-  }, [session, sessionStatus, roomId, router])
+    // Allow users to add items even without rooms - they can add to "Just My Stuff"
+    // The API will handle creating a default room if needed
+  }, [session, sessionStatus, router])
 
   const handleSearch = useCallback(async () => {
     if (!searchQuery.trim()) return
 
     setLoading(true)
     setSearchResults([])
+    setLastSearchedQuery(searchQuery.trim())
     try {
       const res = await fetch(`/api/tmdb/search?query=${encodeURIComponent(searchQuery)}&type=mixed`)
       
@@ -617,7 +609,7 @@ export default function AddPage() {
         <div className="text-center text-muted-foreground py-8">Searching...</div>
       )}
 
-      {!loading && searchQuery && searchResults.length === 0 && (
+      {!loading && lastSearchedQuery && searchQuery.trim() === lastSearchedQuery && searchResults.length === 0 && (
         <div className="text-center text-muted-foreground py-8 space-y-4">
           <div>No results found</div>
           <div className="flex flex-col items-center gap-3">

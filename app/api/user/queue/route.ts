@@ -57,10 +57,31 @@ export async function GET() {
     },
     include: {
       createdBy: {
-        select: { name: true },
+        select: { id: true, name: true },
       },
       room: {
         select: { id: true, name: true },
+      },
+      mediaItemRooms: {
+        include: {
+          room: {
+            select: { id: true, name: true },
+          },
+          addedBy: {
+            select: { id: true, name: true },
+          },
+        },
+      },
+      preferences: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              imageUrl: true,
+            },
+          },
+        },
       },
     },
     orderBy: { createdAt: 'desc' },
@@ -68,10 +89,26 @@ export async function GET() {
 
   const items = unratedItems.map((item) => {
     const genres = item.genres ? JSON.parse(item.genres) : []
+    
+    // Get other users' preferences (exclude current user since these are unrated items)
+    const otherPreferences = item.preferences
+      .filter((p) => p.userId !== session.user.id)
+      .map((p) => ({
+        status: p.status.toLowerCase(),
+        excitement: p.excitement,
+        user: {
+          id: p.user.id,
+          name: p.user.name,
+          imageUrl: p.user.imageUrl,
+        },
+      }))
+
     return {
       id: item.id,
       title: item.title,
       type: item.type.toLowerCase(),
+      tmdbId: item.tmdbId,
+      sourceType: item.sourceType?.toLowerCase(),
       posterUrl: item.posterUrl,
       description: item.description,
       genres,
@@ -79,9 +116,17 @@ export async function GET() {
       rating: item.rating,
       releaseDate: item.releaseDate,
       createdBy: item.createdBy.name,
+      createdByUserId: item.createdBy.id,
       roomId: item.room.id,
       roomName: item.room.name,
       createdAt: item.createdAt,
+      rooms: item.mediaItemRooms.map((mir) => ({
+        id: mir.room.id,
+        name: mir.room.name,
+        addedByUserId: mir.addedByUserId,
+        addedByName: mir.addedBy.name,
+      })),
+      otherPreferences,
     }
   })
 

@@ -1,15 +1,13 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Frown, Meh, Smile } from 'lucide-react'
 import { RoomJoinModal } from '@/components/RoomJoinModal'
 import { RoomSelector } from '@/components/RoomSelector'
 import { DuotoneIcon } from '@/components/DuotoneIcon'
-import { useModalAnimation } from '@/lib/useModalAnimation'
 
 interface User {
   id: string
@@ -27,26 +25,14 @@ interface Room {
   mediaItemCount: number
 }
 
-interface QueueItem {
-  id: string
-  title: string
-  type: string
-  posterUrl?: string
-  genres: string[]
-  createdBy: string
-  roomId: string
-  roomName: string
-}
-
 export default function ProfilePage() {
   const { data: session, status, update } = useSession()
   const router = useRouter()
 
   const [user, setUser] = useState<User | null>(null)
   const [rooms, setRooms] = useState<Room[]>([])
-  const [queue, setQueue] = useState<QueueItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'details' | 'queue' | 'rooms'>('details')
+  const [activeTab, setActiveTab] = useState<'profile' | 'rooms'>('profile')
 
   // Edit states
   const [editing, setEditing] = useState(false)
@@ -67,11 +53,9 @@ export default function ProfilePage() {
   const [createError, setCreateError] = useState('')
   const [deletingRoomId, setDeletingRoomId] = useState<string | null>(null)
   const [leavingRoomId, setLeavingRoomId] = useState<string | null>(null)
-  const [selectedQueueItem, setSelectedQueueItem] = useState<QueueItem | null>(null)
   const [showRoomJoinModal, setShowRoomJoinModal] = useState(false)
   const [joinedRoomId, setJoinedRoomId] = useState<string | null>(null)
   const [joinedMediaCount, setJoinedMediaCount] = useState(0)
-  const queueContainerRef = useRef<HTMLDivElement>(null)
   
   // Modal closing states
   const [inviteModalClosing, setInviteModalClosing] = useState(false)
@@ -116,26 +100,13 @@ export default function ProfilePage() {
     loadData()
   }, [session, status, router])
 
-  // Restore scroll position after queue loads
-  useEffect(() => {
-    if (!loading && activeTab === 'queue' && queue.length > 0) {
-      const savedScrollPosition = sessionStorage.getItem('queueScrollPosition')
-      if (savedScrollPosition) {
-        requestAnimationFrame(() => {
-          window.scrollTo(0, parseInt(savedScrollPosition, 10))
-          sessionStorage.removeItem('queueScrollPosition')
-        })
-      }
-    }
-  }, [loading, activeTab, queue.length])
 
   const loadData = async () => {
     setLoading(true)
     try {
-      const [userRes, roomsRes, queueRes] = await Promise.all([
+      const [userRes, roomsRes] = await Promise.all([
         fetch('/api/user/profile'),
         fetch('/api/rooms'),
-        fetch('/api/user/queue'),
       ])
 
       if (userRes.ok) {
@@ -148,11 +119,6 @@ export default function ProfilePage() {
       if (roomsRes.ok) {
         const roomsData = await roomsRes.json()
         setRooms(roomsData.rooms || [])
-      }
-
-      if (queueRes.ok) {
-        const queueData = await queueRes.json()
-        setQueue(queueData.items || [])
       }
     } catch (err) {
       console.error('Failed to load profile data:', err)
@@ -405,9 +371,10 @@ export default function ProfilePage() {
 
   const handleGoToQueue = () => {
     setShowRoomJoinModal(false)
-    if (joinedRoomId) {
-      router.push(`/onboarding?roomId=${joinedRoomId}`)
-    }
+    // Use setTimeout to ensure modal closes before navigation
+    setTimeout(() => {
+      router.push('/new')
+    }, 100)
   }
 
   const handleCreateRoom = async (e: React.FormEvent) => {
@@ -460,27 +427,17 @@ export default function ProfilePage() {
     <div className="max-w-4xl mx-auto pb-20">
       <div className="sticky top-0 bg-white border-b z-10">
         <div className="p-4">
-          <h1 className="text-2xl font-bold mb-4 text-gray-900">Profile</h1>
+          <h1 className="text-2xl font-bold mb-4 text-gray-900">Settings</h1>
           <div className="flex gap-2 border-b">
             <button
-              onClick={() => setActiveTab('details')}
+              onClick={() => setActiveTab('profile')}
               className={`px-4 py-2 font-medium ${
-                activeTab === 'details'
+                activeTab === 'profile'
                   ? 'border-b-2 border-blue-600 text-blue-600'
                   : 'text-gray-500'
               }`}
             >
-              Details
-            </button>
-            <button
-              onClick={() => setActiveTab('queue')}
-              className={`px-4 py-2 font-medium ${
-                activeTab === 'queue'
-                  ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-500'
-              }`}
-            >
-              Queue ({queue.length})
+              Profile
             </button>
             <button
               onClick={() => setActiveTab('rooms')}
@@ -497,7 +454,7 @@ export default function ProfilePage() {
       </div>
 
       <div className="p-4">
-        {activeTab === 'details' && (
+        {activeTab === 'profile' && (
           <div className="space-y-6">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-start justify-between mb-4">
@@ -637,56 +594,6 @@ export default function ProfilePage() {
                 Log Out
               </button>
             </div>
-          </div>
-        )}
-
-        {activeTab === 'queue' && (
-          <div ref={queueContainerRef} className="space-y-4">
-            {queue.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">
-                <p className="text-lg">No items in your queue</p>
-                <p className="text-sm mt-2">All media items have been rated!</p>
-              </div>
-            ) : (
-              queue.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => setSelectedQueueItem(item)}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
-                >
-                  <div className="flex gap-4">
-                    {item.posterUrl && (
-                      <div className="flex-shrink-0">
-                        <Image
-                          src={item.posterUrl}
-                          alt={item.title}
-                          width={80}
-                          height={120}
-                          className="rounded object-cover"
-                        />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-lg mb-1 text-gray-900">{item.title}</h3>
-                      <p className="text-sm text-gray-600 mb-2 capitalize">{item.type}</p>
-                      <p className="text-sm text-gray-500">In: {item.roomName}</p>
-                      {item.genres.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {item.genres.slice(0, 3).map((genre, i) => (
-                            <span
-                              key={i}
-                              className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded"
-                            >
-                              {genre}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
           </div>
         )}
 
@@ -928,20 +835,6 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {selectedQueueItem && (
-        <QueueItemModal
-          item={selectedQueueItem}
-          onClose={() => setSelectedQueueItem(null)}
-          onSave={() => {
-            // Save scroll position before reload
-            const scrollPosition = window.scrollY || document.documentElement.scrollTop
-            sessionStorage.setItem('queueScrollPosition', scrollPosition.toString())
-            setSelectedQueueItem(null)
-            loadData()
-          }}
-        />
-      )}
-
       <RoomJoinModal
         isOpen={showRoomJoinModal}
         mediaCount={joinedMediaCount}
@@ -949,145 +842,6 @@ export default function ProfilePage() {
         onSkip={handleSkipQueue}
         onGoToQueue={handleGoToQueue}
       />
-    </div>
-  )
-}
-
-function QueueItemModal({
-  item,
-  onClose,
-  onSave,
-}: {
-  item: QueueItem
-  onClose: () => void
-  onSave: () => void
-}) {
-  const [status, setStatus] = useState('have_not_seen')
-  const [excitement, setExcitement] = useState(3)
-  const [saving, setSaving] = useState(false)
-  const { isClosing, handleClose } = useModalAnimation(onClose)
-
-  const handleSave = async () => {
-    setSaving(true)
-    try {
-      const res = await fetch(`/api/media/${item.id}/preference`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, excitement }),
-      })
-
-      if (res.ok) {
-        handleClose()
-        onSave()
-      } else {
-        const error = await res.json()
-        alert(error.error || 'Failed to save preference')
-      }
-    } catch (err) {
-      console.error('Failed to save preference:', err)
-      alert('Failed to save preference')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
-      <div className={`bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto modal-content ${isClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
-        <div className="p-6">
-          <div className="flex justify-between items-start mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">{item.title}</h2>
-            <button onClick={handleClose} className="text-gray-500 text-2xl">
-              ×
-            </button>
-          </div>
-
-          {item.posterUrl && (
-            <div className="mb-4">
-              <Image
-                src={item.posterUrl}
-                alt={item.title}
-                width={200}
-                height={300}
-                className="rounded mx-auto"
-              />
-            </div>
-          )}
-
-          <div className="mb-4">
-            <p className="text-sm text-gray-600 mb-2 capitalize">{item.type}</p>
-            <p className="text-sm text-gray-500 mb-2">In: {item.roomName}</p>
-            {item.genres.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {item.genres.slice(0, 3).map((genre, i) => (
-                  <span
-                    key={i}
-                    className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded"
-                  >
-                    {genre}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Your status</label>
-            <div className="space-y-2">
-              {[
-                { value: 'have_not_seen', label: 'Have not seen' },
-                { value: 'already_seen', label: 'Already seen' },
-              ].map((opt) => (
-                <label key={opt.value} className="flex items-center">
-                  <input
-                    type="radio"
-                    name="status"
-                    value={opt.value}
-                    checked={status === opt.value}
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="mr-2"
-                  />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">
-              Your excitement
-            </label>
-            <div className="space-y-2">
-              {[
-                { value: 1, label: 'Not excited', icon: Frown },
-                { value: 3, label: 'Neutral', icon: Meh },
-                { value: 5, label: 'Excited', icon: Smile },
-              ].map((opt) => (
-                <label key={opt.value} className="flex items-center">
-                  <input
-                    type="radio"
-                    name="excitement"
-                    value={opt.value}
-                    checked={excitement === opt.value}
-                    onChange={(e) => setExcitement(parseInt(e.target.value))}
-                    className="mr-2"
-                  />
-                  <opt.icon className="w-4 h-4 mr-2" />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full bg-blue-600 text-white py-3 rounded-md font-medium hover:bg-blue-700 disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </button>
-        </div>
-      </div>
     </div>
   )
 }

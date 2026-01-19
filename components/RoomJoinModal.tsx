@@ -45,12 +45,11 @@ export function RoomJoinModal({
           </button>
           <button
             onClick={() => {
-              handleSkip()
               onGoToQueue()
             }}
             className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 font-medium"
           >
-            Go to my queue
+            Go rate what's new
           </button>
         </div>
       </div>

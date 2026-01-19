@@ -98,9 +98,10 @@ export default function RoomSetupPage() {
 
   const handleGoToQueue = () => {
     setShowJoinModal(false)
-    if (joinedRoomId) {
-      router.push(`/onboarding?roomId=${joinedRoomId}`)
-    }
+    // Use setTimeout to ensure modal closes before navigation
+    setTimeout(() => {
+      router.push('/new')
+    }, 100)
   }
 
   if (!session) {

@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { DuotoneIcon } from '@/components/DuotoneIcon'
 import { useModalAnimation } from '@/lib/useModalAnimation'
+import { getAvatarColor } from '@/lib/utils'
 import {
   MediaCard,
   CardLayout,
@@ -530,11 +531,11 @@ export default function BrowsePage() {
                     setDetailModalItem(item)
                     loadTrailer(item)
                   }}
-                  className="cursor-pointer"
+                  className="cursor-pointer pt-2"
                 >
                   <CardPoster src={item.posterUrl} alt={item.title} width={80} height={120} />
                 </div>
-                <CardContent className="pr-0">
+                <CardContent className="pr-0 py-2">
                   <div
                     onClick={(e) => {
                       e.stopPropagation()
@@ -565,14 +566,14 @@ export default function BrowsePage() {
                   </div>
                 </CardContent>
               </CardLayout>
-              <div className="space-y-2 -mx-4 -mb-4 px-4 pt-1 pb-1 border-t border-border mt-2 bg-muted/50">
+              <div className="space-y-0.5 -mx-4 -mb-4 px-4 pt-1 pb-1 border-t border-border mt-2 bg-muted/50">
                 {item.myPreference ? (
                   <div
                     onClick={(e) => {
                       e.stopPropagation()
                       setSelectedItem(item)
                     }}
-                    className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/70 transition-colors -mx-4 px-4 py-2 rounded"
+                    className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/70 transition-colors -mx-4 px-4 py-0.5 rounded"
                   >
                     <div className="flex items-center gap-2 flex-1">
                       {myAvatar ? (
@@ -587,7 +588,10 @@ export default function BrowsePage() {
                           />
                         </div>
                       ) : (
-                        <div className="w-6 h-6 rounded-full bg-background flex items-center justify-center text-xs flex-shrink-0 text-foreground">
+                        <div 
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 text-white font-medium"
+                          style={{ backgroundColor: getAvatarColor(session?.user?.id || session?.user?.name || 'user') }}
+                        >
                           {(session?.user?.name?.[0] || '?').toUpperCase()}
                         </div>
                       )}
@@ -607,47 +611,64 @@ export default function BrowsePage() {
                     </div>
                     <DuotoneIcon icon={Edit} size={14} />
                   </div>
-                ) : (
-                  <div className="flex items-center">
+                ) : null}
+                {item.otherPreferences && item.otherPreferences.length > 0 && (
+                  <>
+                    {item.otherPreferences.map((pref) => (
+                      <div
+                        key={pref.user.id}
+                        className="flex items-center gap-2 text-sm -mx-4 px-4 py-0.5"
+                      >
+                        <div className="flex items-center gap-2 flex-1">
+                          {pref.user.imageUrl ? (
+                            <div className="w-6 h-6 flex-shrink-0">
+                              <Image
+                                src={pref.user.imageUrl}
+                                alt={pref.user.name}
+                                width={24}
+                                height={24}
+                                className="rounded-full object-cover w-full h-full"
+                                unoptimized
+                              />
+                            </div>
+                          ) : (
+                            <div 
+                              className="w-6 h-6 rounded-full flex items-center justify-center text-xs flex-shrink-0 text-white font-medium"
+                              style={{ backgroundColor: getAvatarColor(pref.user.id || pref.user.name) }}
+                            >
+                              {(pref.user.name[0] || '?').toUpperCase()}
+                            </div>
+                          )}
+                          <span className="text-foreground flex items-center gap-2">
+                            <DuotoneIcon 
+                              icon={pref.excitement === 1 ? Frown : pref.excitement === 3 ? Meh : Smile} 
+                              size={18} 
+                              active
+                              strokeWidth={1.5}
+                            />
+                            {(() => {
+                              const excitementText = getExcitementLabel(pref.excitement)
+                              return excitementText ? `${excitementText}, ` : null
+                            })()}
+                            {getStatusLabel(pref.status)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+                {!item.myPreference && (
+                  <div className="flex justify-center pt-1 pb-2">
                     <Button
                       onClick={(e) => {
                         e.stopPropagation()
                         setSelectedItem(item)
                       }}
                       size="sm"
+                      className="h-7 px-2.5 text-xs"
                     >
-                      Edit
+                      Add your excitement
                     </Button>
-                  </div>
-                )}
-                {item.otherPreferences && item.otherPreferences.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-3 text-sm pt-1">
-                    {item.otherPreferences.map((pref) => (
-                      <div key={pref.user.id} className="flex items-center gap-2">
-                        {pref.user.imageUrl ? (
-                          <div className="w-6 h-6 flex-shrink-0">
-                            <Image
-                              src={pref.user.imageUrl}
-                              alt={pref.user.name}
-                              width={24}
-                              height={24}
-                              className="rounded-full object-cover w-full h-full"
-                              unoptimized
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-6 h-6 rounded-full bg-background flex items-center justify-center text-xs flex-shrink-0 text-foreground">
-                            {(pref.user.name[0] || '?').toUpperCase()}
-                          </div>
-                        )}
-                        <span className="text-foreground flex items-center gap-0.5">
-                          {pref.user.name.split(' ')[0]}: {getStatusLabel(pref.status)} •{' '}
-                          {Array.from({ length: pref.excitement }).map((_, i) => (
-                            <DuotoneIcon key={i} icon={Star} size={14} active />
-                          ))}
-                        </span>
-                      </div>
-                    ))}
                   </div>
                 )}
               </div>

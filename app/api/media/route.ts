@@ -301,20 +301,43 @@ export async function POST(request: NextRequest) {
 
     // Get user's first room for the required roomId field (backward compatibility)
     // The item won't be added to any room because we don't create a MediaItemRoom entry
-    const memberships = await prisma.roomMembership.findMany({
+    let memberships = await prisma.roomMembership.findMany({
       where: { userId: session.user.id },
       select: { roomId: true },
       take: 1,
     })
 
-    if (memberships.length === 0) {
-      return NextResponse.json(
-        { error: 'You must be a member of at least one room' },
-        { status: 400 }
-      )
-    }
+    let roomId: string
 
-    const roomId = memberships[0].roomId
+    // If user has no rooms, automatically create a default personal room
+    if (memberships.length === 0) {
+      const { generateInviteCode } = await import('@/lib/utils')
+      
+      // Generate unique invite code
+      let inviteCode = generateInviteCode()
+      let exists = await prisma.room.findUnique({ where: { inviteCode } })
+      while (exists) {
+        inviteCode = generateInviteCode()
+        exists = await prisma.room.findUnique({ where: { inviteCode } })
+      }
+
+      const defaultRoom = await prisma.room.create({
+        data: {
+          name: 'My Stuff',
+          inviteCode,
+          memberships: {
+            create: {
+              userId: session.user.id,
+              role: 'owner',
+            },
+          },
+        },
+      })
+
+      roomId = defaultRoom.id
+    } else {
+      roomId = memberships[0].roomId
+    }
 
     // Check if item already exists (by tmdbId if provided)
     let mediaItem = null

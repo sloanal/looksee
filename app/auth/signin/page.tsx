@@ -55,13 +55,13 @@ export default function SignInPage() {
   return (
     <div className="min-h-screen flex items-start justify-center px-4 pt-4" style={{ backgroundColor: '#F9F3E4' }}>
       <div className="w-full max-w-md">
-        <div className="mb-3 flex justify-center overflow-hidden" style={{ height: '180px' }}>
+        <div className="mb-3 flex justify-center overflow-hidden" style={{ height: '180px', width: '100vw', marginLeft: '-1rem', marginRight: '-1rem' }}>
           <video
             autoPlay
             loop
             muted
             playsInline
-            className="w-full max-w-xs rounded-lg object-cover"
+            className="w-full rounded-lg object-cover"
             style={{ objectPosition: 'center', height: '150%', marginTop: '-10%' }}
           >
             <source src="/welcome.mp4" type="video/mp4" />
@@ -74,7 +74,7 @@ export default function SignInPage() {
           <p className="text-muted-foreground">Sign in to your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-card rounded-lg shadow-md p-6 border border-border">
+        <form onSubmit={handleSubmit} className="p-6">
           {error && (
             <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 text-destructive rounded">
               {error}

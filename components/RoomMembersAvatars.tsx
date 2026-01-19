@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Image from 'next/image'
+import { getAvatarColor } from '@/lib/utils'
 
 interface Member {
   id: string
@@ -65,7 +66,10 @@ export function RoomMembersAvatars() {
               sizes="32px"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-primary text-primary-foreground text-xs font-medium">
+            <div 
+              className="w-full h-full flex items-center justify-center text-white text-xs font-medium"
+              style={{ backgroundColor: getAvatarColor(member.id || member.name) }}
+            >
               {member.name.charAt(0).toUpperCase()}
             </div>
           )}

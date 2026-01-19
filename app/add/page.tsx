@@ -149,7 +149,7 @@ export default function AddPage() {
 
   // Auto-search when search param is provided
   useEffect(() => {
-    if (searchParam && !hasAutoSearched && session && sessionStatus !== 'loading' && searchQuery.trim()) {
+    if (searchParam && !hasAutoSearched && sessionStatus === 'authenticated' && session && searchQuery.trim()) {
       setHasAutoSearched(true)
       handleSearch()
     }

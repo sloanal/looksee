@@ -378,7 +378,7 @@ export default function BrowsePage() {
           <div>No saved items found</div>
           {debouncedSearch && (
             <div className="flex flex-col items-center gap-3">
-              <p className="text-sm">Can't find what you're looking for?</p>
+              <p className="text-sm">Can&apos;t find what you&apos;re looking for?</p>
               <Button
                 onClick={() => {
                   const params = new URLSearchParams()
@@ -388,7 +388,7 @@ export default function BrowsePage() {
                 }}
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                Search for "{debouncedSearch}" and add
+                Search for &quot;{debouncedSearch}&quot; and add
               </Button>
             </div>
           )}

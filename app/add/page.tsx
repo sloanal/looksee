@@ -621,7 +621,7 @@ export default function AddPage() {
         <div className="text-center text-muted-foreground py-8 space-y-4">
           <div>No results found</div>
           <div className="flex flex-col items-center gap-3">
-            <p className="text-sm">Can't find what you're looking for?</p>
+            <p className="text-sm">Can&apos;t find what you&apos;re looking for?</p>
             <Button
               onClick={() => {
                 if (searchQuery) setTitle(searchQuery)
@@ -629,7 +629,7 @@ export default function AddPage() {
               }}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              Add "{searchQuery}" manually
+              Add &quot;{searchQuery}&quot; manually
             </Button>
           </div>
         </div>

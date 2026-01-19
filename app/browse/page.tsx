@@ -181,10 +181,25 @@ export default function BrowsePage() {
     if (!loading && items.length > 0) {
       const savedScrollPosition = sessionStorage.getItem('browseScrollPosition')
       if (savedScrollPosition) {
-        // Use requestAnimationFrame to ensure DOM is ready
+        const position = parseInt(savedScrollPosition, 10)
+        // Use double requestAnimationFrame for Safari compatibility
+        // Safari needs more time for DOM to be fully rendered
         requestAnimationFrame(() => {
-          window.scrollTo(0, parseInt(savedScrollPosition, 10))
-          sessionStorage.removeItem('browseScrollPosition')
+          requestAnimationFrame(() => {
+            // Try multiple methods for Safari compatibility
+            window.scrollTo({
+              top: position,
+              behavior: 'instant' as ScrollBehavior
+            })
+            // Fallback for older Safari versions
+            if (window.scrollY !== position && document.documentElement) {
+              document.documentElement.scrollTop = position
+            }
+            if (document.body && document.body.scrollTop !== position) {
+              document.body.scrollTop = position
+            }
+            sessionStorage.removeItem('browseScrollPosition')
+          })
         })
       }
     }
@@ -684,8 +699,11 @@ export default function BrowsePage() {
           onClose={() => setSelectedItem(null)} 
           roomId={roomId}
           onSave={() => {
-            // Save scroll position before reload
-            const scrollPosition = window.scrollY || document.documentElement.scrollTop
+            // Save scroll position before reload - use multiple methods for Safari compatibility
+            const scrollPosition = window.scrollY || 
+                                  document.documentElement.scrollTop || 
+                                  document.body.scrollTop || 
+                                  0
             sessionStorage.setItem('browseScrollPosition', scrollPosition.toString())
             loadItems()
           }}

@@ -110,13 +110,23 @@ export default function NewPage() {
   // Restore scroll position after queue loads
   useEffect(() => {
     if (!loading && queue.length > 0 && scrollPositionRef.current !== null) {
-      // Use multiple animation frames to ensure DOM is fully rendered
+      const position = scrollPositionRef.current
+      // Use double requestAnimationFrame for Safari compatibility
+      // Safari needs more time for DOM to be fully rendered
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
+          // Try multiple methods for Safari compatibility
           window.scrollTo({
-            top: scrollPositionRef.current!,
-            behavior: 'instant'
+            top: position,
+            behavior: 'instant' as ScrollBehavior
           })
+          // Fallback for older Safari versions
+          if (window.scrollY !== position && document.documentElement) {
+            document.documentElement.scrollTop = position
+          }
+          if (document.body && document.body.scrollTop !== position) {
+            document.body.scrollTop = position
+          }
           scrollPositionRef.current = null
         })
       })
@@ -212,7 +222,11 @@ export default function NewPage() {
                   <div
                 onClick={(e) => {
                   e.stopPropagation()
-                  scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop
+                  // Get scroll position with multiple fallbacks for Safari compatibility
+                  scrollPositionRef.current = window.scrollY || 
+                                              document.documentElement.scrollTop || 
+                                              document.body.scrollTop || 
+                                              0
                   setSelectedQueueItem(item)
                   loadTrailer(item)
                 }}
@@ -224,7 +238,11 @@ export default function NewPage() {
                     <div
                 onClick={(e) => {
                   e.stopPropagation()
-                  scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop
+                  // Get scroll position with multiple fallbacks for Safari compatibility
+                  scrollPositionRef.current = window.scrollY || 
+                                              document.documentElement.scrollTop || 
+                                              document.body.scrollTop || 
+                                              0
                   setSelectedQueueItem(item)
                   loadTrailer(item)
                 }}
@@ -255,7 +273,11 @@ export default function NewPage() {
                     <Button
                 onClick={(e) => {
                   e.stopPropagation()
-                  scrollPositionRef.current = window.scrollY || document.documentElement.scrollTop
+                  // Get scroll position with multiple fallbacks for Safari compatibility
+                  scrollPositionRef.current = window.scrollY || 
+                                              document.documentElement.scrollTop || 
+                                              document.body.scrollTop || 
+                                              0
                   setSelectedQueueItem(item)
                   loadTrailer(item)
                 }}

@@ -49,7 +49,7 @@ export function RoomJoinModal({
             }}
             className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 font-medium"
           >
-            Go rate what's new
+            Go rate what&apos;s new
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
@@ -101,6 +101,7 @@ export default function BrowsePage() {
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
   const [loadingTrailer, setLoadingTrailer] = useState(false)
   const [editingRoomsItem, setEditingRoomsItem] = useState<MediaItem | null>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   const loadItems = useCallback(async () => {
     setLoading(true)
@@ -174,6 +175,20 @@ export default function BrowsePage() {
     loadMyAvatar()
   }, [session, status, loadItems, router])
 
+  // Restore scroll position after items load
+  useEffect(() => {
+    if (!loading && items.length > 0) {
+      const savedScrollPosition = sessionStorage.getItem('browseScrollPosition')
+      if (savedScrollPosition) {
+        // Use requestAnimationFrame to ensure DOM is ready
+        requestAnimationFrame(() => {
+          window.scrollTo(0, parseInt(savedScrollPosition, 10))
+          sessionStorage.removeItem('browseScrollPosition')
+        })
+      }
+    }
+  }, [loading, items.length])
+
   // Handle clicks outside menu
   useEffect(() => {
     if (!openMenuId) {
@@ -222,6 +237,16 @@ export default function BrowsePage() {
       already_seen: 'Already seen',
     }
     return labels[status] || status
+  }
+
+  const getExcitementLabel = (excitement?: number) => {
+    if (!excitement) return ''
+    const labels: Record<number, string> = {
+      1: 'Not excited',
+      3: 'Neutral',
+      5: 'Excited',
+    }
+    return labels[excitement] || ''
   }
 
   const handleDelete = async (item: MediaItem) => {
@@ -344,14 +369,32 @@ export default function BrowsePage() {
         </div>
       </div>
 
+      <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
+        <div ref={scrollContainerRef} className="p-4 space-y-4 bg-content min-h-[calc(100vh-200px)]">
       {loading ? (
-        <div className="p-4 text-center text-muted-foreground">Loading...</div>
+        <div className="text-center text-muted-foreground py-8">Loading...</div>
       ) : items.length === 0 ? (
-        <div className="p-4 text-center text-muted-foreground">No items found</div>
+        <div className="text-center text-muted-foreground py-8 space-y-4">
+          <div>No saved items found</div>
+          {debouncedSearch && (
+            <div className="flex flex-col items-center gap-3">
+              <p className="text-sm">Can't find what you're looking for?</p>
+              <Button
+                onClick={() => {
+                  const params = new URLSearchParams()
+                  if (roomId) params.set('roomId', roomId)
+                  params.set('search', debouncedSearch)
+                  router.push(`/add?${params.toString()}`)
+                }}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Search for "{debouncedSearch}" and add
+              </Button>
+            </div>
+          )}
+        </div>
       ) : (
-        <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
-          <div className="p-4 space-y-4 bg-content">
-          {items.map((item) => (
+          items.map((item) => (
             <MediaCard key={item.id} variant="default" className="relative">
               {item.rooms && item.rooms.length > 0 && (
                 <div
@@ -372,8 +415,8 @@ export default function BrowsePage() {
                       </span>
                     ))}
                   </div>
-                  <div className="absolute right-[14px] top-2 w-5 h-5 rounded-full border border-muted-foreground/30 flex items-center justify-center text-muted-foreground pointer-events-none">
-                    <Plus size={10} strokeWidth={3} />
+                  <div className="absolute right-[16px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-muted-foreground flex items-center justify-center text-muted-foreground opacity-60 pointer-events-none" style={{ borderWidth: '1.5px' }}>
+                    <Plus size={8} strokeWidth={3.5} />
                   </div>
                 </div>
               )}
@@ -383,7 +426,7 @@ export default function BrowsePage() {
                     e.stopPropagation()
                     setOpenMenuId(openMenuId === item.id ? null : item.id)
                   }}
-                  className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-full transition-colors"
+                  className="p-2 text-muted-foreground opacity-60 hover:text-foreground hover:opacity-100 hover:bg-accent rounded-full transition-colors"
                   aria-label="Menu"
                 >
                   <svg
@@ -430,7 +473,7 @@ export default function BrowsePage() {
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                       </svg>
-                      Edit
+                      Edit details
                     </Button>
                     <div className="relative">
                       <button
@@ -555,6 +598,10 @@ export default function BrowsePage() {
                           active
                           strokeWidth={1.5}
                         />
+                        {(() => {
+                          const excitementText = getExcitementLabel(item.myPreference.excitement)
+                          return excitementText ? `${excitementText}, ` : null
+                        })()}
                         {getStatusLabel(item.myPreference.status)}
                       </span>
                     </div>
@@ -605,13 +652,23 @@ export default function BrowsePage() {
                 )}
               </div>
             </MediaCard>
-          ))}
-          </div>
-        </div>
+          ))
       )}
+        </div>
+      </div>
 
       {selectedItem && (
-        <ItemDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} roomId={roomId} />
+        <ItemDetailModal 
+          item={selectedItem} 
+          onClose={() => setSelectedItem(null)} 
+          roomId={roomId}
+          onSave={() => {
+            // Save scroll position before reload
+            const scrollPosition = window.scrollY || document.documentElement.scrollTop
+            sessionStorage.setItem('browseScrollPosition', scrollPosition.toString())
+            loadItems()
+          }}
+        />
       )}
 
       {editingItem && (
@@ -656,10 +713,12 @@ function ItemDetailModal({
   item,
   onClose,
   roomId,
+  onSave,
 }: {
   item: MediaItem
   onClose: () => void
   roomId: string | null
+  onSave?: () => void
 }) {
   const [status, setStatus] = useState(item.myPreference?.status || 'have_not_seen')
   const [excitement, setExcitement] = useState(item.myPreference?.excitement || 3)
@@ -675,7 +734,11 @@ function ItemDetailModal({
         body: JSON.stringify({ status, excitement }),
       })
       handleClose()
-      window.location.reload()
+      if (onSave) {
+        onSave()
+      } else {
+        window.location.reload()
+      }
     } catch (err) {
       console.error('Failed to save preference:', err)
     } finally {
@@ -698,7 +761,7 @@ function ItemDetailModal({
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Status</label>
+            <label className="block text-sm font-medium mb-2">Your status</label>
             <div className="space-y-2">
               {[
                 { value: 'have_not_seen', label: 'Have not seen' },
@@ -721,13 +784,13 @@ function ItemDetailModal({
 
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">
-              Excitement
+              Your excitement
             </label>
             <div className="space-y-2">
               {[
-                { value: 1, label: 'Not excited' },
-                { value: 3, label: 'Neutral' },
-                { value: 5, label: 'Excited' },
+                { value: 1, label: 'Not excited', icon: Frown },
+                { value: 3, label: 'Neutral', icon: Meh },
+                { value: 5, label: 'Excited', icon: Smile },
               ].map((opt) => (
                 <label key={opt.value} className="flex items-center">
                   <input
@@ -738,6 +801,7 @@ function ItemDetailModal({
                     onChange={(e) => setExcitement(parseInt(e.target.value))}
                     className="mr-2"
                   />
+                  <opt.icon className="w-4 h-4 mr-2" />
                   {opt.label}
                 </label>
               ))}

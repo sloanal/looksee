@@ -111,23 +111,33 @@ export default function RoomSetupPage() {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 bg-background">
         <div className="w-full max-w-md">
-          <div className="text-center mb-8">
+          <div className="text-center mb-4">
             <h1 className="text-3xl font-bold mb-2 text-foreground">Welcome to Looksee</h1>
+            <p className="text-black mb-6" style={{ textWrap: 'balance' }}>Add movies and shows you like to rooms you share with others. Looksee will help you find things you all want to watch.</p>
             <p className="text-muted-foreground">Get started by creating or joining a room</p>
           </div>
 
           <div className="space-y-4">
             <button
               onClick={() => setMode('create')}
-              className="w-full bg-primary text-primary-foreground py-4 rounded-lg font-medium hover:bg-primary/90 transition-colors text-lg"
+              className="w-full bg-primary text-primary-foreground py-4 rounded-lg font-medium hover:bg-primary/90 transition-colors text-lg flex flex-col items-center"
             >
-              Create a Room
+              <span>Create a Room</span>
+              <span className="text-sm opacity-90 mt-1">Add movies and shows and invite others later</span>
             </button>
             <button
               onClick={() => setMode('join')}
-              className="w-full bg-card border-2 border-border text-foreground py-4 rounded-lg font-medium hover:bg-accent transition-colors text-lg"
+              className="w-full bg-card border-2 border-border text-foreground py-4 rounded-lg font-medium hover:bg-accent transition-colors text-lg flex flex-col items-center"
             >
-              Join a Room
+              <span>Join a Room</span>
+              <span className="text-sm text-muted-foreground mt-1">Enter an invite code</span>
+            </button>
+            <button
+              onClick={() => router.push('/browse')}
+              className="w-full text-foreground py-4 rounded-lg font-medium hover:bg-accent transition-colors text-lg flex flex-col items-center"
+            >
+              <span>Skip for now</span>
+              <span className="text-sm text-muted-foreground mt-1">Just add some things for yourself</span>
             </button>
           </div>
         </div>

@@ -71,7 +71,7 @@ export function RoomSelector() {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-1 pl-3 pr-1.5 py-2 text-sm font-medium text-foreground rounded-md transition-all duration-200 neumorphic-button"
       >
-        <span>{displayName}</span>
+        <span className="whitespace-nowrap">{displayName}</span>
         <svg
           className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
@@ -92,10 +92,10 @@ export function RoomSelector() {
               }`}
             >
               <div className="flex items-start gap-1.5">
-                <DuotoneIcon icon={User} size={16} active={false} className="mt-0.5" />
-                <div className="flex flex-col">
-                  <div>Just My Stuff</div>
-                  <div className="text-xs text-muted-foreground">Everything you&apos;ve added</div>
+                <DuotoneIcon icon={User} size={16} active={false} className="mt-0.5 flex-shrink-0" />
+                <div className="flex flex-col min-w-0">
+                  <div className="whitespace-nowrap">Just My Stuff</div>
+                  <div className="text-xs text-muted-foreground whitespace-nowrap">Everything you&apos;ve added</div>
                 </div>
               </div>
             </button>
@@ -106,10 +106,10 @@ export function RoomSelector() {
               }`}
             >
               <div className="flex items-start gap-1.5">
-                <Globe className="w-4 h-4 text-muted-foreground mt-0.5" />
-                <div className="flex flex-col">
-                  <div>Everything</div>
-                  <div className="text-xs text-muted-foreground">Your rooms plus your stuff</div>
+                <Globe className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <div className="flex flex-col min-w-0">
+                  <div className="whitespace-nowrap">Everything</div>
+                  <div className="text-xs text-muted-foreground whitespace-nowrap">Your rooms plus your stuff</div>
                 </div>
               </div>
             </button>
@@ -124,10 +124,10 @@ export function RoomSelector() {
                   }`}
                 >
                   <div className="flex items-start gap-1.5">
-                    <Sofa className="w-4 h-4 text-muted-foreground mt-0.5" />
-                    <div className="flex flex-col">
-                      <div>{room.name}</div>
-                      <div className="text-xs text-muted-foreground">
+                    <Sofa className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <div className="whitespace-nowrap truncate">{room.name}</div>
+                      <div className="text-xs text-muted-foreground whitespace-nowrap">
                         Shared with {otherCount} other{otherCount !== 1 ? 's' : ''}
                       </div>
                     </div>

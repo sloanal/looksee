@@ -68,7 +68,7 @@ interface CardContentProps {
 
 // Main Card Component
 export function MediaCard({ children, onClick, className = '', variant = 'default' }: MediaCardProps) {
-  const baseClasses = 'bg-card rounded-lg shadow-md border border-border p-4 transition-shadow'
+  const baseClasses = 'bg-card rounded-lg border border-border p-4 transition-shadow shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-1px_rgba(0,0,0,0.06),inset_0_-1px_3px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-1px_rgba(0,0,0,0.06),inset_0_-1px_3px_rgba(0,0,0,0.2)]'
   const variantClasses = {
     default: '',
     highlighted: 'border-2 border-primary shadow-lg',

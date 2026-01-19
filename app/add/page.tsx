@@ -1,13 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
-import { Film, Tv, Video, Link as LinkIcon, Calendar } from 'lucide-react'
+import { Film, Tv, Video, Link as LinkIcon, Calendar, ArrowLeft } from 'lucide-react'
 import { RoomSelector } from '@/components/RoomSelector'
 import { RoomMembersAvatars } from '@/components/RoomMembersAvatars'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { DuotoneIcon } from '@/components/DuotoneIcon'
 import {
   MediaCard,
@@ -64,10 +65,20 @@ export default function AddPage() {
   const roomId = searchParams.get('roomId')
 
   const [mode, setMode] = useState<'search' | 'manual' | 'confirm'>('search')
+  const searchParam = searchParams.get('search')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<TMDBResult[]>([])
   const [selectedResult, setSelectedResult] = useState<TMDBDetails | null>(null)
   const [loading, setLoading] = useState(false)
+  const [hasAutoSearched, setHasAutoSearched] = useState(false)
+
+  // Sync search param to search query
+  useEffect(() => {
+    if (searchParam) {
+      setSearchQuery(searchParam)
+      setHasAutoSearched(false) // Reset so we can auto-search again if param changes
+    }
+  }, [searchParam])
 
   // Form state
   const [title, setTitle] = useState('')
@@ -103,7 +114,7 @@ export default function AddPage() {
     }
   }, [session, sessionStatus, roomId, router])
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     if (!searchQuery.trim()) return
 
     setLoading(true)
@@ -134,7 +145,15 @@ export default function AddPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [searchQuery])
+
+  // Auto-search when search param is provided
+  useEffect(() => {
+    if (searchParam && !hasAutoSearched && session && sessionStatus !== 'loading' && searchQuery.trim()) {
+      setHasAutoSearched(true)
+      handleSearch()
+    }
+  }, [searchParam, hasAutoSearched, session, sessionStatus, searchQuery, handleSearch])
 
   const handleSelectResult = async (result: TMDBResult) => {
     setLoading(true)
@@ -282,17 +301,18 @@ export default function AddPage() {
       <div className="max-w-4xl mx-auto">
         <div className="sticky top-0 bg-background border-b border-border z-10 p-4">
           <div className="flex items-center gap-3 mb-4">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => {
                   setMode('search')
                   setSelectedResult(null)
                 }}
-                className="text-primary"
+                className="flex items-center justify-center p-1.5 -ml-1 rounded-md hover:bg-accent transition-colors"
+                aria-label="Back"
               >
-                ← Back
+                <DuotoneIcon icon={ArrowLeft} size={20} />
               </button>
-              <h1 className="text-2xl font-bold text-foreground">Confirm Details</h1>
+              <h1 className="text-2xl font-bold text-foreground whitespace-nowrap leading-tight">Confirm</h1>
             </div>
             <RoomSelector />
           </div>
@@ -580,7 +600,10 @@ export default function AddPage() {
             </button>
           </div>
           <button
-            onClick={() => setMode('manual')}
+            onClick={() => {
+              if (searchQuery) setTitle(searchQuery)
+              setMode('manual')
+            }}
             className="text-sm text-primary hover:underline"
           >
             Or add manually
@@ -588,14 +611,32 @@ export default function AddPage() {
         </div>
       </div>
 
+      <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
+        <div className="space-y-4 bg-content p-4 min-h-[calc(100vh-200px)]">
       {loading && searchQuery && (
-        <div className="p-4 text-center text-muted-foreground py-8">Searching...</div>
+        <div className="text-center text-muted-foreground py-8">Searching...</div>
+      )}
+
+      {!loading && searchQuery && searchResults.length === 0 && (
+        <div className="text-center text-muted-foreground py-8 space-y-4">
+          <div>No results found</div>
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-sm">Can't find what you're looking for?</p>
+            <Button
+              onClick={() => {
+                if (searchQuery) setTitle(searchQuery)
+                setMode('manual')
+              }}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Add "{searchQuery}" manually
+            </Button>
+          </div>
+        </div>
       )}
 
       {searchResults.length > 0 && (
-        <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
-          <div className="space-y-4 bg-content p-4">
-          {searchResults.map((result) => (
+          searchResults.map((result) => (
             <MediaCard
               key={`${result.type}-${result.id}`}
               onClick={() => handleSelectResult(result)}
@@ -636,10 +677,10 @@ export default function AddPage() {
                 </CardContent>
               </CardLayout>
             </MediaCard>
-          ))}
-          </div>
-        </div>
+          ))
       )}
+        </div>
+      </div>
     </div>
   )
 }

@@ -52,10 +52,24 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-background">
+    <div className="min-h-screen flex items-start justify-center px-4 pt-4" style={{ backgroundColor: '#F9F3E4' }}>
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="mb-3 flex justify-center overflow-hidden" style={{ height: '180px' }}>
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full max-w-xs rounded-lg object-cover"
+            style={{ objectPosition: 'center', height: '150%', marginTop: '-10%' }}
+          >
+            <source src="/welcome.mp4" type="video/mp4" />
+          </video>
+        </div>
+
+        <div className="text-center mb-4">
           <h1 className="text-3xl font-bold mb-2 text-foreground">Looksee</h1>
+          <p className="text-sm text-black mb-4">Share and compare movies and shows with your friends and housemates</p>
           <p className="text-muted-foreground">Create your account</p>
         </div>
 

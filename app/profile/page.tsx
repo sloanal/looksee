@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import { Frown, Meh, Smile } from 'lucide-react'
 import { RoomJoinModal } from '@/components/RoomJoinModal'
 import { RoomSelector } from '@/components/RoomSelector'
 import { DuotoneIcon } from '@/components/DuotoneIcon'
@@ -70,6 +71,7 @@ export default function ProfilePage() {
   const [showRoomJoinModal, setShowRoomJoinModal] = useState(false)
   const [joinedRoomId, setJoinedRoomId] = useState<string | null>(null)
   const [joinedMediaCount, setJoinedMediaCount] = useState(0)
+  const queueContainerRef = useRef<HTMLDivElement>(null)
   
   // Modal closing states
   const [inviteModalClosing, setInviteModalClosing] = useState(false)
@@ -113,6 +115,19 @@ export default function ProfilePage() {
     }
     loadData()
   }, [session, status, router])
+
+  // Restore scroll position after queue loads
+  useEffect(() => {
+    if (!loading && activeTab === 'queue' && queue.length > 0) {
+      const savedScrollPosition = sessionStorage.getItem('queueScrollPosition')
+      if (savedScrollPosition) {
+        requestAnimationFrame(() => {
+          window.scrollTo(0, parseInt(savedScrollPosition, 10))
+          sessionStorage.removeItem('queueScrollPosition')
+        })
+      }
+    }
+  }, [loading, activeTab, queue.length])
 
   const loadData = async () => {
     setLoading(true)
@@ -626,7 +641,7 @@ export default function ProfilePage() {
         )}
 
         {activeTab === 'queue' && (
-          <div className="space-y-4">
+          <div ref={queueContainerRef} className="space-y-4">
             {queue.length === 0 ? (
               <div className="text-center text-gray-500 py-8">
                 <p className="text-lg">No items in your queue</p>
@@ -918,6 +933,9 @@ export default function ProfilePage() {
           item={selectedQueueItem}
           onClose={() => setSelectedQueueItem(null)}
           onSave={() => {
+            // Save scroll position before reload
+            const scrollPosition = window.scrollY || document.documentElement.scrollTop
+            sessionStorage.setItem('queueScrollPosition', scrollPosition.toString())
             setSelectedQueueItem(null)
             loadData()
           }}
@@ -1014,7 +1032,7 @@ function QueueItemModal({
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">Status</label>
+            <label className="block text-sm font-medium mb-2">Your status</label>
             <div className="space-y-2">
               {[
                 { value: 'have_not_seen', label: 'Have not seen' },
@@ -1037,13 +1055,13 @@ function QueueItemModal({
 
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">
-              Excitement
+              Your excitement
             </label>
             <div className="space-y-2">
               {[
-                { value: 1, label: 'Not excited' },
-                { value: 3, label: 'Neutral' },
-                { value: 5, label: 'Excited' },
+                { value: 1, label: 'Not excited', icon: Frown },
+                { value: 3, label: 'Neutral', icon: Meh },
+                { value: 5, label: 'Excited', icon: Smile },
               ].map((opt) => (
                 <label key={opt.value} className="flex items-center">
                   <input
@@ -1054,6 +1072,7 @@ function QueueItemModal({
                     onChange={(e) => setExcitement(parseInt(e.target.value))}
                     className="mr-2"
                   />
+                  <opt.icon className="w-4 h-4 mr-2" />
                   {opt.label}
                 </label>
               ))}

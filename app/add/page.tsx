@@ -199,32 +199,28 @@ export default function AddPage() {
 
       // If "all-rooms" is selected, add to all rooms
       if (roomId === 'all-rooms') {
-        // Fetch all rooms
-        const roomsRes = await fetch('/api/rooms')
-        const roomsData = await roomsRes.json()
-        
-        if (!roomsData.rooms || roomsData.rooms.length === 0) {
-          alert('No rooms found. Please create a room first.')
-          setLoading(false)
-          return
-        }
+        const res = await fetch('/api/rooms/all-rooms/media', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
 
-        // Add to all rooms
-        const addPromises = roomsData.rooms.map((room: { id: string }) =>
-          fetch(`/api/rooms/${room.id}/media`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          })
-        )
-
-        const results = await Promise.allSettled(addPromises)
-        const failed = results.filter((r) => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.ok))
-        
-        if (failed.length > 0) {
-          alert(`Added to ${results.length - failed.length} room(s), but failed to add to ${failed.length} room(s)`)
-        } else {
+        if (res.ok) {
           router.push(`/browse?roomId=all-rooms`)
+        } else {
+          let errorMessage = 'Failed to add item'
+          try {
+            const text = await res.text()
+            if (text) {
+              const data = JSON.parse(text)
+              errorMessage = data.error || errorMessage
+            } else {
+              errorMessage = `Error: ${res.status} ${res.statusText}`
+            }
+          } catch (parseError) {
+            errorMessage = `Error: ${res.status} ${res.statusText}`
+          }
+          alert(errorMessage)
         }
       } else if (!roomId) {
         // "Just My Stuff" - create item without adding it to any room

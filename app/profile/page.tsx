@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { RoomJoinModal } from '@/components/RoomJoinModal'
 import { RoomSelector } from '@/components/RoomSelector'
 import { DuotoneIcon } from '@/components/DuotoneIcon'
+import { RoomMembersModal } from '@/components/RoomMembersModal'
 
 interface User {
   id: string
@@ -56,6 +57,8 @@ export default function ProfilePage() {
   const [showRoomJoinModal, setShowRoomJoinModal] = useState(false)
   const [joinedRoomId, setJoinedRoomId] = useState<string | null>(null)
   const [joinedMediaCount, setJoinedMediaCount] = useState(0)
+  const [showMembersModal, setShowMembersModal] = useState(false)
+  const [selectedRoomForMembers, setSelectedRoomForMembers] = useState<Room | null>(null)
   
   // Modal closing states
   const [inviteModalClosing, setInviteModalClosing] = useState(false)
@@ -632,7 +635,15 @@ export default function ProfilePage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-lg text-gray-900">{room.name}</h3>
+                        <h3 
+                          className="font-semibold text-lg text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+                          onClick={() => {
+                            setSelectedRoomForMembers(room)
+                            setShowMembersModal(true)
+                          }}
+                        >
+                          {room.name}
+                        </h3>
                         {room.role === 'owner' && (
                           <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
                             Owner
@@ -841,6 +852,16 @@ export default function ProfilePage() {
         roomId={joinedRoomId || ''}
         onSkip={handleSkipQueue}
         onGoToQueue={handleGoToQueue}
+      />
+
+      <RoomMembersModal
+        isOpen={showMembersModal}
+        onClose={() => {
+          setShowMembersModal(false)
+          setSelectedRoomForMembers(null)
+        }}
+        roomId={selectedRoomForMembers?.id || null}
+        roomName={selectedRoomForMembers?.name || ''}
       />
     </div>
   )

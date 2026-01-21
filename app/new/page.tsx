@@ -66,15 +66,21 @@ function getTypeIcon(type: string) {
 
 const getStatusLabel = (status?: string) => {
   if (!status) return 'Unrated'
+  const normalizedStatus = status.toLowerCase()
   const labels: Record<string, string> = {
     have_not_seen: 'Have not seen',
     already_seen: 'Already seen',
+    // Handle old status values that might still exist
+    not_seen_want: 'Have not seen',
+    not_seen_dont_want: 'Have not seen',
+    seen_would_rewatch: 'Already seen',
+    seen_wont_rewatch: 'Already seen',
   }
-  return labels[status] || status
+  return labels[normalizedStatus] || 'Unrated'
 }
 
 const getExcitementLabel = (excitement?: number) => {
-  if (!excitement) return ''
+  if (!excitement || (excitement !== 1 && excitement !== 3 && excitement !== 5)) return ''
   const labels: Record<number, string> = {
     1: 'Not excited',
     3: 'Neutral',

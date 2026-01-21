@@ -45,13 +45,31 @@ export async function GET(
     orderBy: { createdAt: 'asc' },
   })
 
-  const members = memberships.map((m) => ({
-    id: m.user.id,
-    name: m.user.name,
-    imageUrl: m.user.imageUrl,
-    email: m.user.email,
-    role: m.role,
-  }))
+  // Deduplicate members by userId and email (in case of duplicate memberships or duplicate users)
+  // Keep the first membership for each user (by creation date)
+  const seenUserIds = new Set<string>()
+  const seenEmails = new Set<string>()
+  const members = memberships
+    .map((m) => ({
+      id: m.user.id,
+      name: m.user.name,
+      imageUrl: m.user.imageUrl,
+      email: m.user.email,
+      role: m.role,
+    }))
+    .filter((member) => {
+      // Deduplicate by userId first (most common case: duplicate memberships)
+      if (seenUserIds.has(member.id)) {
+        return false
+      }
+      // Also deduplicate by email as a fallback (in case of duplicate User records)
+      if (seenEmails.has(member.email.toLowerCase())) {
+        return false
+      }
+      seenUserIds.add(member.id)
+      seenEmails.add(member.email.toLowerCase())
+      return true
+    })
 
   return NextResponse.json({ members })
 }

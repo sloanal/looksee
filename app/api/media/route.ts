@@ -180,7 +180,28 @@ export async function GET(request: NextRequest) {
     orderBy: { createdAt: 'desc' },
   })
 
-  const items = mediaItems.map((item) => {
+  // Map items and filter rooms to only include rooms the user is a member of
+  const itemsMap = new Map<string, any>()
+  
+  mediaItems.forEach((item) => {
+    // Deduplicate by item ID - if we've already seen this item, merge the rooms
+    if (itemsMap.has(item.id)) {
+      const existingItem = itemsMap.get(item.id)
+      // Add any new rooms from this item that aren't already in the list
+      const existingRoomIds = new Set(existingItem.rooms.map((r: any) => r.id))
+      item.mediaItemRooms.forEach((mir) => {
+        if (roomIds.includes(mir.roomId) && !existingRoomIds.has(mir.room.id)) {
+          existingItem.rooms.push({
+            id: mir.room.id,
+            name: mir.room.name,
+            addedByUserId: mir.addedByUserId,
+            addedByName: mir.addedBy.name,
+          })
+        }
+      })
+      return
+    }
+
     const genres = item.genres ? JSON.parse(item.genres) : []
     
     // Find current user's preference
@@ -199,7 +220,17 @@ export async function GET(request: NextRequest) {
         },
       }))
 
-    return {
+    // Filter mediaItemRooms to only include rooms the user is a member of
+    const userRooms = item.mediaItemRooms
+      .filter((mir) => roomIds.includes(mir.roomId))
+      .map((mir) => ({
+        id: mir.room.id,
+        name: mir.room.name,
+        addedByUserId: mir.addedByUserId,
+        addedByName: mir.addedBy.name,
+      }))
+
+    itemsMap.set(item.id, {
       id: item.id,
       title: item.title,
       type: item.type.toLowerCase(),
@@ -216,12 +247,7 @@ export async function GET(request: NextRequest) {
       createdByUserId: item.createdByUserId,
       createdAt: item.createdAt,
       roomName: item.room.name,
-      rooms: item.mediaItemRooms.map((mir) => ({
-        id: mir.room.id,
-        name: mir.room.name,
-        addedByUserId: mir.addedByUserId,
-        addedByName: mir.addedBy.name,
-      })),
+      rooms: userRooms,
       myPreference: myPref
         ? {
             status: myPref.status.toLowerCase(),
@@ -233,8 +259,10 @@ export async function GET(request: NextRequest) {
         : null,
       otherPreferences,
       preferenceCount: item._count.preferences,
-    }
+    })
   })
+
+  const items = Array.from(itemsMap.values())
 
   // Sort options
   const sortBy = searchParams.get('sortBy') || 'recent'

@@ -117,8 +117,9 @@ export function RoomMembersModal({
         ) : (
           <div className="space-y-3 max-h-[60vh] overflow-y-auto">
             {members.map((member) => {
-              const imageFailed = member.imageUrl && failedImages.has(member.imageUrl)
-              const showImage = member.imageUrl && !imageFailed
+              const imageUrl = member.imageUrl
+              const imageFailed = imageUrl && failedImages.has(imageUrl)
+              const showImage = imageUrl && !imageFailed
               
               const isCurrentUser = session?.user?.id === member.id
               const canRemove = currentUserRole === 'owner' && !isCurrentUser
@@ -131,14 +132,14 @@ export function RoomMembersModal({
                   <div className="relative w-12 h-12 rounded-full border-2 border-gray-200 overflow-hidden bg-muted flex-shrink-0">
                     {showImage ? (
                       <Image
-                        src={member.imageUrl}
+                        src={imageUrl}
                         alt={member.name}
                         fill
                         className="object-cover"
                         sizes="48px"
                         onError={() => {
-                          if (member.imageUrl) {
-                            setFailedImages((prev) => new Set(prev).add(member.imageUrl!))
+                          if (imageUrl) {
+                            setFailedImages((prev) => new Set(prev).add(imageUrl))
                           }
                         }}
                       />

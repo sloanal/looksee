@@ -55,18 +55,18 @@ export async function POST(
     
     // Convert IDs to names based on type preference
     if (typePreference === 'movie') {
-      genreIds.forEach((id) => {
+      genreIds.forEach((id: number) => {
         const name = movieGenres[id]
         if (name) selectedGenreNames.push(name)
       })
     } else if (typePreference === 'show') {
-      genreIds.forEach((id) => {
+      genreIds.forEach((id: number) => {
         const name = tvGenres[id]
         if (name) selectedGenreNames.push(name)
       })
     } else {
       // For 'any', check both movie and TV genres
-      genreIds.forEach((id) => {
+      genreIds.forEach((id: number) => {
         const movieName = movieGenres[id]
         const tvName = tvGenres[id]
         if (movieName) selectedGenreNames.push(movieName)

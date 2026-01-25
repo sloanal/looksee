@@ -53,8 +53,9 @@ export function RoomMembersAvatars() {
   return (
     <div className="flex items-center -space-x-2">
       {visibleMembers.map((member) => {
-        const imageFailed = member.imageUrl && failedImages.has(member.imageUrl)
-        const showImage = member.imageUrl && !imageFailed
+        const imageUrl = member.imageUrl
+        const imageFailed = imageUrl && failedImages.has(imageUrl)
+        const showImage = imageUrl && !imageFailed
         
         return (
           <div
@@ -64,14 +65,14 @@ export function RoomMembersAvatars() {
           >
             {showImage ? (
               <Image
-                src={member.imageUrl}
+                src={imageUrl}
                 alt={member.name}
                 fill
                 className="object-cover"
                 sizes="32px"
                 onError={() => {
-                  if (member.imageUrl) {
-                    setFailedImages((prev) => new Set(prev).add(member.imageUrl!))
+                  if (imageUrl) {
+                    setFailedImages((prev) => new Set(prev).add(imageUrl))
                   }
                 }}
               />

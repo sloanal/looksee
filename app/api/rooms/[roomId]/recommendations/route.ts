@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { movieGenres, tvGenres } from '@/lib/tmdb-genres'
 
 // POST /api/rooms/[roomId]/recommendations - Get watch recommendations
 export async function POST(
@@ -47,10 +48,30 @@ export async function POST(
     where.type = typePreference.toUpperCase()
   }
 
-  // Filter by genres
+  // Convert genre IDs to genre names for matching (database stores genre names, not IDs)
+  const selectedGenreNames: string[] = []
   if (genres && genres.length > 0) {
-    where.genres = {
-      contains: JSON.stringify(genres[0]), // Simple contains check
+    const genreIds = genres.map((g: string | number) => typeof g === 'string' ? parseInt(g, 10) : g).filter((g: number) => !isNaN(g))
+    
+    // Convert IDs to names based on type preference
+    if (typePreference === 'movie') {
+      genreIds.forEach((id) => {
+        const name = movieGenres[id]
+        if (name) selectedGenreNames.push(name)
+      })
+    } else if (typePreference === 'show') {
+      genreIds.forEach((id) => {
+        const name = tvGenres[id]
+        if (name) selectedGenreNames.push(name)
+      })
+    } else {
+      // For 'any', check both movie and TV genres
+      genreIds.forEach((id) => {
+        const movieName = movieGenres[id]
+        const tvName = tvGenres[id]
+        if (movieName) selectedGenreNames.push(movieName)
+        if (tvName && tvName !== movieName) selectedGenreNames.push(tvName)
+      })
     }
   }
 
@@ -68,9 +89,24 @@ export async function POST(
     },
   })
 
+  // Filter by genres if specified (check if any selected genre name is in the item's genres array)
+  let filteredItems = mediaItems
+  if (selectedGenreNames.length > 0) {
+    filteredItems = mediaItems.filter((item) => {
+      try {
+        const itemGenres = item.genres ? JSON.parse(item.genres) : []
+        // Check if any of the selected genre names match any genre in the item
+        // itemGenres is an array of genre names (strings)
+        return itemGenres.some((itemGenre: string) => selectedGenreNames.includes(itemGenre))
+      } catch {
+        return false
+      }
+    })
+  }
+
   if (mode === 'me') {
     // Just me mode: filter by my preferences
-    const myItems = mediaItems.filter((item) => {
+    const myItems = filteredItems.filter((item) => {
       const myPref = item.preferences.find((p) => p.userId === session.user.id)
       return (
         myPref &&
@@ -111,7 +147,7 @@ export async function POST(
     return NextResponse.json({ recommendations: results })
   } else {
     // Room mode: aggregate interest across all members
-    const roomItems = mediaItems
+    const roomItems = filteredItems
       .map((item) => {
         const interested = item.preferences.filter(
           (p) => p.status === 'HAVE_NOT_SEEN'

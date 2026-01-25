@@ -117,15 +117,18 @@ export function EditRoomsModal({
       onClick={handleClose}
     >
       <div
-        className={`bg-card rounded-lg max-w-md w-full modal-content ${isClosing ? 'closing' : ''}`}
+        className={`bg-card rounded-lg max-w-md w-full modal-content relative ${isClosing ? 'closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
+        <button 
+          onClick={handleClose} 
+          className="absolute top-4 right-4 z-10 text-muted-foreground text-2xl hover:text-foreground"
+        >
+          ×
+        </button>
         <div className="p-6">
-          <div className="flex justify-between items-start mb-4">
+          <div className="mb-4 pr-8">
             <h2 className="text-2xl font-bold text-foreground">Edit Rooms</h2>
-            <button onClick={handleClose} className="text-muted-foreground text-2xl hover:text-foreground">
-              ×
-            </button>
           </div>
 
           <div className="mb-4">

@@ -53,6 +53,7 @@ interface MediaItem {
   externalUrl?: string
   runtimeMinutes?: number
   releaseDate?: string
+  rating?: number
   tmdbId?: string | null
   myPreference?: {
     status: string
@@ -96,6 +97,8 @@ export default function BrowsePage() {
   const [editingItem, setEditingItem] = useState<MediaItem | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [myAvatar, setMyAvatar] = useState<string | null>(null)
+  const [avatarError, setAvatarError] = useState(false)
+  const [failedUserImages, setFailedUserImages] = useState<Set<string>>(new Set())
   const [tooltipItemId, setTooltipItemId] = useState<string | null>(null)
   const [tooltipTimeout, setTooltipTimeout] = useState<NodeJS.Timeout | null>(null)
   const [detailModalItem, setDetailModalItem] = useState<MediaItem | null>(null)
@@ -149,6 +152,7 @@ export default function BrowsePage() {
       if (res.ok) {
         const data = await res.json()
         setMyAvatar(data.user?.imageUrl || null)
+        setAvatarError(false) // Reset error when avatar changes
       }
     } catch (err) {
       console.error('Failed to load avatar:', err)
@@ -418,31 +422,35 @@ export default function BrowsePage() {
       ) : (
           items.map((item) => (
             <MediaCard key={item.id} variant="default" className="relative">
-              {item.rooms && item.rooms.length > 0 && (
-                <div
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setEditingRoomsItem(item)
-                  }}
-                  className="flex items-center justify-between -mx-4 -mt-4 px-4 pt-3 pb-2 mb-2 border-b border-border bg-muted/50 cursor-pointer hover:bg-muted/70 transition-colors relative"
-                >
-                  <div className="flex items-center gap-2 flex-wrap flex-1 pr-8">
-                    <DuotoneIcon icon={Sofa} size={14} />
-                    {item.rooms.map((room) => (
+              <div
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setEditingRoomsItem(item)
+                }}
+                className="flex items-center justify-between -mx-4 -mt-4 px-4 pt-3 pb-2 mb-2 border-b border-border bg-muted/50 cursor-pointer hover:bg-muted/70 transition-colors relative"
+              >
+                <div className="flex items-center gap-2 flex-wrap flex-1 pr-8">
+                  <DuotoneIcon icon={Sofa} size={14} />
+                  {item.rooms && item.rooms.length > 0 ? (
+                    item.rooms.map((room) => (
                       <span
                         key={room.id}
                         className="px-2 py-0.5 bg-foreground/10 text-foreground text-xs rounded"
                       >
                         {room.name}
                       </span>
-                    ))}
-                  </div>
-                  <div className="absolute right-[16px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-muted-foreground flex items-center justify-center text-muted-foreground opacity-60 pointer-events-none" style={{ borderWidth: '1.5px' }}>
-                    <Plus size={8} strokeWidth={3.5} />
-                  </div>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground text-xs">
+                      No rooms yet
+                    </span>
+                  )}
                 </div>
-              )}
-              <CardMenu className={item.rooms && item.rooms.length > 0 ? "!top-12" : ""}>
+                <div className="absolute right-[16px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-muted-foreground flex items-center justify-center text-muted-foreground opacity-60 pointer-events-none" style={{ borderWidth: '1.5px' }}>
+                  <Plus size={8} strokeWidth={3.5} />
+                </div>
+              </div>
+              <CardMenu className="!top-12">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
@@ -597,7 +605,7 @@ export default function BrowsePage() {
                     className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/70 transition-colors -mx-4 px-4 py-0.5 rounded"
                   >
                     <div className="flex items-center gap-2 flex-1">
-                      {myAvatar ? (
+                      {myAvatar && !avatarError ? (
                         <div className="w-6 h-6 flex-shrink-0">
                           <Image
                             src={myAvatar}
@@ -606,6 +614,7 @@ export default function BrowsePage() {
                             height={24}
                             className="rounded-full object-cover w-full h-full"
                             unoptimized
+                            onError={() => setAvatarError(true)}
                           />
                         </div>
                       ) : (
@@ -641,7 +650,7 @@ export default function BrowsePage() {
                         className="flex items-center gap-2 text-sm -mx-4 px-4 py-0.5"
                       >
                         <div className="flex items-center gap-2 flex-1">
-                          {pref.user.imageUrl ? (
+                          {pref.user.imageUrl && !failedUserImages.has(pref.user.imageUrl) ? (
                             <div className="w-6 h-6 flex-shrink-0">
                               <Image
                                 src={pref.user.imageUrl}
@@ -650,6 +659,11 @@ export default function BrowsePage() {
                                 height={24}
                                 className="rounded-full object-cover w-full h-full"
                                 unoptimized
+                                onError={() => {
+                                  if (pref.user.imageUrl) {
+                                    setFailedUserImages((prev) => new Set(prev).add(pref.user.imageUrl))
+                                  }
+                                }}
                               />
                             </div>
                           ) : (
@@ -794,15 +808,18 @@ function ItemDetailModal({
   return (
     <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
       <div 
-        className={`bg-card rounded-lg max-w-md w-full modal-content ${isClosing ? 'closing' : ''}`}
+        className={`bg-card rounded-lg max-w-md w-full modal-content relative ${isClosing ? 'closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
+        <button 
+          onClick={onClose} 
+          className="absolute top-4 right-4 z-10 text-muted-foreground text-2xl hover:text-foreground"
+        >
+          ×
+        </button>
         <div className="p-6">
-          <div className="flex justify-between items-start mb-4">
+          <div className="mb-4 pr-8">
             <h2 className="text-2xl font-bold text-foreground">{item.title}</h2>
-            <button onClick={onClose} className="text-muted-foreground text-2xl hover:text-foreground">
-              ×
-            </button>
           </div>
 
           <div className="mb-4">
@@ -943,13 +960,16 @@ function EditItemModal({
 
   return (
     <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}>
-      <div className={`bg-card rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto modal-content ${isClosing ? 'closing' : ''}`}>
+      <div className={`bg-card rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto modal-content relative ${isClosing ? 'closing' : ''}`}>
+        <button 
+          onClick={handleClose} 
+          className="absolute top-4 right-4 z-10 text-muted-foreground text-2xl hover:text-foreground"
+        >
+          ×
+        </button>
         <div className="p-6">
-          <div className="flex justify-between items-start mb-4">
+          <div className="mb-4 pr-8">
             <h2 className="text-2xl font-bold text-foreground">Edit {item.title}</h2>
-            <button onClick={handleClose} className="text-muted-foreground text-2xl">
-              ×
-            </button>
           </div>
 
           {isManual ? (
@@ -1095,15 +1115,18 @@ function DetailModal({
   return (
     <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center pt-4 px-4 pb-20 modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
       <div 
-        className={`bg-card rounded-lg max-w-4xl w-full h-[calc(100vh-6rem)] flex flex-col modal-content ${isClosing ? 'closing' : ''}`}
+        className={`bg-card rounded-lg max-w-4xl w-full h-[calc(100vh-6rem)] flex flex-col modal-content relative ${isClosing ? 'closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
+        <button 
+          onClick={handleClose} 
+          className="absolute top-4 right-4 z-10 text-muted-foreground text-2xl hover:text-foreground"
+        >
+          ×
+        </button>
         <div className="p-6 pt-4 overflow-y-auto flex-1">
-          <div className="flex justify-between items-start mb-4">
+          <div className="mb-4 pr-8">
             <h2 className="text-2xl font-bold text-foreground">{item.title}</h2>
-            <button onClick={handleClose} className="text-muted-foreground text-2xl hover:text-foreground">
-              ×
-            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -1152,6 +1175,16 @@ function DetailModal({
                       month: 'long',
                       day: 'numeric'
                     })}
+                  </p>
+                </div>
+              )}
+
+              {item.rating && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 text-foreground">Rating</h3>
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    {item.rating.toFixed(1)} / 10
                   </p>
                 </div>
               )}

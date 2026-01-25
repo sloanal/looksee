@@ -59,6 +59,7 @@ export default function ProfilePage() {
   const [joinedMediaCount, setJoinedMediaCount] = useState(0)
   const [showMembersModal, setShowMembersModal] = useState(false)
   const [selectedRoomForMembers, setSelectedRoomForMembers] = useState<Room | null>(null)
+  const [imageError, setImageError] = useState(false)
   
   // Modal closing states
   const [inviteModalClosing, setInviteModalClosing] = useState(false)
@@ -92,6 +93,11 @@ export default function ProfilePage() {
       setCreateModalClosing(false)
     }, 200)
   }
+
+  // Reset image error when user or imageUrl changes
+  useEffect(() => {
+    setImageError(false)
+  }, [user?.imageUrl])
 
   useEffect(() => {
     if (status === 'loading') return
@@ -562,7 +568,7 @@ export default function ProfilePage() {
               ) : (
                 <div className="space-y-4">
                   <div className="flex items-center gap-4">
-                    {user?.imageUrl ? (
+                    {user?.imageUrl && !imageError ? (
                       <div className="w-20 h-20 flex-shrink-0">
                         <Image
                           src={user.imageUrl}
@@ -572,6 +578,7 @@ export default function ProfilePage() {
                           className="rounded-full object-cover w-full h-full"
                           style={{ width: '80px', height: '80px' }}
                           unoptimized
+                          onError={() => setImageError(true)}
                         />
                       </div>
                     ) : (
@@ -696,17 +703,17 @@ export default function ProfilePage() {
 
       {(showInviteModal || inviteModalClosing) && (
         <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${inviteModalClosing ? 'closing' : ''}`} onClick={handleCloseInviteModal}>
-          <div className={`bg-white rounded-lg max-w-md w-full p-6 modal-content ${inviteModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
+          <div className={`bg-white rounded-lg max-w-md w-full p-6 modal-content relative ${inviteModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             {showInviteModal && (
               <>
-                <div className="flex justify-between items-start mb-4">
+                <button
+                  onClick={handleCloseInviteModal}
+                  className="absolute top-4 right-4 z-10 text-gray-500 text-2xl hover:text-gray-700"
+                >
+                  ×
+                </button>
+                <div className="mb-4 pr-8">
                   <h2 className="text-2xl font-bold text-gray-900">Invite to {showInviteModal.name}</h2>
-                  <button
-                    onClick={handleCloseInviteModal}
-                    className="text-gray-500 text-2xl"
-                  >
-                    ×
-                  </button>
                 </div>
                 <div className="space-y-4">
                   <div>
@@ -745,15 +752,15 @@ export default function ProfilePage() {
 
       {(showJoinModal || joinModalClosing) && (
         <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${joinModalClosing ? 'closing' : ''}`} onClick={handleCloseJoinModal}>
-          <div className={`bg-white rounded-lg max-w-md w-full p-6 modal-content ${joinModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-start mb-4">
+          <div className={`bg-white rounded-lg max-w-md w-full p-6 modal-content relative ${joinModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={handleCloseJoinModal}
+              className="absolute top-4 right-4 z-10 text-gray-500 text-2xl hover:text-gray-700"
+            >
+              ×
+            </button>
+            <div className="mb-4 pr-8">
               <h2 className="text-2xl font-bold text-gray-900">Join a Room</h2>
-              <button
-                onClick={handleCloseJoinModal}
-                className="text-gray-500 text-2xl"
-              >
-                ×
-              </button>
             </div>
             <form onSubmit={handleJoinRoom} className="space-y-4">
               {joinError && (
@@ -797,15 +804,15 @@ export default function ProfilePage() {
 
       {(showCreateModal || createModalClosing) && (
         <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${createModalClosing ? 'closing' : ''}`} onClick={handleCloseCreateModal}>
-          <div className={`bg-white rounded-lg max-w-md w-full p-6 modal-content ${createModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-start mb-4">
+          <div className={`bg-white rounded-lg max-w-md w-full p-6 modal-content relative ${createModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={handleCloseCreateModal}
+              className="absolute top-4 right-4 z-10 text-gray-500 text-2xl hover:text-gray-700"
+            >
+              ×
+            </button>
+            <div className="mb-4 pr-8">
               <h2 className="text-2xl font-bold text-gray-900">Create a Room</h2>
-              <button
-                onClick={handleCloseCreateModal}
-                className="text-gray-500 text-2xl"
-              >
-                ×
-              </button>
             </div>
             <form onSubmit={handleCreateRoom} className="space-y-4">
               {createError && (

@@ -53,7 +53,22 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-start justify-center px-4 pt-4" style={{ backgroundColor: '#F9F3E4' }}>
+    <>
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          #email::placeholder,
+          #email::-webkit-input-placeholder {
+            color: #d1d5db !important;
+            -webkit-text-fill-color: #d1d5db !important;
+          }
+          #password::placeholder,
+          #password::-webkit-input-placeholder {
+            color: #d1d5db !important;
+            -webkit-text-fill-color: #d1d5db !important;
+          }
+        `
+      }} />
+      <div className="min-h-screen flex items-start justify-center px-4 pt-4" style={{ backgroundColor: '#F9F3E4' }}>
       <div className="w-full max-w-md">
         <div className="mb-3 flex justify-center overflow-hidden" style={{ height: '180px', width: '100vw', marginLeft: '-1rem', marginRight: '-1rem' }}>
           <video
@@ -91,7 +106,7 @@ export default function SignInPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               placeholder="you@example.com"
             />
           </div>
@@ -106,7 +121,7 @@ export default function SignInPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               placeholder="••••••••"
             />
           </div>
@@ -128,6 +143,7 @@ export default function SignInPage() {
         </p>
       </div>
     </div>
+    </>
   )
 }
 

@@ -119,6 +119,62 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* Placeholder text styling - lighter gray for placeholders */
+/* Must come after the input text color rules to override them with higher specificity */
+input[type="email"]::placeholder,
+input[type="email"]::-webkit-input-placeholder,
+input[type="email"]::-moz-placeholder,
+input[type="email"]:-ms-input-placeholder {
+  color: #d1d5db !important; /* gray-300 - lighter gray for placeholders */
+  -webkit-text-fill-color: #d1d5db !important; /* Override webkit-text-fill-color for placeholders */
+  opacity: 1 !important;
+}
+
+input[type="password"]::placeholder,
+input[type="password"]::-webkit-input-placeholder,
+input[type="password"]::-moz-placeholder,
+input[type="password"]:-ms-input-placeholder {
+  color: #d1d5db !important; /* gray-300 - lighter gray for placeholders */
+  -webkit-text-fill-color: #d1d5db !important; /* Override webkit-text-fill-color for placeholders */
+  opacity: 1 !important;
+}
+
+input[type="text"]::placeholder,
+input[type="text"]::-webkit-input-placeholder,
+input[type="text"]::-moz-placeholder,
+input[type="text"]:-ms-input-placeholder,
+textarea::placeholder,
+textarea::-webkit-input-placeholder,
+textarea::-moz-placeholder,
+textarea:-ms-input-placeholder {
+  color: #d1d5db !important; /* gray-300 - lighter gray for placeholders */
+  -webkit-text-fill-color: #d1d5db !important; /* Override webkit-text-fill-color for placeholders */
+  opacity: 1 !important;
+}
+
+/* Additional webkit-specific placeholder override with highest specificity */
+@supports (-webkit-appearance: none) {
+  input[type="email"]::placeholder,
+  input[type="email"]::-webkit-input-placeholder {
+    -webkit-text-fill-color: #d1d5db !important;
+    color: #d1d5db !important;
+  }
+  
+  input[type="password"]::placeholder,
+  input[type="password"]::-webkit-input-placeholder {
+    -webkit-text-fill-color: #d1d5db !important;
+    color: #d1d5db !important;
+  }
+  
+  input[type="text"]::placeholder,
+  input[type="text"]::-webkit-input-placeholder,
+  textarea::placeholder,
+  textarea::-webkit-input-placeholder {
+    -webkit-text-fill-color: #d1d5db !important;
+    color: #d1d5db !important;
+  }
+}
+
 /* Mobile-first: ensure full viewport height */
 html,
 body,

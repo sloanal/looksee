@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Film, Tv, Video, Link as LinkIcon, Calendar, Sofa, Frown, Meh, Smile } from 'lucide-react'
+import { Film, Tv, Video, Link as LinkIcon, Calendar, Star, Sofa, Frown, Meh, Smile } from 'lucide-react'
 import { DuotoneIcon } from '@/components/DuotoneIcon'
 import { useModalAnimation } from '@/lib/useModalAnimation'
 import { Button } from '@/components/ui/button'
@@ -27,6 +27,7 @@ interface QueueItem {
   description?: string
   genres: string[]
   releaseDate?: string
+  rating?: number
   createdBy: string
   createdByUserId?: string
   roomId: string
@@ -367,15 +368,18 @@ function QueueItemModal({
   return (
     <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center pt-4 px-4 pb-20 modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
       <div 
-        className={`bg-card rounded-lg max-w-4xl w-full h-[calc(100vh-6rem)] flex flex-col modal-content ${isClosing ? 'closing' : ''}`}
+        className={`bg-card rounded-lg max-w-4xl w-full h-[calc(100vh-6rem)] flex flex-col modal-content relative ${isClosing ? 'closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
+        <button 
+          onClick={handleClose} 
+          className="absolute top-4 right-4 z-10 text-muted-foreground text-2xl hover:text-foreground"
+        >
+          ×
+        </button>
         <div className="p-6 pt-4 overflow-y-auto flex-1">
-          <div className="flex justify-between items-start mb-4">
+          <div className="mb-4 pr-8">
             <h2 className="text-2xl font-bold text-foreground">{item.title}</h2>
-            <button onClick={handleClose} className="text-muted-foreground text-2xl hover:text-foreground">
-              ×
-            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -424,6 +428,16 @@ function QueueItemModal({
                       month: 'long',
                       day: 'numeric'
                     })}
+                  </p>
+                </div>
+              )}
+
+              {item.rating && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 text-foreground">Rating</h3>
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    {item.rating.toFixed(1)} / 10
                   </p>
                 </div>
               )}

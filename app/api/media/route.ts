@@ -399,6 +399,12 @@ export async function POST(request: NextRequest) {
           // This means the item won't appear in any room's media list
         },
       })
+    } else {
+      // Item already exists - ensure it's NOT in any room when adding to "Just My Stuff"
+      // Remove it from all rooms if it was previously added to any room
+      await prisma.mediaItemRoom.deleteMany({
+        where: { mediaItemId: mediaItem.id },
+      })
     }
 
     // Create or update user preference

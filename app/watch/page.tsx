@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
@@ -9,6 +9,8 @@ import { RoomSelector } from '@/components/RoomSelector'
 import { RoomMembersAvatars } from '@/components/RoomMembersAvatars'
 import { DuotoneIcon } from '@/components/DuotoneIcon'
 import { useModalAnimation } from '@/lib/useModalAnimation'
+import { getAvatarColor } from '@/lib/utils'
+import { movieGenres, tvGenres } from '@/lib/tmdb-genres'
 import {
   MediaCard,
   CardLayout,
@@ -45,13 +47,15 @@ interface Recommendation {
   description?: string
   genres: string[]
   releaseDate?: string
+  rating?: number
   tmdbId?: string | null
   sourceType?: string
   myExcitement?: number
   myStatus?: string
   interestedCount: number
   avgExcitement: number
-  interestedUsers: Array<{ id: string; name: string }>
+  interestedUsers: Array<{ id: string; name: string; imageUrl: string | null }>
+  seenUsers: Array<{ id: string; name: string; imageUrl: string | null }>
 }
 
 export default function WatchPage() {
@@ -64,6 +68,7 @@ export default function WatchPage() {
   const [mode, setMode] = useState<'me' | 'room'>('me')
   const [typePreference, setTypePreference] = useState('any')
   const [selectedGenres, setSelectedGenres] = useState<string[]>([])
+  const [showSeenAndNoExcitement, setShowSeenAndNoExcitement] = useState(true)
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedItem, setSelectedItem] = useState<Recommendation | null>(null)
@@ -71,6 +76,7 @@ export default function WatchPage() {
   const [detailModalItem, setDetailModalItem] = useState<Recommendation | null>(null)
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
   const [loadingTrailer, setLoadingTrailer] = useState(false)
+  const prevTypePreferenceRef = useRef<string>(typePreference)
   const { isClosing: isWarningClosing, handleClose: handleWarningClose } = useModalAnimation(() => {
     setShowWarning(false)
     setSelectedItem(null)
@@ -87,6 +93,36 @@ export default function WatchPage() {
     // Allow users to access watch page even without rooms
     // Recommendations API will return empty array if no rooms, which is fine
   }, [session, status, router])
+
+  // Filter selected genres when type preference changes to only include valid ones
+  useEffect(() => {
+    const prevType = prevTypePreferenceRef.current
+    
+    // Only filter if switching between specific types (not to/from 'any')
+    if (typePreference === 'any' || prevType === 'any') {
+      prevTypePreferenceRef.current = typePreference
+      return
+    }
+    
+    // Only filter if the type actually changed
+    if (prevType !== typePreference) {
+      // Filter selected genres to only include valid ones for the current type
+      setSelectedGenres((currentGenres) => {
+        if (currentGenres.length === 0) {
+          return currentGenres
+        }
+        
+        const validGenreIds = typePreference === 'movie' 
+          ? Object.keys(movieGenres)
+          : Object.keys(tvGenres)
+        
+        const filteredGenres = currentGenres.filter((genreId) => validGenreIds.includes(genreId))
+        return filteredGenres
+      })
+    }
+    
+    prevTypePreferenceRef.current = typePreference
+  }, [typePreference])
 
   const handleGetRecommendations = async () => {
     setLoading(true)
@@ -105,6 +141,7 @@ export default function WatchPage() {
           mode,
           typePreference,
           genres: selectedGenres,
+          showSeenAndNoExcitement: mode === 'me' ? showSeenAndNoExcitement : undefined,
         }),
       })
 
@@ -227,6 +264,22 @@ export default function WatchPage() {
           <h2 className="text-2xl font-bold mb-6 text-foreground">Preferences (all optional)</h2>
 
           <div className="space-y-6 mb-8">
+            {mode === 'me' && (
+              <div>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showSeenAndNoExcitement}
+                    onChange={(e) => setShowSeenAndNoExcitement(e.target.checked)}
+                    className="w-5 h-5 rounded border-input text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm text-foreground">
+                    Show me things other people have already seen and no one else is excited about
+                  </span>
+                </label>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium mb-2">Content Type</label>
               <select
@@ -242,9 +295,61 @@ export default function WatchPage() {
 
             <div>
               <label className="block text-sm font-medium mb-2">Genres (optional)</label>
-              <p className="text-sm text-muted-foreground mb-2">
-                Genre filtering coming soon - for now showing all types
-              </p>
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 border border-input rounded-md bg-background">
+                  {(() => {
+                    // Get genres based on content type preference
+                    // When showing all types, merge and deduplicate by ID (Map uses first entry for duplicate keys)
+                    const uniqueGenres = typePreference === 'movie' 
+                      ? Object.entries(movieGenres)
+                      : typePreference === 'show'
+                      ? Object.entries(tvGenres)
+                      : Array.from(
+                          new Map([
+                            ...Object.entries(movieGenres),
+                            ...Object.entries(tvGenres)
+                          ]).entries()
+                        )
+                    
+                    return uniqueGenres.map(([id, name]) => {
+                      const genreId = id
+                      const isSelected = selectedGenres.includes(genreId)
+                      return (
+                        <label
+                          key={genreId}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-md border cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-secondary text-secondary-foreground border-input hover:bg-accent'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedGenres([...selectedGenres, genreId])
+                              } else {
+                                setSelectedGenres(selectedGenres.filter((g) => g !== genreId))
+                              }
+                            }}
+                            className="sr-only"
+                          />
+                          <span className="text-sm font-medium">{name}</span>
+                        </label>
+                      )
+                    })
+                  })()}
+                </div>
+                {selectedGenres.length > 0 && (
+                  <button
+                    onClick={() => setSelectedGenres([])}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Clear all genres
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -312,26 +417,19 @@ export default function WatchPage() {
                 </CardHeader>
               )}
 
-              <CardLayout>
-                <div
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setDetailModalItem(rec)
-                    loadTrailer(rec)
-                  }}
-                  className="cursor-pointer pt-2"
-                >
-                  <CardPoster src={rec.posterUrl} alt={rec.title} width={80} height={120} />
-                </div>
-                <CardContent className="pr-0 py-2">
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setDetailModalItem(rec)
-                      loadTrailer(rec)
-                    }}
-                    className="cursor-pointer"
-                  >
+              <div
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setDetailModalItem(rec)
+                  loadTrailer(rec)
+                }}
+                className="cursor-pointer"
+              >
+                <CardLayout>
+                  <div className="pt-2">
+                    <CardPoster src={rec.posterUrl} alt={rec.title} width={80} height={120} />
+                  </div>
+                  <CardContent className="pr-0 py-2">
                     <CardTitle>{rec.title}</CardTitle>
                     <div className="flex items-center gap-1 mb-0.5">
                       <DuotoneIcon icon={getTypeIcon(rec.type)} size={12} />
@@ -349,34 +447,204 @@ export default function WatchPage() {
                     {rec.description && (
                       <CardDescription>{rec.description}</CardDescription>
                     )}
-                  </div>
-                </CardContent>
-              </CardLayout>
+                  </CardContent>
+                </CardLayout>
+              </div>
 
               {mode === 'room' ? (
-                <div className="text-sm text-muted-foreground -mx-4 px-4 pt-2 border-t border-border mt-2">
-                  <p>
-                    {rec.interestedCount} {rec.interestedCount === 1 ? 'person' : 'people'} want
-                    to watch this
-                  </p>
-                  <p>Average excitement: {rec.avgExcitement}/5</p>
-                  {rec.interestedUsers.length > 0 && (
-                    <p className="mt-1">
-                      {rec.interestedUsers.map((u) => u.name).join(', ')}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                rec.myExcitement && (
-                  <div className="text-sm text-muted-foreground -mx-4 px-4 pt-2 border-t border-border mt-2">
-                    <p className="flex items-center gap-1">
-                      My excitement:{' '}
-                      {Array.from({ length: rec.myExcitement }).map((_, i) => (
-                        <DuotoneIcon key={i} icon={Star} size={14} />
-                      ))}
+                <div className="text-sm text-muted-foreground -mx-4 px-4 pt-2 border-t border-border mt-2 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center -space-x-2">
+                      {rec.interestedUsers.slice(0, 4).map((user) => {
+                        const showImage = user.imageUrl
+                        return (
+                          <div
+                            key={user.id}
+                            className="relative w-6 h-6 rounded-full border-2 border-background overflow-hidden bg-muted flex-shrink-0"
+                            title={user.name}
+                          >
+                            {showImage ? (
+                              <Image
+                                src={user.imageUrl!}
+                                alt={user.name}
+                                fill
+                                className="object-cover"
+                                sizes="24px"
+                              />
+                            ) : (
+                              <div
+                                className="w-full h-full flex items-center justify-center text-white text-xs font-medium"
+                                style={{ backgroundColor: getAvatarColor(user.id || user.name) }}
+                              >
+                                {user.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                      {rec.interestedUsers.length > 4 && (
+                        <div
+                          className="relative w-6 h-6 rounded-full border-2 border-background bg-muted flex items-center justify-center text-xs font-medium text-foreground flex-shrink-0"
+                          title={`${rec.interestedUsers.length - 4} more`}
+                        >
+                          +{rec.interestedUsers.length - 4}
+                        </div>
+                      )}
+                    </div>
+                    <p>
+                      {rec.interestedCount === 1 && rec.interestedUsers[0]?.id === session?.user?.id
+                        ? 'You are excited to watch this'
+                        : `${rec.interestedCount} ${rec.interestedCount === 1 ? 'person is' : 'people are'} excited to watch this`}
                     </p>
                   </div>
-                )
+                  <div className="flex items-center gap-2">
+                    {rec.seenUsers.length > 0 ? (
+                      <>
+                        <div className="flex items-center -space-x-2">
+                          {rec.seenUsers.slice(0, 4).map((user) => {
+                            const showImage = user.imageUrl
+                            return (
+                              <div
+                                key={user.id}
+                                className="relative w-6 h-6 rounded-full border-2 border-background overflow-hidden bg-muted flex-shrink-0"
+                                title={user.name}
+                              >
+                                {showImage ? (
+                                  <Image
+                                    src={user.imageUrl!}
+                                    alt={user.name}
+                                    fill
+                                    className="object-cover"
+                                    sizes="24px"
+                                  />
+                                ) : (
+                                  <div
+                                    className="w-full h-full flex items-center justify-center text-white text-xs font-medium"
+                                    style={{ backgroundColor: getAvatarColor(user.id || user.name) }}
+                                  >
+                                    {user.name.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                          {rec.seenUsers.length > 4 && (
+                            <div
+                              className="relative w-6 h-6 rounded-full border-2 border-background bg-muted flex items-center justify-center text-xs font-medium text-foreground flex-shrink-0"
+                              title={`${rec.seenUsers.length - 4} more`}
+                            >
+                              +{rec.seenUsers.length - 4}
+                            </div>
+                          )}
+                        </div>
+                        <p>
+                          {rec.seenUsers.length === 1 && rec.seenUsers[0]?.id === session?.user?.id
+                            ? 'You have seen this'
+                            : `${rec.seenUsers.length} ${rec.seenUsers.length === 1 ? 'person has' : 'people have'} seen this`}
+                        </p>
+                      </>
+                    ) : (
+                      <p>No one has seen this yet</p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground -mx-4 px-4 pt-2 border-t border-border mt-2 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center -space-x-2">
+                      {rec.interestedUsers.slice(0, 4).map((user) => {
+                        const showImage = user.imageUrl
+                        return (
+                          <div
+                            key={user.id}
+                            className="relative w-6 h-6 rounded-full border-2 border-background overflow-hidden bg-muted flex-shrink-0"
+                            title={user.name}
+                          >
+                            {showImage ? (
+                              <Image
+                                src={user.imageUrl!}
+                                alt={user.name}
+                                fill
+                                className="object-cover"
+                                sizes="24px"
+                              />
+                            ) : (
+                              <div
+                                className="w-full h-full flex items-center justify-center text-white text-xs font-medium"
+                                style={{ backgroundColor: getAvatarColor(user.id || user.name) }}
+                              >
+                                {user.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                      {rec.interestedUsers.length > 4 && (
+                        <div
+                          className="relative w-6 h-6 rounded-full border-2 border-background bg-muted flex items-center justify-center text-xs font-medium text-foreground flex-shrink-0"
+                          title={`${rec.interestedUsers.length - 4} more`}
+                        >
+                          +{rec.interestedUsers.length - 4}
+                        </div>
+                      )}
+                    </div>
+                    <p>
+                      {rec.interestedCount === 1 && rec.interestedUsers[0]?.id === session?.user?.id
+                        ? 'You are excited to watch this'
+                        : `${rec.interestedCount} ${rec.interestedCount === 1 ? 'person is' : 'people are'} excited to watch this`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {rec.seenUsers && rec.seenUsers.length > 0 ? (
+                      <>
+                        <div className="flex items-center -space-x-2">
+                          {rec.seenUsers.slice(0, 4).map((user) => {
+                            const showImage = user.imageUrl
+                            return (
+                              <div
+                                key={user.id}
+                                className="relative w-6 h-6 rounded-full border-2 border-background overflow-hidden bg-muted flex-shrink-0"
+                                title={user.name}
+                              >
+                                {showImage ? (
+                                  <Image
+                                    src={user.imageUrl!}
+                                    alt={user.name}
+                                    fill
+                                    className="object-cover"
+                                    sizes="24px"
+                                  />
+                                ) : (
+                                  <div
+                                    className="w-full h-full flex items-center justify-center text-white text-xs font-medium"
+                                    style={{ backgroundColor: getAvatarColor(user.id || user.name) }}
+                                  >
+                                    {user.name.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                          {rec.seenUsers.length > 4 && (
+                            <div
+                              className="relative w-6 h-6 rounded-full border-2 border-background bg-muted flex items-center justify-center text-xs font-medium text-foreground flex-shrink-0"
+                              title={`${rec.seenUsers.length - 4} more`}
+                            >
+                              +{rec.seenUsers.length - 4}
+                            </div>
+                          )}
+                        </div>
+                        <p>
+                          {rec.seenUsers.length === 1 && rec.seenUsers[0]?.id === session?.user?.id
+                            ? 'You have seen this'
+                            : `${rec.seenUsers.length} ${rec.seenUsers.length === 1 ? 'person has' : 'people have'} seen this`}
+                        </p>
+                      </>
+                    ) : (
+                      <p>No one has seen this yet</p>
+                    )}
+                  </div>
+                </div>
               )}
 
               <CardActions>
@@ -457,15 +725,18 @@ function DetailModal({
   return (
     <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center pt-4 px-4 pb-20 modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
       <div 
-        className={`bg-card rounded-lg max-w-4xl w-full h-[calc(100vh-6rem)] flex flex-col modal-content ${isClosing ? 'closing' : ''}`}
+        className={`bg-card rounded-lg max-w-4xl w-full h-[calc(100vh-6rem)] flex flex-col modal-content relative ${isClosing ? 'closing' : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
+        <button 
+          onClick={handleClose} 
+          className="absolute top-4 right-4 z-10 text-muted-foreground text-2xl hover:text-foreground"
+        >
+          ×
+        </button>
         <div className="p-6 pt-4 overflow-y-auto flex-1">
-          <div className="flex justify-between items-start mb-4">
+          <div className="mb-4 pr-8">
             <h2 className="text-2xl font-bold text-foreground">{item.title}</h2>
-            <button onClick={handleClose} className="text-muted-foreground text-2xl hover:text-foreground">
-              ×
-            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -514,6 +785,16 @@ function DetailModal({
                       month: 'long',
                       day: 'numeric'
                     })}
+                  </p>
+                </div>
+              )}
+
+              {item.rating && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-2 text-foreground">Rating</h3>
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    {item.rating.toFixed(1)} / 10
                   </p>
                 </div>
               )}

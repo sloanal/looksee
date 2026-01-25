@@ -660,8 +660,9 @@ export default function BrowsePage() {
                                 className="rounded-full object-cover w-full h-full"
                                 unoptimized
                                 onError={() => {
-                                  if (pref.user.imageUrl) {
-                                    setFailedUserImages((prev) => new Set(prev).add(pref.user.imageUrl))
+                                  const imageUrl = pref.user.imageUrl
+                                  if (imageUrl) {
+                                    setFailedUserImages((prev) => new Set(prev).add(imageUrl))
                                   }
                                 }}
                               />

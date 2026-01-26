@@ -213,7 +213,7 @@ export default function WatchPage() {
             <RoomSelector />
           </div>
         </div>
-        <div className="p-4">
+        <div className="p-4 bg-content min-h-[calc(100vh-200px)]">
           <p className="text-muted-foreground mb-4">We&apos;ll do our best to suggest something you&apos;ll like.</p>
           <h2 className="text-2xl font-bold mb-6 text-foreground">Who&apos;s watching?</h2>
 
@@ -260,7 +260,7 @@ export default function WatchPage() {
             <RoomSelector />
           </div>
         </div>
-        <div className="p-4">
+        <div className="p-4 bg-content min-h-[calc(100vh-200px)]">
           <h2 className="text-2xl font-bold mb-6 text-foreground">Preferences (all optional)</h2>
 
           <div className="space-y-6 mb-8">
@@ -384,7 +384,7 @@ export default function WatchPage() {
         </div>
       </div>
 
-      <div className="p-4">
+      <div className="p-4 bg-content">
         <h2 className="text-2xl font-bold mb-2 text-foreground">Recommendations</h2>
         {recommendations.length > 0 && (
           <p className="text-muted-foreground mb-4">Based on the excitement levels and who&apos;s seen what, these are our recommendations for what you should watch.</p>

@@ -140,6 +140,41 @@ export default function NewPage() {
     }
   }, [loading, queue.length])
 
+  // Restore scroll position when modal closes (Safari fix)
+  useEffect(() => {
+    if (selectedQueueItem === null && scrollPositionRef.current !== null) {
+      const position = scrollPositionRef.current
+      // Safari can reset scroll position when modal closes, so we need to restore it
+      // Wait for modal animation to complete (200ms) plus extra time for Safari
+      setTimeout(() => {
+        // Use triple requestAnimationFrame for Safari - needs even more time
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              // Try multiple methods for Safari compatibility
+              window.scrollTo({
+                top: position,
+                behavior: 'instant' as ScrollBehavior
+              })
+              // Fallback for older Safari versions
+              if (window.scrollY !== position && document.documentElement) {
+                document.documentElement.scrollTop = position
+              }
+              if (document.body && document.body.scrollTop !== position) {
+                document.body.scrollTop = position
+              }
+              // Also try scrolling the container if it exists
+              if (queueContainerRef.current) {
+                queueContainerRef.current.scrollTop = position
+              }
+              scrollPositionRef.current = null
+            })
+          })
+        })
+      }, 250) // Wait for modal animation (200ms) + buffer
+    }
+  }, [selectedQueueItem])
+
   const loadData = async () => {
     setLoading(true)
     try {

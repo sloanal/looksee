@@ -5,10 +5,13 @@ import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import { Sofa } from 'lucide-react'
 import { RoomJoinModal } from '@/components/RoomJoinModal'
 import { RoomSelector } from '@/components/RoomSelector'
 import { DuotoneIcon } from '@/components/DuotoneIcon'
 import { RoomMembersModal } from '@/components/RoomMembersModal'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 interface User {
   id: string
@@ -427,33 +430,33 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto p-4">
-        <div className="text-center text-gray-500">Loading...</div>
+        <div className="text-center text-muted-foreground">Loading...</div>
       </div>
     )
   }
 
   return (
     <div className="max-w-4xl mx-auto pb-20">
-      <div className="sticky top-0 bg-white border-b z-10">
+      <div className="sticky top-0 bg-background border-b border-border z-10">
         <div className="p-4">
-          <h1 className="text-2xl font-bold mb-4 text-gray-900">Settings</h1>
-          <div className="flex gap-2 border-b">
+          <h1 className="text-2xl font-bold mb-4 text-foreground">Settings</h1>
+          <div className="flex gap-2">
             <button
               onClick={() => setActiveTab('profile')}
-              className={`px-4 py-2 font-medium ${
+              className={`px-4 py-2 font-medium transition-colors ${
                 activeTab === 'profile'
-                  ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-500'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Profile
             </button>
             <button
               onClick={() => setActiveTab('rooms')}
-              className={`px-4 py-2 font-medium ${
+              className={`px-4 py-2 font-medium transition-colors ${
                 activeTab === 'rooms'
-                  ? 'border-b-2 border-blue-600 text-blue-600'
-                  : 'text-gray-500'
+                  ? 'border-b-2 border-primary text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               Rooms ({rooms.length})
@@ -462,26 +465,25 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="p-4">
+      <div className="p-4 bg-content min-h-[calc(100vh-200px)]">
         {activeTab === 'profile' && (
           <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="bg-card rounded-lg shadow-sm border border-border p-6">
               <div className="flex items-start justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900">Personal Details</h2>
+                <h2 className="text-xl font-bold text-foreground">Personal Details</h2>
                 {!editing && (
-                  <button
+                  <Button
                     onClick={() => setEditing(true)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                   >
                     Edit
-                  </button>
+                  </Button>
                 )}
               </div>
 
               {editing ? (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Profile Image</label>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Profile Image</label>
                     <div className="flex gap-4 items-start">
                       {editImageUrl && (
                         <div className="flex-shrink-0 w-20 h-20">
@@ -503,66 +505,64 @@ export default function ProfilePage() {
                           accept="image/*"
                           onChange={handleFileChange}
                           disabled={uploading}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         {uploading && (
-                          <p className="text-xs text-blue-600 mt-1">Uploading...</p>
+                          <p className="text-xs text-primary mt-1">Uploading...</p>
                         )}
                       </div>
                       {editImageUrl && (
-                        <button
+                        <Button
                           type="button"
                           onClick={() => setEditImageUrl('')}
-                          className="px-3 py-2 text-sm bg-red-100 text-red-700 rounded-md hover:bg-red-200"
+                          variant="destructive"
+                          size="sm"
                         >
                           Remove
-                        </button>
+                        </Button>
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       Upload an image from your device (max 5MB)
                     </p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Name</label>
-                    <input
+                    <label className="block text-sm font-medium mb-2 text-foreground">Name</label>
+                    <Input
                       type="text"
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Email</label>
-                    <input
+                    <label className="block text-sm font-medium mb-2 text-foreground">Email</label>
+                    <Input
                       type="email"
                       value={user?.email || ''}
                       disabled
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                    <p className="text-xs text-muted-foreground mt-1">Email cannot be changed</p>
                   </div>
 
                   <div className="flex gap-2">
-                    <button
+                    <Button
                       onClick={handleSaveProfile}
                       disabled={saving || !editName.trim()}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                     >
                       {saving ? 'Saving...' : 'Save'}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() => {
                         setEditing(false)
                         setEditName(user?.name || '')
                         setEditImageUrl(user?.imageUrl || '')
                       }}
-                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                      variant="outline"
                     >
                       Cancel
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ) : (
@@ -582,27 +582,30 @@ export default function ProfilePage() {
                         />
                       </div>
                     ) : (
-                      <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center text-2xl">
+                      <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center text-2xl text-foreground">
                         {user?.name?.[0]?.toUpperCase() || '?'}
                       </div>
                     )}
                     <div>
-                      <h3 className="text-xl font-semibold text-gray-900">{user?.name}</h3>
-                      <p className="text-gray-600">{user?.email}</p>
+                      <h3 className="text-xl font-semibold text-foreground">{user?.name}</h3>
+                      <p className="text-muted-foreground">{user?.email}</p>
                     </div>
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
-              <h2 className="text-xl font-bold mb-4 text-gray-900">Account</h2>
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"
-              >
-                Log Out
-              </button>
+            <div className="bg-card rounded-lg shadow-sm border border-border p-6 mt-6">
+              <h2 className="text-xl font-bold mb-4 text-foreground">Account</h2>
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleLogout}
+                  variant="outline"
+                  className="border-destructive text-destructive hover:bg-destructive/10 hover:border-destructive"
+                >
+                  Log Out
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -610,25 +613,27 @@ export default function ProfilePage() {
         {activeTab === 'rooms' && (
           <div className="space-y-4">
             <div className="flex justify-end gap-2">
-              <button
+              <Button
                 onClick={() => setShowCreateModal(true)}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
+                size="sm"
+                className="text-white hover:opacity-90"
+                style={{ backgroundColor: '#7A8471' }} // Sage green from avatar palette
               >
                 Create Room
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setShowJoinModal(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+                size="sm"
               >
                 Join Room
-              </button>
+              </Button>
             </div>
             {rooms.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">
+              <div className="text-center text-muted-foreground py-8">
                 <p className="text-lg">No rooms yet</p>
                 <Link
                   href="/rooms/setup"
-                  className="text-blue-600 hover:underline mt-2 inline-block"
+                  className="text-primary hover:underline mt-2 inline-block"
                 >
                   Create your first room
                 </Link>
@@ -637,13 +642,14 @@ export default function ProfilePage() {
               rooms.map((room) => (
                 <div
                   key={room.id}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
+                  className="bg-card rounded-lg shadow-sm border border-border p-4"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
+                        <DuotoneIcon icon={Sofa} size={18} />
                         <h3 
-                          className="font-semibold text-lg text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+                          className="font-semibold text-lg text-foreground cursor-pointer hover:text-primary transition-colors"
                           onClick={() => {
                             setSelectedRoomForMembers(room)
                             setShowMembersModal(true)
@@ -652,44 +658,49 @@ export default function ProfilePage() {
                           {room.name}
                         </h3>
                         {room.role === 'owner' && (
-                          <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                          <span className="px-2 py-1 bg-primary/10 text-primary text-xs rounded">
                             Owner
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600 mb-2">
+                      <p className="text-sm text-muted-foreground mb-2">
                         {room.memberCount} member{room.memberCount !== 1 ? 's' : ''} •{' '}
                         {room.mediaItemCount} item{room.mediaItemCount !== 1 ? 's' : ''}
                       </p>
                       <div className="flex gap-2 mt-3">
-                        <button
+                        <Button
                           onClick={() => handleEnterRoom(room.id)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+                          size="sm"
                         >
                           Enter Room
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={() => setShowInviteModal(room)}
-                          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm"
+                          variant="outline"
+                          size="sm"
                         >
                           Invite
-                        </button>
+                        </Button>
                         {room.role === 'owner' ? (
-                          <button
+                          <Button
                             onClick={() => handleDeleteRoom(room.id)}
                             disabled={deletingRoomId === room.id}
-                            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm disabled:opacity-50"
+                            variant="outline"
+                            size="sm"
+                            className="border-destructive text-destructive hover:bg-destructive/10 hover:border-destructive ml-auto"
                           >
                             {deletingRoomId === room.id ? 'Deleting...' : 'Delete'}
-                          </button>
+                          </Button>
                         ) : (
-                          <button
+                          <Button
                             onClick={() => handleLeaveRoom(room.id)}
                             disabled={leavingRoomId === room.id}
-                            className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 text-sm disabled:opacity-50"
+                            variant="outline"
+                            size="sm"
+                            className="border-orange-600 text-orange-600 hover:bg-orange-600/10 hover:border-orange-600 ml-auto"
                           >
                             {leavingRoomId === room.id ? 'Leaving...' : 'Leave Room'}
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </div>
@@ -703,46 +714,46 @@ export default function ProfilePage() {
 
       {(showInviteModal || inviteModalClosing) && (
         <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${inviteModalClosing ? 'closing' : ''}`} onClick={handleCloseInviteModal}>
-          <div className={`bg-white rounded-lg max-w-md w-full p-6 modal-content relative ${inviteModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
+          <div className={`bg-card rounded-lg max-w-md w-full p-6 modal-content relative border border-border ${inviteModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             {showInviteModal && (
               <>
                 <button
                   onClick={handleCloseInviteModal}
-                  className="absolute top-4 right-4 z-10 text-gray-500 text-2xl hover:text-gray-700"
+                  className="absolute top-4 right-4 z-10 text-muted-foreground text-2xl hover:text-foreground transition-colors"
                 >
                   ×
                 </button>
                 <div className="mb-4 pr-8">
-                  <h2 className="text-2xl font-bold text-gray-900">Invite to {showInviteModal.name}</h2>
+                  <h2 className="text-2xl font-bold text-foreground">Invite to {showInviteModal.name}</h2>
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Invite Code</label>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Invite Code</label>
                     <div className="flex gap-2">
-                      <input
+                      <Input
                         type="text"
                         value={showInviteModal.inviteCode}
                         readOnly
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-md bg-gray-100 font-mono"
+                        className="flex-1 font-mono bg-muted"
                       />
-                      <button
+                      <Button
                         onClick={() => copyInviteCode(showInviteModal.inviteCode)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                       >
                         Copy
-                      </button>
+                      </Button>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     Share this code with others so they can join your room. They can enter it on the
                     rooms setup page.
                   </p>
-                  <button
+                  <Button
                     onClick={handleCloseInviteModal}
-                    className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                    variant="outline"
+                    className="w-full"
                   >
                     Close
-                  </button>
+                  </Button>
                 </div>
               </>
             )}
@@ -752,50 +763,51 @@ export default function ProfilePage() {
 
       {(showJoinModal || joinModalClosing) && (
         <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${joinModalClosing ? 'closing' : ''}`} onClick={handleCloseJoinModal}>
-          <div className={`bg-white rounded-lg max-w-md w-full p-6 modal-content relative ${joinModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
+          <div className={`bg-card rounded-lg max-w-md w-full p-6 modal-content relative border border-border ${joinModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <button
               onClick={handleCloseJoinModal}
-              className="absolute top-4 right-4 z-10 text-gray-500 text-2xl hover:text-gray-700"
+              className="absolute top-4 right-4 z-10 text-muted-foreground text-2xl hover:text-foreground transition-colors"
             >
               ×
             </button>
             <div className="mb-4 pr-8">
-              <h2 className="text-2xl font-bold text-gray-900">Join a Room</h2>
+              <h2 className="text-2xl font-bold text-foreground">Join a Room</h2>
             </div>
             <form onSubmit={handleJoinRoom} className="space-y-4">
               {joinError && (
-                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+                <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded">
                   {joinError}
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium mb-2">Invite Code</label>
-                <input
+                <label className="block text-sm font-medium mb-2 text-foreground">Invite Code</label>
+                <Input
                   type="text"
                   value={joinInviteCode}
                   onChange={(e) => setJoinInviteCode(e.target.value.toUpperCase())}
                   required
                   maxLength={6}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-2xl font-mono tracking-widest uppercase text-gray-900"
+                  className="text-center text-2xl font-mono tracking-widest uppercase"
                   placeholder="ABC123"
                   autoFocus
                 />
               </div>
               <div className="flex gap-2">
-                <button
+                <Button
                   type="button"
                   onClick={handleCloseJoinModal}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                  variant="outline"
+                  className="flex-1"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
                   disabled={joining}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1"
                 >
                   {joining ? 'Joining...' : 'Join'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -804,49 +816,49 @@ export default function ProfilePage() {
 
       {(showCreateModal || createModalClosing) && (
         <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${createModalClosing ? 'closing' : ''}`} onClick={handleCloseCreateModal}>
-          <div className={`bg-white rounded-lg max-w-md w-full p-6 modal-content relative ${createModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
+          <div className={`bg-card rounded-lg max-w-md w-full p-6 modal-content relative border border-border ${createModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <button
               onClick={handleCloseCreateModal}
-              className="absolute top-4 right-4 z-10 text-gray-500 text-2xl hover:text-gray-700"
+              className="absolute top-4 right-4 z-10 text-muted-foreground text-2xl hover:text-foreground transition-colors"
             >
               ×
             </button>
             <div className="mb-4 pr-8">
-              <h2 className="text-2xl font-bold text-gray-900">Create a Room</h2>
+              <h2 className="text-2xl font-bold text-foreground">Create a Room</h2>
             </div>
             <form onSubmit={handleCreateRoom} className="space-y-4">
               {createError && (
-                <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+                <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded">
                   {createError}
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium mb-2">Room Name</label>
-                <input
+                <label className="block text-sm font-medium mb-2 text-foreground">Room Name</label>
+                <Input
                   type="text"
                   value={roomName}
                   onChange={(e) => setRoomName(e.target.value)}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   placeholder="e.g., Our Apartment"
                   autoFocus
                 />
               </div>
               <div className="flex gap-2">
-                <button
+                <Button
                   type="button"
                   onClick={handleCloseCreateModal}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                  variant="outline"
+                  className="flex-1"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
                   disabled={creating || !roomName.trim()}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-green-600 hover:bg-green-700"
                 >
                   {creating ? 'Creating...' : 'Create'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

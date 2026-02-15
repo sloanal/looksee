@@ -158,18 +158,10 @@ export default function WatchPage() {
   }
 
   const handleSelectItem = (item: Recommendation) => {
-    // Check if we need to show warning
-    if (mode === 'me' && item.interestedCount > 1) {
-      // Check if there are other users interested
-      const otherInterested = item.interestedUsers.filter((u) => u.id !== session?.user?.id)
-      if (otherInterested.length > 0) {
-        setSelectedItem(item)
-        setShowWarning(true)
-        return
-      }
-    }
-    // No warning needed, just proceed
-    handleProceed()
+    const searchQuery = `Where can I watch ${item.title}`
+    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`
+
+    window.open(searchUrl, '_blank', 'noopener,noreferrer,popup=yes')
   }
 
   const handleProceed = () => {
@@ -220,21 +212,21 @@ export default function WatchPage() {
           <div className="space-y-4">
             <button
               onClick={() => {
-                setMode('me')
+                setMode('room')
                 setStep('preferences')
               }}
               className="w-full bg-primary text-primary-foreground py-6 rounded-lg font-medium hover:bg-primary/90 transition-colors text-lg"
             >
-              Just me
+              Everyone in the room
             </button>
             <button
               onClick={() => {
-                setMode('room')
+                setMode('me')
                 setStep('preferences')
               }}
               className="w-full bg-card border-2 border-border text-foreground py-6 rounded-lg font-medium hover:bg-accent transition-colors text-lg"
             >
-              Everyone in the room
+              Just me
             </button>
           </div>
         </div>
@@ -652,7 +644,7 @@ export default function WatchPage() {
                   onClick={() => handleSelectItem(rec)}
                   className="bg-primary text-primary-foreground px-6 py-2 rounded-md font-medium hover:bg-primary/90"
                 >
-                  Watch this
+                  Where can I watch this?
                 </button>
               </CardActions>
             </MediaCard>

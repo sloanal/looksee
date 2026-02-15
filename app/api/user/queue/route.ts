@@ -103,6 +103,15 @@ export async function GET() {
         },
       }))
 
+    const visibleRooms = item.mediaItemRooms
+      .filter((mir) => roomIds.includes(mir.roomId))
+      .map((mir) => ({
+        id: mir.room.id,
+        name: mir.room.name,
+        addedByUserId: mir.addedByUserId,
+        addedByName: mir.addedBy.name,
+      }))
+
     return {
       id: item.id,
       title: item.title,
@@ -121,12 +130,7 @@ export async function GET() {
       roomId: item.room.id,
       roomName: item.room.name,
       createdAt: item.createdAt,
-      rooms: item.mediaItemRooms.map((mir) => ({
-        id: mir.room.id,
-        name: mir.room.name,
-        addedByUserId: mir.addedByUserId,
-        addedByName: mir.addedBy.name,
-      })),
+      rooms: visibleRooms,
       otherPreferences,
     }
   })

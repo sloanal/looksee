@@ -57,7 +57,7 @@ export async function GET() {
     },
     include: {
       createdBy: {
-        select: { id: true, name: true },
+        select: { id: true, name: true, imageUrl: true },
       },
       room: {
         select: { id: true, name: true },
@@ -117,6 +117,7 @@ export async function GET() {
       releaseDate: item.releaseDate,
       createdBy: item.createdBy.name,
       createdByUserId: item.createdBy.id,
+      createdByImageUrl: item.createdBy.imageUrl,
       roomId: item.room.id,
       roomName: item.room.name,
       createdAt: item.createdAt,

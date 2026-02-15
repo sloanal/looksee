@@ -10,6 +10,8 @@ interface Room {
   name: string
 }
 
+const PERSONAL_ROOM_NAME = 'my stuff'
+
 interface MediaItemRoom {
   id: string
   name: string
@@ -44,7 +46,10 @@ export function EditRoomsModal({
         const res = await fetch('/api/rooms')
         if (res.ok) {
           const data = await res.json()
-          setAllRooms(data.rooms || [])
+          const filteredRooms = (data.rooms || []).filter(
+            (room: Room) => room.name.trim().toLowerCase() !== PERSONAL_ROOM_NAME
+          )
+          setAllRooms(filteredRooms)
           // Initialize selected rooms with current rooms
           setSelectedRoomIds(currentRooms.map((r) => r.id))
         }

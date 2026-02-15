@@ -7,6 +7,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Sofa } from 'lucide-react'
 import { RoomJoinModal } from '@/components/RoomJoinModal'
+import { JoinRoomWatchlistPromptModal } from '@/components/JoinRoomWatchlistPromptModal'
 import { RoomSelector } from '@/components/RoomSelector'
 import { DuotoneIcon } from '@/components/DuotoneIcon'
 import { RoomMembersModal } from '@/components/RoomMembersModal'
@@ -58,7 +59,9 @@ export default function ProfilePage() {
   const [deletingRoomId, setDeletingRoomId] = useState<string | null>(null)
   const [leavingRoomId, setLeavingRoomId] = useState<string | null>(null)
   const [showRoomJoinModal, setShowRoomJoinModal] = useState(false)
+  const [showWatchlistPrompt, setShowWatchlistPrompt] = useState(false)
   const [joinedRoomId, setJoinedRoomId] = useState<string | null>(null)
+  const [joinedRoomName, setJoinedRoomName] = useState('')
   const [joinedMediaCount, setJoinedMediaCount] = useState(0)
   const [showMembersModal, setShowMembersModal] = useState(false)
   const [selectedRoomForMembers, setSelectedRoomForMembers] = useState<Room | null>(null)
@@ -351,26 +354,46 @@ export default function ProfilePage() {
         return
       }
 
-      // If already a member or no media items, just refresh and close
-      if (data.alreadyMember || !data.mediaItemCount || data.mediaItemCount === 0) {
+      // If already a member, just refresh and close
+      if (data.alreadyMember) {
         await loadData()
         setShowJoinModal(false)
         setJoinInviteCode('')
         return
       }
 
-      // Show interstitial modal for existing room with media items
+      // First step: ask whether they want to add their watchlist now
       setJoinedRoomId(data.room.id)
+      setJoinedRoomName(data.room.name || '')
       setJoinedMediaCount(data.mediaItemCount)
       await loadData()
       setShowJoinModal(false)
       setJoinInviteCode('')
-      setShowRoomJoinModal(true)
+      setShowWatchlistPrompt(true)
     } catch (err) {
       console.error('Failed to join room:', err)
       setJoinError('Something went wrong. Please try again.')
     } finally {
       setJoining(false)
+    }
+  }
+
+  const handleSkipWatchlistPrompt = () => {
+    setShowWatchlistPrompt(false)
+    // If there are existing items, continue to queue onboarding step.
+    if (joinedMediaCount > 0) {
+      setShowRoomJoinModal(true)
+      return
+    }
+    if (joinedRoomId) {
+      router.push(`/browse?roomId=${joinedRoomId}`)
+    }
+  }
+
+  const handleAddWatchlistNow = () => {
+    setShowWatchlistPrompt(false)
+    if (joinedRoomId) {
+      router.push(`/add?roomId=${joinedRoomId}`)
     }
   }
 
@@ -762,7 +785,7 @@ export default function ProfilePage() {
       )}
 
       {(showJoinModal || joinModalClosing) && (
-        <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${joinModalClosing ? 'closing' : ''}`} onClick={handleCloseJoinModal}>
+        <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start sm:items-center justify-center pt-8 px-4 pb-4 sm:p-4 modal-overlay ${joinModalClosing ? 'closing' : ''}`} onClick={handleCloseJoinModal}>
           <div className={`bg-card rounded-lg max-w-md w-full p-6 modal-content relative border border-border ${joinModalClosing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <button
               onClick={handleCloseJoinModal}
@@ -871,6 +894,12 @@ export default function ProfilePage() {
         roomId={joinedRoomId || ''}
         onSkip={handleSkipQueue}
         onGoToQueue={handleGoToQueue}
+      />
+      <JoinRoomWatchlistPromptModal
+        isOpen={showWatchlistPrompt}
+        roomName={joinedRoomName}
+        onSkip={handleSkipWatchlistPrompt}
+        onAddNow={handleAddWatchlistNow}
       />
 
       <RoomMembersModal

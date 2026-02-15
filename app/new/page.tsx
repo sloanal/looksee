@@ -30,6 +30,7 @@ interface QueueItem {
   rating?: number
   createdBy: string
   createdByUserId?: string
+  createdByImageUrl?: string | null
   roomId: string
   roomName: string
   tmdbId?: string | null
@@ -225,6 +226,14 @@ export default function NewPage() {
     }
   }
 
+  const getInitials = (name?: string) => {
+    if (!name) return '?'
+    const parts = name.trim().split(/\s+/).filter(Boolean)
+    if (parts.length === 0) return '?'
+    if (parts.length === 1) return parts[0][0]?.toUpperCase() || '?'
+    return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase()
+  }
+
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -311,6 +320,24 @@ export default function NewPage() {
                   </CardContent>
                 </CardLayout>
                 <div className="space-y-0.5 -mx-4 -mb-4 px-4 pt-1 pb-1 border-t border-border mt-2 bg-muted/50">
+                  <div className="flex items-center justify-center gap-2 pt-2">
+                    {item.createdByImageUrl ? (
+                      <Image
+                        src={item.createdByImageUrl}
+                        alt={`${item.createdBy} avatar`}
+                        width={20}
+                        height={20}
+                        className="h-5 w-5 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-5 w-5 rounded-full bg-foreground/10 text-[10px] font-medium text-foreground flex items-center justify-center">
+                        {getInitials(item.createdBy)}
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Added by {item.createdBy}
+                    </p>
+                  </div>
                   <div className="flex justify-center pt-1 pb-2">
                     <Button
                 onClick={(e) => {

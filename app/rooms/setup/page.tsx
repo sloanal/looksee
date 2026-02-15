@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { RoomJoinModal } from '@/components/RoomJoinModal'
+import { JoinRoomWatchlistPromptModal } from '@/components/JoinRoomWatchlistPromptModal'
 
 export default function RoomSetupPage() {
   const { data: session, status } = useSession()
@@ -14,7 +15,9 @@ export default function RoomSetupPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showJoinModal, setShowJoinModal] = useState(false)
+  const [showWatchlistPrompt, setShowWatchlistPrompt] = useState(false)
   const [joinedRoomId, setJoinedRoomId] = useState<string | null>(null)
+  const [joinedRoomName, setJoinedRoomName] = useState<string>('')
   const [joinedMediaCount, setJoinedMediaCount] = useState(0)
 
   useEffect(() => {
@@ -72,20 +75,40 @@ export default function RoomSetupPage() {
         return
       }
 
-      // If already a member or no media items, redirect directly
-      if (data.alreadyMember || !data.mediaItemCount || data.mediaItemCount === 0) {
+      // If already a member, redirect directly
+      if (data.alreadyMember) {
         router.push(`/browse?roomId=${data.room.id}`)
         return
       }
 
-      // Show modal for existing room with media items
+      // First step: ask whether they want to add their watchlist now
       setJoinedRoomId(data.room.id)
+      setJoinedRoomName(data.room.name || '')
       setJoinedMediaCount(data.mediaItemCount)
-      setShowJoinModal(true)
+      setShowWatchlistPrompt(true)
     } catch (err) {
       setError('Something went wrong. Please try again.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleSkipWatchlistPrompt = () => {
+    setShowWatchlistPrompt(false)
+    // If there are existing items, continue to queue onboarding step.
+    if (joinedMediaCount > 0) {
+      setShowJoinModal(true)
+      return
+    }
+    if (joinedRoomId) {
+      router.push(`/browse?roomId=${joinedRoomId}`)
+    }
+  }
+
+  const handleAddWatchlistNow = () => {
+    setShowWatchlistPrompt(false)
+    if (joinedRoomId) {
+      router.push(`/add?roomId=${joinedRoomId}`)
     }
   }
 
@@ -134,7 +157,7 @@ export default function RoomSetupPage() {
               <span className="text-sm text-muted-foreground mt-1">Enter an invite code</span>
             </button>
             <button
-              onClick={() => router.push('/browse')}
+              onClick={() => router.push('/add')}
               className="w-full text-foreground py-4 rounded-lg font-medium hover:bg-accent transition-colors text-lg flex flex-col items-center"
             >
               <span>Skip for now</span>
@@ -255,6 +278,12 @@ export default function RoomSetupPage() {
         roomId={joinedRoomId || ''}
         onSkip={handleSkipQueue}
         onGoToQueue={handleGoToQueue}
+      />
+      <JoinRoomWatchlistPromptModal
+        isOpen={showWatchlistPrompt}
+        roomName={joinedRoomName}
+        onSkip={handleSkipWatchlistPrompt}
+        onAddNow={handleAddWatchlistNow}
       />
     </div>
   )

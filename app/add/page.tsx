@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
@@ -14,6 +14,7 @@ import {
   MediaCard,
   CardLayout,
   CardPoster,
+  CardMenu,
   CardContent,
   CardTitle,
   CardSubtitle,
@@ -91,7 +92,11 @@ export default function AddPage() {
   const [recommendedByName, setRecommendedByName] = useState('')
   const [recommendationContext, setRecommendationContext] = useState('')
   const [status, setStatus] = useState('have_not_seen')
-  const [excitement, setExcitement] = useState(3)
+  const [excitement, setExcitement] = useState(5)
+  const [isConfirmDetailsEditable, setIsConfirmDetailsEditable] = useState(false)
+  const [isConfirmMenuOpen, setIsConfirmMenuOpen] = useState(false)
+  const confirmMenuRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (sessionStatus === 'loading') return
@@ -104,6 +109,21 @@ export default function AddPage() {
     // Allow users to add items even without rooms - they can add to "Just My Stuff"
     // The API will handle creating a default room if needed
   }, [session, sessionStatus, router])
+
+  useEffect(() => {
+    if (!isConfirmMenuOpen) return
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (!confirmMenuRef.current?.contains(event.target as Node)) {
+        setIsConfirmMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick)
+    }
+  }, [isConfirmMenuOpen])
 
   const handleSearch = useCallback(async () => {
     if (!searchQuery.trim()) return
@@ -160,6 +180,8 @@ export default function AddPage() {
       setType(data.type === 'movie' ? 'movie' : 'show')
       setDescription(data.overview || '')
       setGenres(data.genres?.join(', ') || '')
+      setIsConfirmDetailsEditable(false)
+      setIsConfirmMenuOpen(false)
       setMode('confirm')
     } catch (err) {
       console.error('Failed to fetch details:', err)
@@ -283,6 +305,10 @@ export default function AddPage() {
   // Allow null roomId ("Just My Stuff"), "all-rooms", or any valid roomId
   // Only show loading if we're checking for rooms (which happens in useEffect)
   // The page can render with null roomId
+  const parsedGenres = genres
+    .split(',')
+    .map((genre) => genre.trim())
+    .filter(Boolean)
 
   if (mode === 'confirm') {
     return (
@@ -294,6 +320,7 @@ export default function AddPage() {
                 onClick={() => {
                   setMode('search')
                   setSelectedResult(null)
+                  setIsConfirmMenuOpen(false)
                 }}
                 className="flex items-center justify-center p-1.5 -ml-1 rounded-md hover:bg-accent transition-colors"
                 aria-label="Back"
@@ -301,68 +328,149 @@ export default function AddPage() {
                 <DuotoneIcon icon={ArrowLeft} size={20} />
               </button>
               <h1 className="text-2xl font-bold text-foreground whitespace-nowrap leading-tight">Confirm</h1>
+              <RoomSelector />
             </div>
-            <RoomSelector />
           </div>
         </div>
 
-        <div className="p-4">
+        <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
+          <div className="bg-content p-4 min-h-[calc(100vh-200px)]">
+            <form onSubmit={handleSubmit} className="space-y-4 max-w-4xl mx-auto">
+          <MediaCard className="relative">
+            <div ref={confirmMenuRef}>
+              <CardMenu>
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmMenuOpen((prev) => !prev)}
+                  className="p-2 text-muted-foreground opacity-60 hover:text-foreground hover:opacity-100 hover:bg-accent rounded-full transition-colors"
+                  aria-label="Menu"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="1" />
+                    <circle cx="12" cy="5" r="1" />
+                    <circle cx="12" cy="19" r="1" />
+                  </svg>
+                </button>
+                {isConfirmMenuOpen && (
+                  <div className="absolute right-0 mt-1 w-44 bg-popover rounded-md shadow-lg border border-border py-1 z-[20]">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsConfirmDetailsEditable((prev) => !prev)
+                        setIsConfirmMenuOpen(false)
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-accent"
+                    >
+                      {isConfirmDetailsEditable ? 'Lock details' : 'Edit details'}
+                    </button>
+                  </div>
+                )}
+              </CardMenu>
+            </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Title *</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            />
-          </div>
+            {isConfirmDetailsEditable ? (
+              <div className="space-y-4 pr-10">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Title *</label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                    className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  />
+                </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Type *</label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value as any)}
-              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground"
-            >
-              <option value="movie">Movie</option>
-              <option value="show">Show</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Type *</label>
+                  <select
+                    value={type}
+                    onChange={(e) => setType(e.target.value as any)}
+                    className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground"
+                  >
+                    <option value="movie">Movie</option>
+                    <option value="show">Show</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+            ) : (
+              <>
+                <input type="text" value={title} readOnly required className="hidden" aria-hidden />
+                <CardLayout>
+                  <CardPoster src={selectedResult?.posterUrl || null} alt={title || 'Selected title'} width={80} height={120} />
+                  <CardContent>
+                    <CardTitle className="text-xl">{title || 'Untitled'}</CardTitle>
+                    <div className="flex items-center gap-1 mb-1">
+                      <DuotoneIcon icon={getTypeIcon(type)} size={12} />
+                      <CardSubtitle className="mb-0">{type}</CardSubtitle>
+                      {selectedResult?.releaseDate && (
+                        <>
+                          <DuotoneIcon icon={Calendar} size={12} />
+                          <p className="text-xs text-muted-foreground mb-0">
+                            {new Date(selectedResult.releaseDate).getFullYear()}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    {parsedGenres.length > 0 && <CardGenres genres={parsedGenres} maxDisplay={8} />}
+                    {description ? (
+                      <CardDescription lineClamp={0} className="mt-2 mb-0">{description}</CardDescription>
+                    ) : (
+                      <p className="text-sm text-muted-foreground mt-2 mb-0">No description yet</p>
+                    )}
+                  </CardContent>
+                </CardLayout>
+              </>
+            )}
+          </MediaCard>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">External URL (optional)</label>
-            <input
-              type="url"
-              value={externalUrl}
-              onChange={(e) => setExternalUrl(e.target.value)}
-              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              placeholder="https://..."
-            />
-          </div>
+          {!selectedResult && (
+            <div>
+              <label className="block text-sm font-medium mb-1">External URL (optional)</label>
+              <input
+                type="url"
+                value={externalUrl}
+                onChange={(e) => setExternalUrl(e.target.value)}
+                className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                placeholder="https://..."
+              />
+            </div>
+          )}
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            />
-          </div>
+          {isConfirmDetailsEditable && (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
+              </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Genres (comma-separated)</label>
-            <input
-              type="text"
-              value={genres}
-              onChange={(e) => setGenres(e.target.value)}
-              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            />
-          </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Genres (comma-separated)</label>
+                <input
+                  type="text"
+                  value={genres}
+                  onChange={(e) => setGenres(e.target.value)}
+                  className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
+              </div>
+            </>
+          )}
 
           <div>
             <label className="block text-sm font-medium mb-1">Recommended by</label>
@@ -413,14 +521,15 @@ export default function AddPage() {
             </select>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary text-primary-foreground py-3 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50"
-          >
-            {loading ? 'Adding...' : roomId === 'all-rooms' ? 'Add to Everything' : !roomId ? 'Add to My Stuff' : 'Add to Room'}
-          </button>
-        </form>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-primary text-primary-foreground py-3 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50"
+              >
+                {loading ? 'Adding...' : roomId === 'all-rooms' ? 'Add to All Rooms' : !roomId ? 'Add to My Stuff' : 'Add to Room'}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     )
@@ -551,7 +660,7 @@ export default function AddPage() {
             disabled={loading}
             className="w-full bg-primary text-primary-foreground py-3 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50"
           >
-            {loading ? 'Adding...' : roomId === 'all-rooms' ? 'Add to Everything' : !roomId ? 'Add to My Stuff' : 'Add to Room'}
+            {loading ? 'Adding...' : roomId === 'all-rooms' ? 'Add to All Rooms' : !roomId ? 'Add to My Stuff' : 'Add to Room'}
           </button>
         </form>
         </div>
@@ -572,6 +681,7 @@ export default function AddPage() {
         <div className="space-y-3">
           <div className="flex gap-2">
             <Input
+              ref={searchInputRef}
               type="text"
               placeholder="Search for a new title..."
               value={searchQuery}
@@ -601,6 +711,28 @@ export default function AddPage() {
 
       <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
         <div className="space-y-4 bg-content p-4 min-h-[calc(100vh-200px)]">
+      {!loading && searchResults.length === 0 && !(lastSearchedQuery && searchQuery.trim() === lastSearchedQuery) && (
+        <div className="flex items-center justify-center min-h-[calc(100vh-280px)]">
+          <div className="w-full max-w-md overflow-hidden rounded-lg text-center">
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full h-auto object-cover"
+            >
+              <source src="/welcome.mp4" type="video/mp4" />
+            </video>
+            <button
+              type="button"
+              onClick={() => searchInputRef.current?.focus()}
+              className="mt-4 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Add something you want to watch
+            </button>
+          </div>
+        </div>
+      )}
       {loading && searchQuery && (
         <div className="text-center text-muted-foreground py-8">Searching...</div>
       )}

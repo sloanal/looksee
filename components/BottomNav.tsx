@@ -16,8 +16,8 @@ export function BottomNav() {
   const [queueCount, setQueueCount] = useState(0)
 
   const navItems = [
-    { href: '/browse', label: 'Browse', icon: List },
     { href: '/add', label: 'Add', icon: Plus },
+    { href: '/browse', label: 'Browse', icon: List },
     { href: '/watch', label: 'Watch', icon: Play },
     { href: '/new', label: 'New', icon: Bell },
     { href: '/profile', label: 'Settings', icon: Settings },
@@ -74,7 +74,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border safe-bottom safe-x z-50">
-      <div className="flex justify-around items-center h-20 max-w-full overflow-hidden pb-6">
+      <div className="flex justify-around items-center h-20 max-w-full overflow-hidden pb-7">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
           return (

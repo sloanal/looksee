@@ -25,7 +25,7 @@ export default function Home() {
         })
         .then((data) => {
           if (data && data.rooms && data.rooms.length > 0) {
-            router.push('/browse')
+            router.push('/add')
           } else {
             router.push('/rooms/setup')
           }

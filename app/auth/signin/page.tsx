@@ -36,7 +36,7 @@ export default function SignInPage() {
           }
           const roomsData = await roomsRes.json()
           if (roomsData.rooms && roomsData.rooms.length > 0) {
-            router.push('/browse')
+            router.push('/add')
           } else {
             router.push('/rooms/setup')
           }

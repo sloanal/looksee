@@ -165,6 +165,7 @@ This app is configured for deployment on Vercel with PostgreSQL and Blob Storage
 6. **Deploy**
    - Click **Deploy** (or push to your main branch for automatic deployment)
    - Vercel will build and deploy your app
+   - Production builds now fail if `prisma migrate deploy` fails (safer default)
 
 7. **Run Database Migrations** (IMPORTANT - Do this after creating the database!)
    
@@ -183,10 +184,13 @@ This app is configured for deployment on Vercel with PostgreSQL and Blob Storage
    npx prisma migrate deploy
    ```
    
-   **Option B: Using the API endpoint**
+   **Option B: Using the API endpoint (opt-in)**
+   - Set environment variables first:
+     - `ALLOW_RUNTIME_MIGRATIONS=true`
+     - `MIGRATION_TOKEN=<a long random secret, 24+ chars>`
    - After deployment, call: `POST https://your-app.vercel.app/api/admin/migrate`
-   - Include header: `Authorization: Bearer setup-migration-2024`
-   - Or set `MIGRATION_TOKEN` environment variable in Vercel for custom token
+   - Include header: `Authorization: Bearer <MIGRATION_TOKEN>`
+   - In production, this endpoint is disabled unless `ALLOW_RUNTIME_MIGRATIONS=true`
    
    **Option C: Manual via Vercel Dashboard**
    - Go to your Postgres database in Vercel Storage
@@ -207,6 +211,9 @@ Once connected, every push to your main branch will automatically trigger a new 
 - `NEXTAUTH_SECRET` - Required: Generate a secure random string
 - `NEXTAUTH_URL` - Automatically set by Vercel (your app URL)
 - `TMDB_API_KEY` - Required: Your TMDB API key
+- `MIGRATIONS_FAIL_OPEN` - Optional emergency bypass (`true` to continue prod builds when migrations fail)
+- `MIGRATION_TOKEN` - Required if using `/api/admin/migrate` (use 24+ character random secret)
+- `ALLOW_RUNTIME_MIGRATIONS` - Optional, defaults to off in production; set `true` only when you intentionally want `/api/admin/migrate` enabled
 
 ## License
 

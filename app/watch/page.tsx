@@ -198,11 +198,14 @@ export default function WatchPage() {
 
   if (step === 'who') {
     return (
-      <div className="max-w-4xl mx-auto">
-        <div className="sticky top-0 bg-background border-b border-border z-10 p-4">
-          <div className="flex items-center gap-3 mb-4">
-            <h1 className="text-2xl font-bold text-foreground">Watch from</h1>
-            <RoomSelector />
+      <div className="max-w-4xl xl:max-w-5xl mx-auto">
+        <div className="sticky top-0 z-10">
+          <div className="absolute inset-y-0 left-1/2 w-screen -translate-x-1/2 bg-background border-b border-border pointer-events-none" />
+          <div className="relative max-w-4xl xl:max-w-5xl mx-auto p-4">
+            <div className="flex items-center gap-3 mb-4">
+              <h1 className="text-2xl font-bold text-foreground">Watch from</h1>
+              <RoomSelector />
+            </div>
           </div>
         </div>
         <div className="p-4 bg-content min-h-[calc(100vh-200px)]">
@@ -236,20 +239,23 @@ export default function WatchPage() {
 
   if (step === 'preferences') {
     return (
-      <div className="max-w-4xl mx-auto">
-        <div className="sticky top-0 bg-background border-b border-border z-10 p-4">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setStep('who')}
-                className="flex items-center justify-center p-1.5 -ml-1 rounded-md hover:bg-accent transition-colors"
-                aria-label="Back"
-              >
-                <DuotoneIcon icon={ArrowLeft} size={20} />
-              </button>
-              <h1 className="text-2xl font-bold text-foreground whitespace-nowrap leading-tight">Watch from</h1>
+      <div className="max-w-4xl xl:max-w-5xl mx-auto">
+        <div className="sticky top-0 z-10">
+          <div className="absolute inset-y-0 left-1/2 w-screen -translate-x-1/2 bg-background border-b border-border pointer-events-none" />
+          <div className="relative max-w-4xl xl:max-w-5xl mx-auto p-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setStep('who')}
+                  className="flex items-center justify-center p-1.5 -ml-1 rounded-md hover:bg-accent transition-colors"
+                  aria-label="Back"
+                >
+                  <DuotoneIcon icon={ArrowLeft} size={20} />
+                </button>
+                <h1 className="text-2xl font-bold text-foreground whitespace-nowrap leading-tight">Watch from</h1>
+              </div>
+              <RoomSelector />
             </div>
-            <RoomSelector />
           </div>
         </div>
         <div className="p-4 bg-content min-h-[calc(100vh-200px)]">
@@ -358,21 +364,24 @@ export default function WatchPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="sticky top-0 bg-background border-b border-border z-10 p-4">
+    <div className="max-w-4xl xl:max-w-5xl mx-auto">
+      <div className="sticky top-0 z-10">
+        <div className="absolute inset-y-0 left-1/2 w-screen -translate-x-1/2 bg-background border-b border-border pointer-events-none" />
+        <div className="relative max-w-4xl xl:max-w-5xl mx-auto p-4">
           <div className="flex items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setStep('preferences')}
-              className="flex items-center justify-center p-1.5 -ml-1 rounded-md hover:bg-accent transition-colors"
-              aria-label="Back"
-            >
-              <DuotoneIcon icon={ArrowLeft} size={20} />
-            </button>
-            <h1 className="text-2xl font-bold text-foreground whitespace-nowrap leading-tight">Watch from</h1>
-            <RoomSelector />
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setStep('preferences')}
+                className="flex items-center justify-center p-1.5 -ml-1 rounded-md hover:bg-accent transition-colors"
+                aria-label="Back"
+              >
+                <DuotoneIcon icon={ArrowLeft} size={20} />
+              </button>
+              <h1 className="text-2xl font-bold text-foreground whitespace-nowrap leading-tight">Watch from</h1>
+              <RoomSelector />
+            </div>
+            <RoomMembersAvatars />
           </div>
-          <RoomMembersAvatars />
         </div>
       </div>
 
@@ -395,7 +404,7 @@ export default function WatchPage() {
         </div>
       ) : (
         <>
-          <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
+          <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] lg:w-full lg:left-0 lg:right-0 lg:ml-0 lg:mr-0">
           <div className="space-y-4 bg-content p-4">
             {recommendations.map((rec, index) => (
             <MediaCard

@@ -452,16 +452,17 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto p-4">
+      <div className="max-w-4xl xl:max-w-5xl mx-auto p-4">
         <div className="text-center text-muted-foreground">Loading...</div>
       </div>
     )
   }
 
   return (
-    <div className="max-w-4xl mx-auto pb-20">
-      <div className="sticky top-0 bg-background border-b border-border z-10">
-        <div className="p-4">
+    <div className="max-w-4xl xl:max-w-5xl mx-auto pb-20">
+      <div className="sticky top-0 z-10">
+        <div className="absolute inset-y-0 left-1/2 w-screen -translate-x-1/2 bg-background border-b border-border pointer-events-none" />
+        <div className="relative max-w-4xl xl:max-w-5xl mx-auto p-4">
           <h1 className="text-2xl font-bold mb-4 text-foreground">Settings</h1>
           <div className="flex gap-2">
             <button

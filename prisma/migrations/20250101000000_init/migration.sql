@@ -118,4 +118,3 @@ ALTER TABLE "UserMediaPreference" ADD CONSTRAINT "UserMediaPreference_userId_fke
 
 -- AddForeignKey
 ALTER TABLE "UserMediaPreference" ADD CONSTRAINT "UserMediaPreference_mediaItemId_fkey" FOREIGN KEY ("mediaItemId") REFERENCES "MediaItem"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-

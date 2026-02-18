@@ -236,13 +236,16 @@ export default function NewPage() {
 
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="sticky top-0 bg-background border-b border-border z-10 p-4">
-        <h1 className="text-2xl font-bold text-foreground mb-2">New</h1>
-        <p className="text-sm text-muted-foreground">Add your excitement to these movies and shows added by other people in your rooms.</p>
+    <div className="max-w-4xl xl:max-w-5xl mx-auto">
+      <div className="sticky top-0 z-10">
+        <div className="absolute inset-y-0 left-1/2 w-screen -translate-x-1/2 bg-background border-b border-border pointer-events-none" />
+        <div className="relative max-w-4xl xl:max-w-5xl mx-auto p-4">
+          <h1 className="text-2xl font-bold text-foreground mb-2">New</h1>
+          <p className="text-sm text-muted-foreground">Add your excitement to these movies and shows added by other people in your rooms.</p>
+        </div>
       </div>
 
-      <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
+      <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] lg:w-full lg:left-0 lg:right-0 lg:ml-0 lg:mr-0">
         <div ref={queueContainerRef} className="p-4 space-y-4 bg-content min-h-[calc(100vh-200px)]">
           {loading ? (
             <div className="text-center text-muted-foreground py-8">Loading...</div>

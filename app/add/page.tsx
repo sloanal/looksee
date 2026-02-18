@@ -312,28 +312,31 @@ export default function AddPage() {
 
   if (mode === 'confirm') {
     return (
-      <div className="max-w-4xl mx-auto">
-        <div className="sticky top-0 bg-background border-b border-border z-10 p-4">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => {
-                  setMode('search')
-                  setSelectedResult(null)
-                  setIsConfirmMenuOpen(false)
-                }}
-                className="flex items-center justify-center p-1.5 -ml-1 rounded-md hover:bg-accent transition-colors"
-                aria-label="Back"
-              >
-                <DuotoneIcon icon={ArrowLeft} size={20} />
-              </button>
-              <h1 className="text-2xl font-bold text-foreground whitespace-nowrap leading-tight">Confirm</h1>
-              <RoomSelector />
+      <div className="max-w-4xl xl:max-w-5xl mx-auto">
+        <div className="sticky top-0 z-10">
+          <div className="absolute inset-y-0 left-1/2 w-screen -translate-x-1/2 bg-background border-b border-border pointer-events-none" />
+          <div className="relative max-w-4xl xl:max-w-5xl mx-auto p-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setMode('search')
+                    setSelectedResult(null)
+                    setIsConfirmMenuOpen(false)
+                  }}
+                  className="flex items-center justify-center p-1.5 -ml-1 rounded-md hover:bg-accent transition-colors"
+                  aria-label="Back"
+                >
+                  <DuotoneIcon icon={ArrowLeft} size={20} />
+                </button>
+                <h1 className="text-2xl font-bold text-foreground whitespace-nowrap leading-tight">Confirm</h1>
+                <RoomSelector />
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
+        <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] lg:w-full lg:left-0 lg:right-0 lg:ml-0 lg:mr-0">
           <div className="bg-content p-4 min-h-[calc(100vh-200px)]">
             <form onSubmit={handleSubmit} className="space-y-4 max-w-4xl mx-auto">
           <MediaCard className="relative">
@@ -537,16 +540,19 @@ export default function AddPage() {
 
   if (mode === 'manual') {
     return (
-      <div className="max-w-4xl mx-auto">
-        <div className="sticky top-0 bg-background border-b border-border z-10 p-4">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="flex items-center gap-4">
-              <button onClick={() => setMode('search')} className="text-primary">
-                ← Back to Search
-              </button>
-              <h1 className="text-2xl font-bold text-foreground">Add Manually</h1>
+      <div className="max-w-4xl xl:max-w-5xl mx-auto">
+        <div className="sticky top-0 z-10">
+          <div className="absolute inset-y-0 left-1/2 w-screen -translate-x-1/2 bg-background border-b border-border pointer-events-none" />
+          <div className="relative max-w-4xl xl:max-w-5xl mx-auto p-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-4">
+                <button onClick={() => setMode('search')} className="text-primary">
+                  ← Back to Search
+                </button>
+                <h1 className="text-2xl font-bold text-foreground">Add Manually</h1>
+              </div>
+              <RoomSelector />
             </div>
-            <RoomSelector />
           </div>
         </div>
 
@@ -669,47 +675,50 @@ export default function AddPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="sticky top-0 bg-background border-b border-border z-10 p-4">
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-foreground">Add to</h1>
-            <RoomSelector />
+    <div className="max-w-4xl xl:max-w-5xl mx-auto">
+      <div className="sticky top-0 z-10">
+        <div className="absolute inset-y-0 left-1/2 w-screen -translate-x-1/2 bg-background border-b border-border pointer-events-none" />
+        <div className="relative max-w-4xl xl:max-w-5xl mx-auto p-4">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-foreground">Add to</h1>
+              <RoomSelector />
+            </div>
+            <RoomMembersAvatars />
           </div>
-          <RoomMembersAvatars />
-        </div>
-        <div className="space-y-3">
-          <div className="flex gap-2">
-            <Input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Search for a new title..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="flex-1"
-            />
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <Input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search for a new title..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                className="flex-1"
+              />
+              <button
+                onClick={handleSearch}
+                disabled={loading}
+                className="px-6 h-10 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center"
+              >
+                Search
+              </button>
+            </div>
             <button
-              onClick={handleSearch}
-              disabled={loading}
-              className="px-6 h-10 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center"
+              onClick={() => {
+                if (searchQuery) setTitle(searchQuery)
+                setMode('manual')
+              }}
+              className="text-sm text-primary hover:underline"
             >
-              Search
+              Or add manually
             </button>
           </div>
-          <button
-            onClick={() => {
-              if (searchQuery) setTitle(searchQuery)
-              setMode('manual')
-            }}
-            className="text-sm text-primary hover:underline"
-          >
-            Or add manually
-          </button>
         </div>
       </div>
 
-      <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
+      <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] lg:w-full lg:left-0 lg:right-0 lg:ml-0 lg:mr-0">
         <div className="space-y-4 bg-content p-4 min-h-[calc(100vh-200px)]">
       {!loading && searchResults.length === 0 && !(lastSearchedQuery && searchQuery.trim() === lastSearchedQuery) && (
         <div className="flex items-center justify-center min-h-[calc(100vh-280px)]">

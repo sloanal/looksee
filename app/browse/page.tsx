@@ -350,52 +350,55 @@ export default function BrowsePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="sticky top-0 bg-background border-b border-border z-10 p-4">
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-foreground">Browse</h1>
-            <RoomSelector />
+    <div className="max-w-4xl xl:max-w-5xl mx-auto">
+      <div className="sticky top-0 z-10">
+        <div className="absolute inset-y-0 left-1/2 w-screen -translate-x-1/2 bg-background border-b border-border pointer-events-none" />
+        <div className="relative max-w-4xl xl:max-w-5xl mx-auto p-4">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-foreground">Browse</h1>
+              <RoomSelector />
+            </div>
+            <RoomMembersAvatars />
           </div>
-          <RoomMembersAvatars />
-        </div>
 
-        <div className="space-y-3">
-          <Input
-            type="text"
-            placeholder="Search your titles..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full"
-          />
+          <div className="space-y-3">
+            <Input
+              type="text"
+              placeholder="Search your titles..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full"
+            />
 
-          <div className="flex gap-2 flex-wrap">
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="px-3 py-2 border border-input rounded-md text-sm text-foreground bg-background"
-            >
-              <option value="all">All Types</option>
-              <option value="movie">Movies</option>
-              <option value="show">Shows</option>
-              <option value="video">Videos</option>
-              <option value="link">Links</option>
-            </select>
+            <div className="flex gap-2 flex-wrap">
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="px-3 py-2 border border-input rounded-md text-sm text-foreground bg-background"
+              >
+                <option value="all">All Types</option>
+                <option value="movie">Movies</option>
+                <option value="show">Shows</option>
+                <option value="video">Videos</option>
+                <option value="link">Links</option>
+              </select>
 
-            <select
-              value={myStatusFilter}
-              onChange={(e) => setMyStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-input rounded-md text-sm text-foreground bg-background"
-            >
-              <option value="unrated">All Items</option>
-              <option value="have_not_seen">Have not seen</option>
-              <option value="already_seen">Already seen</option>
-            </select>
+              <select
+                value={myStatusFilter}
+                onChange={(e) => setMyStatusFilter(e.target.value)}
+                className="px-3 py-2 border border-input rounded-md text-sm text-foreground bg-background"
+              >
+                <option value="unrated">All Items</option>
+                <option value="have_not_seen">Have not seen</option>
+                <option value="already_seen">Already seen</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
+      <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] lg:w-full lg:left-0 lg:right-0 lg:ml-0 lg:mr-0">
         <div ref={scrollContainerRef} className="p-4 space-y-4 bg-content min-h-[calc(100vh-200px)]">
       {loading ? (
         <div className="text-center text-muted-foreground py-8">Loading...</div>

@@ -23,7 +23,7 @@
   --input: 214.3 31.8% 91.4%;
   --ring: 222.2 84% 4.9%;
   --radius: 0.75rem;
-  --content-background: 43 45% 94%;
+  --content-background: #FAF4E5;
 }
 
 @layer base {
@@ -56,7 +56,9 @@
     text-wrap: balance;
   }
   .bg-content {
-    background-color: hsl(var(--content-background));
+    background-color: var(--content-background);
+    box-shadow: 0 0 0 100vmax var(--content-background);
+    clip-path: inset(0 -100vmax);
   }
   
   /* Neumorphic button styling */

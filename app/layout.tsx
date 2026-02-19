@@ -3,6 +3,14 @@ import { Archivo, Inter } from 'next/font/google'
 import './globals.css'
 import { SessionProvider } from '@/components/SessionProvider'
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_APP_URL ??
+  process.env.NEXTAUTH_URL ??
+  'http://localhost:3000'
+
+const appDescription =
+  "Looksee finds the overlap in your friends' watchlists, making \"what should we watch?\" simple."
+
 const archivo = Archivo({
   subsets: ['latin'],
   variable: '--font-archivo',
@@ -14,8 +22,26 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: 'Looksee - Collaborative Movie & Show Recommendations',
-  description: 'Share and discover movies and shows with your friends and household',
+  description: appDescription,
+  openGraph: {
+    title: 'Looksee - Collaborative Movie & Show Recommendations',
+    description: appDescription,
+    type: 'website',
+    videos: [
+      {
+        url: '/welcome.mp4',
+        secureUrl: '/welcome.mp4',
+        type: 'video/mp4',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Looksee - Collaborative Movie & Show Recommendations',
+    description: appDescription,
+  },
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },

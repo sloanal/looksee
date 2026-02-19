@@ -109,6 +109,23 @@ export async function GET(
     }
   }
 
+  // Hide items explicitly marked watched by current user from room views.
+  where = {
+    AND: [
+      where,
+      {
+        NOT: {
+          preferences: {
+            some: {
+              userId: session.user.id,
+              isWatched: true,
+            },
+          },
+        },
+      },
+    ],
+  }
+
   // Get media items with all preferences (including user info)
   const mediaItems = await prisma.mediaItem.findMany({
     where,
@@ -188,6 +205,7 @@ export async function GET(
       myPreference: myPref
         ? {
             status: myPref.status.toLowerCase(),
+            isWatched: myPref.isWatched,
             excitement: myPref.excitement,
             notes: myPref.notes,
             recommendedByName: myPref.recommendedByName,
@@ -360,6 +378,7 @@ export async function POST(
         userId: session.user.id,
         mediaItemId: mediaItem.id,
         status: status.toUpperCase(),
+        isWatched: false,
         excitement: parseInt(excitement),
         notes: notes || null,
         recommendedByName: recommendedByName || null,
@@ -367,6 +386,7 @@ export async function POST(
       },
       update: {
         status: status.toUpperCase(),
+        isWatched: false,
         excitement: parseInt(excitement),
         notes: notes || null,
         recommendedByName: recommendedByName || null,

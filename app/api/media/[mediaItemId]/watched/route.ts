@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-// POST /api/media/[mediaItemId]/watched - mark as watched and remove from all rooms
+// POST /api/media/[mediaItemId]/watched - mark as watched for current user
 export async function POST(
   _request: Request,
   { params }: { params: { mediaItemId: string } }
@@ -41,41 +41,37 @@ export async function POST(
       }
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.mediaItemRoom.deleteMany({
-        where: { mediaItemId: params.mediaItemId },
-      })
-
-      const existingPreference = await tx.userMediaPreference.findUnique({
-        where: {
-          userId_mediaItemId: {
-            userId: session.user.id,
-            mediaItemId: params.mediaItemId,
-          },
-        },
-      })
-
-      await tx.userMediaPreference.upsert({
-        where: {
-          userId_mediaItemId: {
-            userId: session.user.id,
-            mediaItemId: params.mediaItemId,
-          },
-        },
-        create: {
+    const existingPreference = await prisma.userMediaPreference.findUnique({
+      where: {
+        userId_mediaItemId: {
           userId: session.user.id,
           mediaItemId: params.mediaItemId,
-          status: 'ALREADY_SEEN',
-          excitement: existingPreference?.excitement || 3,
-          notes: existingPreference?.notes || null,
-          recommendedByName: existingPreference?.recommendedByName || null,
-          recommendationContext: existingPreference?.recommendationContext || null,
         },
-        update: {
-          status: 'ALREADY_SEEN',
-          updatedAt: new Date(),
+      },
+    })
+
+    await prisma.userMediaPreference.upsert({
+      where: {
+        userId_mediaItemId: {
+          userId: session.user.id,
+          mediaItemId: params.mediaItemId,
         },
-      })
+      },
+      create: {
+        userId: session.user.id,
+        mediaItemId: params.mediaItemId,
+        status: 'ALREADY_SEEN',
+        isWatched: true,
+        excitement: existingPreference?.excitement || 3,
+        notes: existingPreference?.notes || null,
+        recommendedByName: existingPreference?.recommendedByName || null,
+        recommendationContext: existingPreference?.recommendationContext || null,
+      },
+      update: {
+        status: 'ALREADY_SEEN',
+        isWatched: true,
+        updatedAt: new Date(),
+      },
     })
 
     return NextResponse.json({ success: true })
@@ -88,7 +84,7 @@ export async function POST(
   }
 }
 
-// DELETE /api/media/[mediaItemId]/watched - remove from watched list
+// DELETE /api/media/[mediaItemId]/watched - remove watched marker for current user
 export async function DELETE(
   _request: Request,
   { params }: { params: { mediaItemId: string } }
@@ -120,7 +116,7 @@ export async function DELETE(
         },
       },
       data: {
-        status: 'HAVE_NOT_SEEN',
+        isWatched: false,
         updatedAt: new Date(),
       },
     })

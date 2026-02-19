@@ -66,6 +66,7 @@ export async function POST(
       userId: session.user.id,
       mediaItemId,
       status: status.toUpperCase(),
+      isWatched: false,
       excitement: parseInt(excitement),
       notes: notes || null,
       recommendedByName: recommendedByName || null,
@@ -73,6 +74,8 @@ export async function POST(
     },
     update: {
       status: status.toUpperCase(),
+      // If a user marks an item as "have not seen", clear explicit watched marker.
+      ...(statusUpper === 'HAVE_NOT_SEEN' ? { isWatched: false } : {}),
       excitement: parseInt(excitement),
       notes: notes || null,
       recommendedByName: recommendedByName || null,
@@ -153,6 +156,7 @@ export async function PATCH(
         userId: session.user.id,
         mediaItemId,
         status: 'HAVE_NOT_SEEN',
+        isWatched: false,
         excitement: 3,
         ...updateData,
       },

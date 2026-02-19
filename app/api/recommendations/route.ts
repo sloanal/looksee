@@ -163,6 +163,12 @@ export async function POST(request: NextRequest) {
     })
   }
 
+  // Never recommend items that current user explicitly marked watched.
+  filteredItems = filteredItems.filter((item) => {
+    const myPref = item.preferences.find((p) => p.userId === session.user.id)
+    return !myPref?.isWatched
+  })
+
   if (mode === 'me') {
     // Just me mode: filter by my preferences
     const myItems = filteredItems.filter((item) => {
@@ -299,6 +305,11 @@ export async function POST(request: NextRequest) {
           }
         })
       }
+
+      filteredItemsWithPrefs = filteredItemsWithPrefs.filter((item) => {
+        const myPref = item.preferences.find((p) => p.userId === session.user.id)
+        return !myPref?.isWatched
+      })
 
       const roomItems = filteredItemsWithPrefs
         .map((item) => {

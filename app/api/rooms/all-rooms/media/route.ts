@@ -136,6 +136,7 @@ export async function POST(request: NextRequest) {
         userId: session.user.id,
         mediaItemId: mediaItem.id,
         status: status.toUpperCase(),
+        isWatched: false,
         excitement: parseInt(excitement),
         notes: notes || null,
         recommendedByName: recommendedByName || null,
@@ -143,6 +144,7 @@ export async function POST(request: NextRequest) {
       },
       update: {
         status: status.toUpperCase(),
+        isWatched: false,
         excitement: parseInt(excitement),
         notes: notes || null,
         recommendedByName: recommendedByName || null,

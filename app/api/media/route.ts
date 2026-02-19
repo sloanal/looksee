@@ -19,25 +19,24 @@ export async function GET(request: NextRequest) {
   })
 
   const roomIds = memberships.map((m) => m.roomId)
+  const watched = searchParams.get('watched') === 'true'
 
-  if (roomIds.length === 0) {
+  if (roomIds.length === 0 && !watched) {
     return NextResponse.json({ items: [] })
   }
 
   // Build query filters
   // Check if allRooms mode is requested (show everything: all rooms plus Just My Stuff)
   const allRooms = searchParams.get('allRooms') === 'true'
-  const watched = searchParams.get('watched') === 'true'
   let where: any
   
   if (watched) {
-    // "Watched" mode: show items the current user marked as already seen.
-    // This includes items that may have been removed from all rooms.
+    // "Watched" mode: show items the current user explicitly marked watched.
     where = {
       preferences: {
         some: {
           userId: session.user.id,
-          status: 'ALREADY_SEEN',
+          isWatched: true,
         },
       },
     }
@@ -109,48 +108,69 @@ export async function GET(request: NextRequest) {
   // Build preferences filters - handle both recommendedBy and myStatus
   const recommendedBy = searchParams.get('recommendedBy')
   const myStatus = searchParams.get('myStatus')
-  
-  if (recommendedBy && (myStatus && myStatus !== 'unrated')) {
-    // Both filters: need items that have BOTH conditions
-    // Item must have a preference with recommendedByName AND
-    // the current user must have a preference with the specified status
-    // We need to combine base conditions with preference filters using AND
-    const baseConditions: any = { ...where }
-    delete baseConditions.preferences
-    delete baseConditions.AND
-    
-    where = {
-      AND: [
-        baseConditions,
-        {
-          preferences: {
-            some: {
-              recommendedByName: recommendedBy,
+
+  if (!watched) {
+    if (recommendedBy && (myStatus && myStatus !== 'unrated')) {
+      // Both filters: need items that have BOTH conditions
+      // Item must have a preference with recommendedByName AND
+      // the current user must have a preference with the specified status
+      // We need to combine base conditions with preference filters using AND
+      const baseConditions: any = { ...where }
+      delete baseConditions.preferences
+      delete baseConditions.AND
+
+      where = {
+        AND: [
+          baseConditions,
+          {
+            preferences: {
+              some: {
+                recommendedByName: recommendedBy,
+              },
             },
           },
+          {
+            preferences: {
+              some: {
+                userId: session.user.id,
+                status: myStatus.toUpperCase(),
+              },
+            },
+          },
+        ],
+      }
+    } else if (recommendedBy) {
+      where.preferences = {
+        some: {
+          recommendedByName: recommendedBy,
         },
+      }
+    } else if (myStatus && myStatus !== 'unrated') {
+      where.preferences = {
+        some: {
+          userId: session.user.id,
+          status: myStatus.toUpperCase(),
+        },
+      }
+    }
+  }
+
+  // Hide watched items from all non-watched views.
+  if (!watched) {
+    where = {
+      AND: [
+        where,
         {
-          preferences: {
-            some: {
-              userId: session.user.id,
-              status: myStatus.toUpperCase(),
+          NOT: {
+            preferences: {
+              some: {
+                userId: session.user.id,
+                isWatched: true,
+              },
             },
           },
         },
       ],
-    }
-  } else if (recommendedBy) {
-    where.preferences = {
-      some: {
-        recommendedByName: recommendedBy,
-      },
-    }
-  } else if (myStatus && myStatus !== 'unrated') {
-    where.preferences = {
-      some: {
-        userId: session.user.id,
-        status: myStatus.toUpperCase(),
-      },
     }
   }
 
@@ -263,6 +283,7 @@ export async function GET(request: NextRequest) {
       myPreference: myPref
         ? {
             status: myPref.status.toLowerCase(),
+            isWatched: myPref.isWatched,
             excitement: myPref.excitement,
             notes: myPref.notes,
             recommendedByName: myPref.recommendedByName,
@@ -431,6 +452,7 @@ export async function POST(request: NextRequest) {
         userId: session.user.id,
         mediaItemId: mediaItem.id,
         status: status.toUpperCase(),
+        isWatched: false,
         excitement: parseInt(excitement),
         notes: notes || null,
         recommendedByName: recommendedByName || null,
@@ -438,6 +460,7 @@ export async function POST(request: NextRequest) {
       },
       update: {
         status: status.toUpperCase(),
+        isWatched: false,
         excitement: parseInt(excitement),
         notes: notes || null,
         recommendedByName: recommendedByName || null,

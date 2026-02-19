@@ -57,6 +57,7 @@ interface MediaItem {
   tmdbId?: string | null
   myPreference?: {
     status: string
+    isWatched?: boolean
     excitement: number
     notes?: string
     recommendedByName?: string
@@ -651,6 +652,12 @@ export default function BrowsePage() {
                     className="cursor-pointer"
                   >
                     <CardTitle>{item.title}</CardTitle>
+                    {item.myPreference?.isWatched && (
+                      <div className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground mb-1">
+                        <EyeOff className="w-3 h-3" />
+                        Watched
+                      </div>
+                    )}
                     <div className="flex items-center gap-1 mb-0.5">
                       <DuotoneIcon icon={getTypeIcon(item.type)} size={12} />
                       <CardSubtitle className="mb-0">{item.type}</CardSubtitle>

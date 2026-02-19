@@ -83,6 +83,7 @@ model UserMediaPreference {
   userId                String
   mediaItemId           String
   status                String   // HAVE_NOT_SEEN, ALREADY_SEEN
+  isWatched             Boolean  @default(false)
   excitement            Int // 1, 3, or 5 (Not excited, Neutral, Excited)
   notes                 String?
   recommendedByName     String?
@@ -96,6 +97,7 @@ model UserMediaPreference {
   @@index([userId])
   @@index([mediaItemId])
   @@index([status])
+  @@index([isWatched])
 }
 
 model MediaItemRoom {

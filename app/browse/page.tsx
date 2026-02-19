@@ -638,11 +638,17 @@ export default function BrowsePage() {
                     setDetailModalItem(item)
                     loadTrailer(item)
                   }}
-                  className="cursor-pointer pt-2"
+                  className="cursor-pointer flex flex-col items-center gap-1"
                 >
+                  {item.myPreference?.isWatched && (
+                    <div className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      <EyeOff className="w-3 h-3" />
+                      Watched
+                    </div>
+                  )}
                   <CardPoster src={item.posterUrl} alt={item.title} width={80} height={120} />
                 </div>
-                <CardContent className="pr-0 py-2">
+                <CardContent className="pr-0 pt-0 pb-2">
                   <div
                     onClick={(e) => {
                       e.stopPropagation()
@@ -652,12 +658,6 @@ export default function BrowsePage() {
                     className="cursor-pointer"
                   >
                     <CardTitle>{item.title}</CardTitle>
-                    {item.myPreference?.isWatched && (
-                      <div className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground mb-1">
-                        <EyeOff className="w-3 h-3" />
-                        Watched
-                      </div>
-                    )}
                     <div className="flex items-center gap-1 mb-0.5">
                       <DuotoneIcon icon={getTypeIcon(item.type)} size={12} />
                       <CardSubtitle className="mb-0">{item.type}</CardSubtitle>

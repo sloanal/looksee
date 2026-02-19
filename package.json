@@ -23,6 +23,7 @@
     "@auth/prisma-adapter": "^2.4.0",
     "@prisma/client": "^5.7.1",
     "@radix-ui/react-slot": "^1.2.4",
+    "@react-email/render": "^2.0.4",
     "@vercel/blob": "^0.19.0",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",

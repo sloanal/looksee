@@ -70,17 +70,18 @@ export default function SignInPage() {
       }} />
       <div className="min-h-screen flex items-start justify-center px-4 pt-4" style={{ backgroundColor: '#F9F3E4' }}>
       <div className="w-full max-w-md">
-        <div className="mb-3 flex justify-center overflow-hidden" style={{ height: '180px', width: '100vw', marginLeft: '-1rem', marginRight: '-1rem' }}>
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-full rounded-lg object-cover"
-            style={{ objectPosition: 'center', height: '150%', marginTop: '-10%' }}
-          >
-            <source src="/welcome.mp4" type="video/mp4" />
-          </video>
+        <div className="mb-4 flex justify-center">
+          <div className="w-full overflow-hidden rounded-xl aspect-[16/8] sm:aspect-[16/7]">
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="h-full w-full object-cover object-center"
+            >
+              <source src="/welcome.mp4" type="video/mp4" />
+            </video>
+          </div>
         </div>
 
         <div className="text-center mb-4">

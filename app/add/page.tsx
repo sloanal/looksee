@@ -722,13 +722,13 @@ export default function AddPage() {
         <div className="space-y-4 bg-content p-4 min-h-[calc(100vh-200px)]">
       {!loading && searchResults.length === 0 && !(lastSearchedQuery && searchQuery.trim() === lastSearchedQuery) && (
         <div className="flex items-center justify-center min-h-[calc(100vh-280px)]">
-          <div className="w-full max-w-md overflow-hidden rounded-lg text-center">
+          <div className="w-full max-w-md overflow-hidden rounded-xl text-center aspect-[16/9]">
             <video
               autoPlay
               loop
               muted
               playsInline
-              className="w-full h-auto object-cover"
+              className="w-full h-full object-cover object-center"
             >
               <source src="/welcome.mp4" type="video/mp4" />
             </video>

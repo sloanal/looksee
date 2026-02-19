@@ -44,6 +44,8 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/looksee?schema=publi
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="your-secret-key-here-change-in-production"
 TMDB_API_KEY="your-tmdb-api-key-here"
+RESEND_API_KEY="re_your_resend_api_key"
+EMAIL_FROM="Looksee <noreply@your-domain.com>"
 ```
 
 Note: This project uses PostgreSQL. A sqlite `file:./dev.db` URL will not work with the current Prisma schema.
@@ -161,6 +163,8 @@ This app is configured for deployment on Vercel with PostgreSQL and Blob Storage
      - `NEXTAUTH_SECRET`: Generate with `openssl rand -base64 32` (or use any secure random string)
      - `TMDB_API_KEY`: Your TMDB API key
      - `NEXTAUTH_URL`: Will be auto-set by Vercel, but you can override if needed
+     - `RESEND_API_KEY`: API key from Resend
+     - `EMAIL_FROM`: Verified sender identity in Resend (for example: `Looksee <noreply@your-domain.com>`)
 
 6. **Deploy**
    - Click **Deploy** (or push to your main branch for automatic deployment)
@@ -211,6 +215,8 @@ Once connected, every push to your main branch will automatically trigger a new 
 - `NEXTAUTH_SECRET` - Required: Generate a secure random string
 - `NEXTAUTH_URL` - Automatically set by Vercel (your app URL)
 - `TMDB_API_KEY` - Required: Your TMDB API key
+- `RESEND_API_KEY` - Required for production password reset emails
+- `EMAIL_FROM` - Required sender identity for password reset emails (must be verified with your email provider)
 - `MIGRATIONS_FAIL_OPEN` - Optional emergency bypass (`true` to continue prod builds when migrations fail)
 - `MIGRATION_TOKEN` - Required if using `/api/admin/migrate` (use 24+ character random secret)
 - `ALLOW_RUNTIME_MIGRATIONS` - Optional, defaults to off in production; set `true` only when you intentionally want `/api/admin/migrate` enabled

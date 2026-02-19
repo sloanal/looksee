@@ -21,7 +21,7 @@ export function RoomMembersAvatars() {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    if (!roomId) {
+    if (!roomId || roomId === 'all-rooms' || roomId === 'watched') {
       setMembers([])
       return
     }
@@ -41,7 +41,7 @@ export function RoomMembersAvatars() {
       .finally(() => setLoading(false))
   }, [roomId])
 
-  if (!roomId || members.length === 0) {
+  if (!roomId || roomId === 'all-rooms' || roomId === 'watched' || members.length === 0) {
     return null
   }
 

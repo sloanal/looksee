@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { Globe, Sofa } from 'lucide-react'
+import { EyeOff, Globe, Sofa } from 'lucide-react'
 
 interface Room {
   id: string
@@ -61,7 +61,8 @@ export function RoomSelector() {
 
   const currentRoom = rooms.find((r) => r.id === currentRoomId)
   const isAllRooms = currentRoomId === 'all-rooms' || !currentRoomId
-  const displayName = isAllRooms ? 'All Rooms' : currentRoom ? currentRoom.name : 'All Rooms'
+  const isWatchedRoom = currentRoomId === 'watched'
+  const displayName = isAllRooms ? 'All Rooms' : isWatchedRoom ? 'Watched' : currentRoom ? currentRoom.name : 'All Rooms'
 
   const handleSelect = (roomId: string | null) => {
     setIsOpen(false)
@@ -128,6 +129,21 @@ export function RoomSelector() {
                 </button>
               )
             })}
+            <div className="my-1 border-t border-border" />
+            <button
+              onClick={() => handleSelect('watched')}
+              className={`w-full text-left pl-3 pr-4 py-2 text-sm hover:bg-accent ${
+                isWatchedRoom ? 'bg-accent font-medium' : ''
+              }`}
+            >
+              <div className="flex items-start gap-1.5">
+                <EyeOff className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                <div className="flex flex-col min-w-0">
+                  <div className="whitespace-nowrap text-muted-foreground">Watched</div>
+                  <div className="text-xs text-muted-foreground whitespace-nowrap">Titles you&apos;ve already seen</div>
+                </div>
+              </div>
+            </button>
           </div>
         </div>
       )}

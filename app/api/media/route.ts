@@ -27,9 +27,21 @@ export async function GET(request: NextRequest) {
   // Build query filters
   // Check if allRooms mode is requested (show everything: all rooms plus Just My Stuff)
   const allRooms = searchParams.get('allRooms') === 'true'
+  const watched = searchParams.get('watched') === 'true'
   let where: any
   
-  if (allRooms) {
+  if (watched) {
+    // "Watched" mode: show items the current user marked as already seen.
+    // This includes items that may have been removed from all rooms.
+    where = {
+      preferences: {
+        some: {
+          userId: session.user.id,
+          status: 'ALREADY_SEEN',
+        },
+      },
+    }
+  } else if (allRooms) {
     // "Everything" mode: show all items from rooms the user is a member of
     // PLUS items created by the user with no room associations (Just My Stuff)
     where = {

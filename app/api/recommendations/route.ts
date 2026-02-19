@@ -57,7 +57,9 @@ export async function POST(request: NextRequest) {
   let memberIds: string[] = []
   let isJustMyStuff = false
 
-  if (roomId === 'all-rooms') {
+  if (roomId === 'watched') {
+    return NextResponse.json({ recommendations: [] })
+  } else if (roomId === 'all-rooms') {
     // All Rooms: use all rooms the user is a member of
     targetRoomIds = userRoomIds
     memberIds = [session.user.id] // Will be expanded later for room mode

@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Film, Tv, Video, Link as LinkIcon, Calendar, Star, Edit, Sofa, Frown, Meh, Smile, Plus } from 'lucide-react'
+import { Eye, EyeOff, Film, Tv, Video, Link as LinkIcon, Calendar, Star, Edit, Sofa, Frown, Meh, Smile, Plus } from 'lucide-react'
 import { RoomSelector } from '@/components/RoomSelector'
 import { RoomMembersAvatars } from '@/components/RoomMembersAvatars'
 import { Button } from '@/components/ui/button'
@@ -86,6 +86,7 @@ export default function BrowsePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const roomId = searchParams.get('roomId')
+  const isWatchedView = roomId === 'watched'
 
   const [items, setItems] = useState<MediaItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -105,6 +106,7 @@ export default function BrowsePage() {
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
   const [loadingTrailer, setLoadingTrailer] = useState(false)
   const [editingRoomsItem, setEditingRoomsItem] = useState<MediaItem | null>(null)
+  const [markingWatchedItemId, setMarkingWatchedItemId] = useState<string | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   const loadItems = useCallback(async () => {
@@ -116,7 +118,10 @@ export default function BrowsePage() {
 
     try {
       let url: string
-      if (roomId === 'all-rooms') {
+      if (roomId === 'watched') {
+        params.set('watched', 'true')
+        url = `/api/media?${params}`
+      } else if (roomId === 'all-rooms') {
         params.set('allRooms', 'true')
         url = `/api/media?${params}`
       } else if (roomId) {
@@ -349,6 +354,48 @@ export default function BrowsePage() {
     }
   }
 
+  const handleMarkAsWatched = async (itemId: string) => {
+    setMarkingWatchedItemId(itemId)
+    try {
+      const res = await fetch(`/api/media/${itemId}/watched`, {
+        method: 'POST',
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error || 'Failed to mark title as watched')
+        return
+      }
+      setOpenMenuId(null)
+      await loadItems()
+    } catch (err) {
+      console.error('Failed to mark as watched:', err)
+      alert('Failed to mark title as watched')
+    } finally {
+      setMarkingWatchedItemId(null)
+    }
+  }
+
+  const handleRemoveFromWatched = async (itemId: string) => {
+    setMarkingWatchedItemId(itemId)
+    try {
+      const res = await fetch(`/api/media/${itemId}/watched`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error || 'Failed to remove title from watched')
+        return
+      }
+      setOpenMenuId(null)
+      await loadItems()
+    } catch (err) {
+      console.error('Failed to remove from watched:', err)
+      alert('Failed to remove title from watched')
+    } finally {
+      setMarkingWatchedItemId(null)
+    }
+  }
+
   return (
     <div className="max-w-4xl xl:max-w-5xl mx-auto">
       <div className="sticky top-0 z-10">
@@ -479,7 +526,34 @@ export default function BrowsePage() {
                   </svg>
                 </button>
                 {openMenuId === item.id && (
-                  <div className="absolute right-0 mt-1 w-32 bg-popover rounded-md shadow-lg border border-border py-1 z-[9]">
+                  <div className="absolute right-0 mt-1 w-44 bg-popover rounded-md shadow-lg border border-border py-1 z-[9]">
+                    <Button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        if (isWatchedView) {
+                          handleRemoveFromWatched(item.id)
+                        } else {
+                          handleMarkAsWatched(item.id)
+                        }
+                      }}
+                      variant="ghost"
+                      size="sm"
+                      disabled={markingWatchedItemId === item.id}
+                      className="w-full justify-start px-4"
+                    >
+                      {isWatchedView ? (
+                        <Eye className="w-3.5 h-3.5" />
+                      ) : (
+                        <EyeOff className="w-3.5 h-3.5" />
+                      )}
+                      {markingWatchedItemId === item.id
+                        ? 'Saving...'
+                        : isWatchedView
+                        ? 'Mark unwatched'
+                        : 'Mark as watched'}
+                    </Button>
                     <Button
                       type="button"
                       onClick={(e) => {

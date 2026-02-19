@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
-import { Film, Tv, Video, Link as LinkIcon, Calendar, Star, ArrowLeft } from 'lucide-react'
+import { CheckCircle2, Film, Tv, Video, Link as LinkIcon, Calendar, Star, ArrowLeft } from 'lucide-react'
 import { RoomSelector } from '@/components/RoomSelector'
 import { RoomMembersAvatars } from '@/components/RoomMembersAvatars'
 import { DuotoneIcon } from '@/components/DuotoneIcon'
@@ -76,6 +76,7 @@ export default function WatchPage() {
   const [detailModalItem, setDetailModalItem] = useState<Recommendation | null>(null)
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
   const [loadingTrailer, setLoadingTrailer] = useState(false)
+  const [markingWatchedId, setMarkingWatchedId] = useState<string | null>(null)
   const prevTypePreferenceRef = useRef<string>(typePreference)
   const { isClosing: isWarningClosing, handleClose: handleWarningClose } = useModalAnimation(() => {
     setShowWarning(false)
@@ -169,6 +170,26 @@ export default function WatchPage() {
     alert('Enjoy watching! (In a real app, this would start playback)')
     setShowWarning(false)
     setSelectedItem(null)
+  }
+
+  const handleMarkAsWatched = async (itemId: string) => {
+    setMarkingWatchedId(itemId)
+    try {
+      const res = await fetch(`/api/media/${itemId}/watched`, {
+        method: 'POST',
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error || 'Failed to mark title as watched')
+        return
+      }
+      setRecommendations((prev) => prev.filter((item) => item.id !== itemId))
+    } catch (err) {
+      console.error('Failed to mark as watched:', err)
+      alert('Failed to mark title as watched')
+    } finally {
+      setMarkingWatchedId(null)
+    }
   }
 
   async function loadTrailer(item: Recommendation) {
@@ -649,12 +670,22 @@ export default function WatchPage() {
               )}
 
               <CardActions>
-                <button
-                  onClick={() => handleSelectItem(rec)}
-                  className="bg-primary text-primary-foreground px-6 py-2 rounded-md font-medium hover:bg-primary/90"
-                >
-                  Where can I watch this?
-                </button>
+                <div className="flex flex-col items-start gap-2">
+                  <button
+                    onClick={() => handleSelectItem(rec)}
+                    className="bg-primary text-primary-foreground px-6 py-2 rounded-md font-medium hover:bg-primary/90"
+                  >
+                    Where can I watch this?
+                  </button>
+                  <button
+                    onClick={() => handleMarkAsWatched(rec.id)}
+                    disabled={markingWatchedId === rec.id}
+                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground disabled:opacity-60"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    {markingWatchedId === rec.id ? 'Marking as watched...' : 'Mark as watched'}
+                  </button>
+                </div>
               </CardActions>
             </MediaCard>
             ))}

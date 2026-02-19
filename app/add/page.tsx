@@ -244,7 +244,7 @@ export default function AddPage() {
           }
           alert(errorMessage)
         }
-      } else if (!roomId) {
+      } else if (!roomId || roomId === 'watched') {
         // "Just My Stuff" - create item without adding it to any room
         const res = await fetch('/api/media', {
           method: 'POST',
@@ -529,7 +529,7 @@ export default function AddPage() {
                 disabled={loading}
                 className="w-full bg-primary text-primary-foreground py-3 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50"
               >
-                {loading ? 'Adding...' : roomId === 'all-rooms' ? 'Add to All Rooms' : !roomId ? 'Add to My Stuff' : 'Add to Room'}
+                {loading ? 'Adding...' : roomId === 'all-rooms' ? 'Add to All Rooms' : !roomId || roomId === 'watched' ? 'Add to My Stuff' : 'Add to Room'}
               </button>
             </form>
           </div>
@@ -666,7 +666,7 @@ export default function AddPage() {
             disabled={loading}
             className="w-full bg-primary text-primary-foreground py-3 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50"
           >
-            {loading ? 'Adding...' : roomId === 'all-rooms' ? 'Add to All Rooms' : !roomId ? 'Add to My Stuff' : 'Add to Room'}
+            {loading ? 'Adding...' : roomId === 'all-rooms' ? 'Add to All Rooms' : !roomId || roomId === 'watched' ? 'Add to My Stuff' : 'Add to Room'}
           </button>
         </form>
         </div>
@@ -684,7 +684,7 @@ export default function AddPage() {
               <h1 className="text-2xl font-bold text-foreground">Add to</h1>
               <RoomSelector />
             </div>
-            <RoomMembersAvatars />
+            {roomId !== 'all-rooms' && roomId !== 'watched' && <RoomMembersAvatars />}
           </div>
           <div className="space-y-3">
             <div className="flex gap-2">
@@ -722,16 +722,18 @@ export default function AddPage() {
         <div className="space-y-4 bg-content p-4 min-h-[calc(100vh-200px)]">
       {!loading && searchResults.length === 0 && !(lastSearchedQuery && searchQuery.trim() === lastSearchedQuery) && (
         <div className="flex items-center justify-center min-h-[calc(100vh-280px)]">
-          <div className="w-full max-w-md overflow-hidden rounded-xl text-center aspect-[16/9]">
-            <video
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="w-full h-full object-cover object-center"
-            >
-              <source src="/welcome.mp4" type="video/mp4" />
-            </video>
+          <div className="w-full max-w-md text-center">
+            <div className="overflow-hidden rounded-xl aspect-[16/9]">
+              <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover object-center"
+              >
+                <source src="/welcome.mp4" type="video/mp4" />
+              </video>
+            </div>
             <button
               type="button"
               onClick={() => searchInputRef.current?.focus()}

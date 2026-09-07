@@ -1,9 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
+import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useModalAnimation } from '@/lib/useModalAnimation'
+import { Modal, ModalBody, ModalFooter, ModalHeader, useModal } from '@/components/ui/modal'
+import { clientSubmissionContext } from '@/lib/submission-context'
+import { cn } from '@/lib/utils'
 
 interface Room {
   id: string
@@ -26,14 +29,17 @@ interface EditRoomsModalProps {
   onSave: () => void
 }
 
-export function EditRoomsModal({
-  mediaItemId,
-  currentRooms,
-  onClose,
-  onSave,
-}: EditRoomsModalProps) {
+export function EditRoomsModal(props: EditRoomsModalProps) {
+  return (
+    <Modal isOpen onClose={props.onClose} aria-label='Edit rooms'>
+      <EditRoomsBody {...props} />
+    </Modal>
+  )
+}
+
+function EditRoomsBody({ mediaItemId, currentRooms, onSave }: EditRoomsModalProps) {
   const { data: session } = useSession()
-  const { isClosing, handleClose } = useModalAnimation(onClose)
+  const { handleClose } = useModal()
   const [allRooms, setAllRooms] = useState<Room[]>([])
   const [selectedRoomIds, setSelectedRoomIds] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
@@ -43,15 +49,24 @@ export function EditRoomsModal({
     // Load all rooms the user is a member of
     const loadRooms = async () => {
       try {
-        const res = await fetch('/api/rooms')
-        if (res.ok) {
-          const data = await res.json()
+        const [allRoomsRes, itemRoomsRes] = await Promise.all([
+          fetch('/api/rooms'),
+          fetch(`/api/media/${mediaItemId}/rooms`),
+        ])
+        if (allRoomsRes.ok) {
+          const data = await allRoomsRes.json()
           const filteredRooms = (data.rooms || []).filter(
-            (room: Room) => room.name.trim().toLowerCase() !== PERSONAL_ROOM_NAME
+            (room: Room) => room.name.trim().toLowerCase() !== PERSONAL_ROOM_NAME,
           )
           setAllRooms(filteredRooms)
-          // Initialize selected rooms with current rooms
-          setSelectedRoomIds(currentRooms.map((r) => r.id))
+          if (itemRoomsRes.ok) {
+            const itemRooms = await itemRoomsRes.json()
+            setSelectedRoomIds(
+              (itemRooms.rooms || []).map((room: MediaItemRoom) => room.id),
+            )
+          } else {
+            setSelectedRoomIds(currentRooms.map((r) => r.id))
+          }
         }
       } catch (err) {
         console.error('Failed to load rooms:', err)
@@ -61,7 +76,7 @@ export function EditRoomsModal({
     }
 
     loadRooms()
-  }, [currentRooms])
+  }, [currentRooms, mediaItemId])
 
   const handleToggleRoom = (roomId: string) => {
     setSelectedRoomIds((prev) => {
@@ -69,7 +84,9 @@ export function EditRoomsModal({
         // Check if user can remove this room
         const room = currentRooms.find((r) => r.id === roomId)
         if (room && room.addedByUserId !== session?.user?.id) {
-          alert(`You cannot remove this item from "${room.name}" because you did not add it to this room.`)
+          alert(
+            `You cannot remove this item from "${room.name}" because you did not add it to this room.`,
+          )
           return prev
         }
         return prev.filter((id) => id !== roomId)
@@ -85,7 +102,7 @@ export function EditRoomsModal({
       const res = await fetch(`/api/media/${mediaItemId}/rooms`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomIds: selectedRoomIds }),
+        body: JSON.stringify({ roomIds: selectedRoomIds, ...clientSubmissionContext() }),
       })
 
       if (!res.ok) {
@@ -104,68 +121,59 @@ export function EditRoomsModal({
     }
   }
 
-  if (loading) {
-    return (
-      <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}>
-        <div className={`bg-card rounded-lg max-w-md w-full modal-content ${isClosing ? 'closing' : ''}`}>
-          <div className="p-6">
-            <p className="text-foreground">Loading...</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div
-      className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}
-      onClick={handleClose}
-    >
-      <div
-        className={`bg-card rounded-lg max-w-md w-full modal-content relative ${isClosing ? 'closing' : ''}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button 
-          onClick={handleClose} 
-          className="absolute top-4 right-4 z-10 text-muted-foreground text-2xl hover:text-foreground"
-        >
-          ×
-        </button>
-        <div className="p-6">
-          <div className="mb-4 pr-8">
-            <h2 className="text-2xl font-bold text-foreground">Edit Rooms</h2>
-          </div>
-
-          <div className="mb-4">
-            <p className="text-sm text-muted-foreground mb-3">
-              Select which rooms this item belongs to. You can only remove items from rooms you added them to.
-            </p>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+    <>
+      <ModalHeader
+        title='Edit rooms'
+        description='Choose which rooms this title belongs to. You can only remove it from rooms you added it to.'
+      />
+      <ModalBody>
+        {loading
+          ? <p className='py-6 text-center text-sm text-muted-foreground'>Loading...</p>
+          : (
+            <div className='space-y-2'>
               {allRooms.map((room) => {
                 const isSelected = selectedRoomIds.includes(room.id)
                 const currentRoom = currentRooms.find((r) => r.id === room.id)
-                const canRemove = !currentRoom || currentRoom.addedByUserId === session?.user?.id
+                const canRemove = !currentRoom ||
+                  currentRoom.addedByUserId === session?.user?.id
+                const locked = !canRemove && isSelected
 
                 return (
                   <label
                     key={room.id}
-                    className={`flex items-center p-3 rounded border cursor-pointer transition-colors ${
+                    className={cn(
+                      'flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors',
                       isSelected
-                        ? 'bg-primary/10 border-primary'
-                        : 'bg-background border-border hover:bg-muted'
-                    } ${!canRemove && isSelected ? 'opacity-75' : ''}`}
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border bg-background hover:bg-accent',
+                      locked && 'cursor-not-allowed opacity-70',
+                    )}
                   >
                     <input
-                      type="checkbox"
+                      type='checkbox'
                       checked={isSelected}
                       onChange={() => handleToggleRoom(room.id)}
-                      disabled={!canRemove && isSelected}
-                      className="mr-3"
+                      disabled={locked}
+                      className='sr-only'
                     />
-                    <div className="flex-1">
-                      <span className="text-foreground font-medium">{room.name}</span>
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border transition-colors',
+                        isSelected
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-input bg-background',
+                      )}
+                    >
+                      {isSelected && <Check className='h-3.5 w-3.5' strokeWidth={3} />}
+                    </span>
+                    <div className='min-w-0 flex-1'>
+                      <span className='block truncate font-medium text-foreground'>
+                        {room.name}
+                      </span>
                       {currentRoom && (
-                        <p className="text-xs text-muted-foreground">
+                        <p className='text-xs text-muted-foreground'>
                           Added by {currentRoom.addedByName}
                         </p>
                       )}
@@ -174,18 +182,16 @@ export function EditRoomsModal({
                 )
               })}
             </div>
-          </div>
-
-          <div className="flex gap-2">
-            <Button onClick={handleClose} variant="outline" className="flex-1">
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={saving} className="flex-1">
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+          )}
+      </ModalBody>
+      <ModalFooter>
+        <Button onClick={handleClose} variant='outline' className='flex-1'>
+          Cancel
+        </Button>
+        <Button onClick={handleSave} disabled={saving || loading} className='flex-1'>
+          {saving ? 'Saving...' : 'Save'}
+        </Button>
+      </ModalFooter>
+    </>
   )
 }

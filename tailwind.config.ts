@@ -13,6 +13,7 @@ const config: Config = {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
+        canvas: 'hsl(var(--canvas))',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         primary: {
@@ -26,6 +27,10 @@ const config: Config = {
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
+        },
+        favorite: {
+          DEFAULT: 'hsl(var(--favorite))',
+          foreground: 'hsl(var(--favorite-foreground))',
         },
         muted: {
           DEFAULT: 'hsl(var(--muted))',
@@ -45,9 +50,20 @@ const config: Config = {
         },
       },
       borderRadius: {
+        '2xl': 'calc(var(--radius) + 8px)',
+        xl: 'calc(var(--radius) + 4px)',
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      boxShadow: {
+        sm: 'var(--shadow-sm)',
+        card: 'var(--shadow-card)',
+        pop: 'var(--shadow-pop)',
+        modal: 'var(--shadow-modal)',
+      },
+      fontFamily: {
+        heading: ['var(--font-archivo)', 'sans-serif'],
       },
       keyframes: {
         'accordion-down': {
@@ -68,4 +84,3 @@ const config: Config = {
   plugins: [tailwindcssAnimate],
 }
 export default config
-

@@ -2,28 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design tokens. Warm cream canvas, white surfaces, near-black ink.
+ * Every hue is shifted toward the cream so grays never read as blue.
+ * Contrast (on canvas): foreground 16:1, muted-foreground 5.3:1, destructive 4.6:1.
+ */
 :root {
+  --canvas: 43 68% 94%;
   --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
+  --foreground: 30 12% 11%;
   --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
+  --card-foreground: 30 12% 11%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 222.2 47.4% 11.2%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 222.2 84% 4.9%;
+  --popover-foreground: 30 12% 11%;
+  --primary: 24 10% 12%;
+  --primary-foreground: 43 68% 97%;
+  --secondary: 40 30% 93%;
+  --secondary-foreground: 24 10% 20%;
+  --muted: 40 30% 94%;
+  --muted-foreground: 25 8% 40%;
+  --accent: 40 30% 92%;
+  --accent-foreground: 30 12% 11%;
+  --destructive: 0 72% 46%;
+  --destructive-foreground: 0 0% 100%;
+  --favorite: 347 77% 50%;
+  --favorite-foreground: 0 0% 100%;
+  --border: 36 22% 87%;
+  --input: 36 22% 82%;
+  --ring: 24 10% 12%;
   --radius: 0.75rem;
-  --content-background: #FAF4E5;
+
+  --shadow-sm: 0 1px 2px hsl(30 20% 10% / 0.06);
+  --shadow-card: 0 1px 2px hsl(30 20% 10% / 0.05), 0 6px 16px -8px hsl(30 20% 10% / 0.14);
+  --shadow-pop: 0 1px 3px hsl(30 20% 10% / 0.06), 0 8px 24px -8px hsl(30 20% 10% / 0.18);
+  --shadow-modal: 0 24px 48px -12px hsl(30 20% 10% / 0.3);
+
+  /* Kept for anything still referencing the old name. */
+  --content-background: hsl(var(--canvas));
 }
 
 @layer base {
@@ -39,12 +54,6 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-archivo), sans-serif;
   }
-  /* Card titles - ensure Archivo is applied */
-  .card-title,
-  h3.font-semibold,
-  h3.font-bold {
-    font-family: var(--font-archivo), sans-serif;
-  }
   button,
   a {
     touch-action: manipulation;
@@ -55,126 +64,28 @@
   .text-balance {
     text-wrap: balance;
   }
-  .bg-content {
-    background-color: var(--content-background);
-    box-shadow: 0 0 0 100vmax var(--content-background);
-    clip-path: inset(0 -100vmax);
-  }
-  
-  /* Neumorphic button styling */
-  .neumorphic-button {
-    background: hsl(var(--background));
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    box-shadow: 
-      /* Outer light shadow (top-left) */
-      3px 3px 6px rgba(0, 0, 0, 0.06),
-      -3px -3px 6px rgba(255, 255, 255, 0.6),
-      /* Inner shadow on bottom edge */
-      inset 0 -1px 3px rgba(0, 0, 0, 0.05);
-  }
-  
-  .neumorphic-button:hover {
-    box-shadow: 
-      2px 2px 4px rgba(0, 0, 0, 0.08),
-      -2px -2px 4px rgba(255, 255, 255, 0.7),
-      inset 0 -1px 3px rgba(0, 0, 0, 0.06);
-    transform: translateY(-1px);
-  }
-  
-  .neumorphic-button:active {
-    box-shadow: 
-      inset 3px 3px 6px rgba(0, 0, 0, 0.15),
-      inset -3px -3px 6px rgba(255, 255, 255, 0.3);
-    transform: translateY(0);
+  .font-heading {
+    font-family: var(--font-archivo), sans-serif;
   }
 }
 
 /* iOS Safari fix for invisible text - must be after Tailwind layers */
-/* Force dark text on all form elements and headings */
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]),
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="url"],
-input[type="search"],
-input[type="number"],
 select,
 textarea,
 h1, h2, h3, h4, h5, h6 {
   color: hsl(var(--foreground)) !important;
-  -webkit-text-fill-color: hsl(var(--foreground)) !important; /* iOS Safari */
+  -webkit-text-fill-color: hsl(var(--foreground)) !important;
 }
 
-/* Additional iOS-specific fix using webkit appearance detection */
-@supports (-webkit-appearance: none) {
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]),
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="url"],
-  input[type="search"],
-  input[type="number"],
-  select,
-  textarea {
-    -webkit-text-fill-color: hsl(var(--foreground)) !important;
-    color: hsl(var(--foreground)) !important;
-  }
-}
-
-/* Placeholder text styling - lighter gray for placeholders */
-/* Must come after the input text color rules to override them with higher specificity */
-input[type="email"]::placeholder,
-input[type="email"]::-webkit-input-placeholder,
-input[type="email"]::-moz-placeholder,
-input[type="email"]:-ms-input-placeholder {
-  color: #d1d5db !important; /* gray-300 - lighter gray for placeholders */
-  -webkit-text-fill-color: #d1d5db !important; /* Override webkit-text-fill-color for placeholders */
-  opacity: 1 !important;
-}
-
-input[type="password"]::placeholder,
-input[type="password"]::-webkit-input-placeholder,
-input[type="password"]::-moz-placeholder,
-input[type="password"]:-ms-input-placeholder {
-  color: #d1d5db !important; /* gray-300 - lighter gray for placeholders */
-  -webkit-text-fill-color: #d1d5db !important; /* Override webkit-text-fill-color for placeholders */
-  opacity: 1 !important;
-}
-
-input[type="text"]::placeholder,
-input[type="text"]::-webkit-input-placeholder,
-input[type="text"]::-moz-placeholder,
-input[type="text"]:-ms-input-placeholder,
+/* Placeholders must come after the text-fill rules above to win on iOS. */
+input::placeholder,
+input::-webkit-input-placeholder,
 textarea::placeholder,
-textarea::-webkit-input-placeholder,
-textarea::-moz-placeholder,
-textarea:-ms-input-placeholder {
-  color: #d1d5db !important; /* gray-300 - lighter gray for placeholders */
-  -webkit-text-fill-color: #d1d5db !important; /* Override webkit-text-fill-color for placeholders */
+textarea::-webkit-input-placeholder {
+  color: hsl(var(--muted-foreground) / 0.65) !important;
+  -webkit-text-fill-color: hsl(var(--muted-foreground) / 0.65) !important;
   opacity: 1 !important;
-}
-
-/* Additional webkit-specific placeholder override with highest specificity */
-@supports (-webkit-appearance: none) {
-  input[type="email"]::placeholder,
-  input[type="email"]::-webkit-input-placeholder {
-    -webkit-text-fill-color: #d1d5db !important;
-    color: #d1d5db !important;
-  }
-  
-  input[type="password"]::placeholder,
-  input[type="password"]::-webkit-input-placeholder {
-    -webkit-text-fill-color: #d1d5db !important;
-    color: #d1d5db !important;
-  }
-  
-  input[type="text"]::placeholder,
-  input[type="text"]::-webkit-input-placeholder,
-  textarea::placeholder,
-  textarea::-webkit-input-placeholder {
-    -webkit-text-fill-color: #d1d5db !important;
-    color: #d1d5db !important;
-  }
 }
 
 /* Mobile-first: ensure full viewport height */
@@ -184,23 +95,18 @@ body,
   height: 100%;
   min-height: 100dvh;
   overflow-x: hidden;
-  /* Prevent horizontal scrolling on iOS */
   position: relative;
   width: 100%;
 }
 
 html {
   -webkit-text-size-adjust: 100%;
-  /* Prevent rubber band scrolling on iOS */
   overscroll-behavior-y: none;
 }
 
 body {
-  /* Smooth scrolling on iOS */
   -webkit-overflow-scrolling: touch;
-  /* Prevent horizontal overflow */
   overflow-x: hidden;
-  /* Prevent pull-to-refresh on iOS */
   overscroll-behavior-y: contain;
 }
 
@@ -231,7 +137,7 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Bottom nav spacing - accounts for nav height (4rem) + safe area */
+/* Bottom nav clearance: nav height (4rem) + breathing room + home indicator. */
 .bottom-nav-spacing {
   padding-bottom: calc(5rem + env(safe-area-inset-bottom));
 }
@@ -258,22 +164,22 @@ body {
 @keyframes modal-content-in {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: translateY(12px) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0) scale(1);
   }
 }
 
 @keyframes modal-content-out {
   from {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0) scale(1);
   }
   to {
     opacity: 0;
-    transform: scale(0.95);
+    transform: translateY(12px) scale(0.97);
   }
 }
 
@@ -282,7 +188,7 @@ body {
 }
 
 .modal-overlay.closing {
-  animation: modal-overlay-out 0.2s ease-in;
+  animation: modal-overlay-out 0.2s ease-in forwards;
 }
 
 .modal-content {
@@ -290,6 +196,14 @@ body {
 }
 
 .modal-content.closing {
-  animation: modal-content-out 0.2s ease-in;
+  animation: modal-content-out 0.2s ease-in forwards;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal-overlay.closing,
+  .modal-content,
+  .modal-content.closing {
+    animation-duration: 0.01ms;
+  }
+}

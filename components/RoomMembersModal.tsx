@@ -1,16 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import Image from 'next/image'
+import { useCallback, useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { AnimatedModal } from './AnimatedModal'
-import { getAvatarColor } from '@/lib/utils'
+import { Modal, ModalBody, ModalHeader } from '@/components/ui/modal'
+import { Avatar } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { Notice } from '@/components/ui/notice'
+import { ConfirmModal } from '@/components/settings/ConfirmModal'
+import { SettingsBadge } from '@/components/settings/SettingsCard'
 
 interface Member {
   id: string
   name: string
   imageUrl: string | null
-  email: string
   role: string
 }
 
@@ -19,6 +21,8 @@ interface RoomMembersModalProps {
   onClose: () => void
   roomId: string | null
   roomName: string
+  /** Fires after a member is removed so the page can refresh its counts. */
+  onMembersChanged?: () => void
 }
 
 export function RoomMembersModal({
@@ -26,158 +30,165 @@ export function RoomMembersModal({
   onClose,
   roomId,
   roomName,
+  onMembersChanged,
 }: RoomMembersModalProps) {
+  const open = isOpen && roomId !== null
+
+  return (
+    <Modal isOpen={open} onClose={onClose} aria-label={`Members of ${roomName}`}>
+      {isOpen && roomId !== null && (
+        <MembersBody
+          key={roomId}
+          roomId={roomId}
+          roomName={roomName}
+          onMembersChanged={onMembersChanged}
+        />
+      )}
+    </Modal>
+  )
+}
+
+interface MembersBodyProps {
+  roomId: string
+  roomName: string
+  onMembersChanged?: () => void
+}
+
+function MembersBody({ roomId, roomName, onMembersChanged }: MembersBodyProps) {
   const { data: session } = useSession()
   const [members, setMembers] = useState<Member[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [removingUserId, setRemovingUserId] = useState<string | null>(null)
-  const [failedImages, setFailedImages] = useState<Set<string>>(new Set())
+  const [pendingRemove, setPendingRemove] = useState<Member | null>(null)
   const [currentUserRole, setCurrentUserRole] = useState<string>('member')
 
-  const fetchMembers = () => {
-    if (!roomId) return
-
+  const fetchMembers = useCallback(async () => {
     setLoading(true)
-    fetch(`/api/rooms/${roomId}/members`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.members) {
-          setMembers(data.members)
-        }
-        if (data.currentUserRole) {
-          setCurrentUserRole(data.currentUserRole)
-        }
-      })
-      .catch((err) => {
-        console.error('Failed to fetch room members:', err)
+    try {
+      const res = await fetch(`/api/rooms/${roomId}/members`)
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || "Couldn't load members")
         setMembers([])
-      })
-      .finally(() => setLoading(false))
-  }
+        return
+      }
+      setMembers(data.members ?? [])
+      if (data.currentUserRole) {
+        setCurrentUserRole(data.currentUserRole)
+      }
+    } catch (err) {
+      console.error('Failed to fetch room members:', err)
+      setError("Couldn't load members")
+      setMembers([])
+    } finally {
+      setLoading(false)
+    }
+  }, [roomId])
 
   useEffect(() => {
-    if (!isOpen || !roomId) {
-      setMembers([])
-      return
-    }
-
     fetchMembers()
-  }, [isOpen, roomId])
+  }, [fetchMembers])
 
-  const handleRemoveMember = async (userId: string) => {
-    if (!roomId) return
-
-    if (!confirm('Are you sure you want to remove this member from the room?')) {
-      return
-    }
-
-    setRemovingUserId(userId)
+  const removeMember = async (member: Member): Promise<string | void> => {
+    setError('')
+    setRemovingUserId(member.id)
     try {
       const response = await fetch(`/api/rooms/${roomId}/members`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: member.id }),
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        alert(error.error || 'Failed to remove member')
-        return
+        const data = await response.json().catch(() => ({}))
+        return data.error || 'Failed to remove member'
       }
 
-      // Refresh the member list
-      fetchMembers()
+      await fetchMembers()
+      onMembersChanged?.()
     } catch (err) {
       console.error('Failed to remove member:', err)
-      alert('Failed to remove member')
+      return 'Failed to remove member'
     } finally {
       setRemovingUserId(null)
     }
   }
 
   return (
-    <AnimatedModal isOpen={isOpen} onClose={onClose} contentClassName="relative">
-      <button 
-        onClick={onClose}
-        className="absolute top-4 right-4 z-10 text-gray-500 text-2xl hover:text-gray-700"
-      >
-        ×
-      </button>
-      <div className="p-6">
-        <div className="mb-4 pr-8">
-          <h2 className="text-2xl font-bold text-gray-900">Members of {roomName}</h2>
-        </div>
+    <>
+      <ModalHeader
+        title='Members'
+        description={<span className='block truncate'>{roomName}</span>}
+      />
+      <ModalBody className='pb-5 sm:pb-6'>
+        {error && <Notice variant='error' className='mb-3'>{error}</Notice>}
 
-        {loading ? (
-          <div className="text-center text-gray-500 py-8">Loading members...</div>
-        ) : members.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">No members found</div>
-        ) : (
-          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-            {members.map((member) => {
-              const imageUrl = member.imageUrl
-              const imageFailed = imageUrl && failedImages.has(imageUrl)
-              const showImage = imageUrl && !imageFailed
-              
-              const isCurrentUser = session?.user?.id === member.id
-              const canRemove = currentUserRole === 'owner' && !isCurrentUser
+        {loading
+          ? <div className='py-8 text-center text-sm text-muted-foreground'>Loading members...</div>
+          : members.length === 0
+          ? <div className='py-8 text-center text-sm text-muted-foreground'>No members found</div>
+          : (
+            <ul className='-mx-2 divide-y divide-border'>
+              {members.map((member) => {
+                const isCurrentUser = session?.user?.id === member.id
+                const canRemove = currentUserRole === 'owner' && !isCurrentUser
 
-              return (
-                <div
-                  key={member.id}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  <div className="relative w-12 h-12 rounded-full border-2 border-gray-200 overflow-hidden bg-muted flex-shrink-0">
-                    {showImage ? (
-                      <Image
-                        src={imageUrl}
-                        alt={member.name}
-                        fill
-                        className="object-cover"
-                        sizes="48px"
-                        onError={() => {
-                          if (imageUrl) {
-                            setFailedImages((prev) => new Set(prev).add(imageUrl))
-                          }
-                        }}
-                      />
-                    ) : (
-                      <div
-                        className="w-full h-full flex items-center justify-center text-white text-sm font-medium"
-                        style={{ backgroundColor: getAvatarColor(member.id || member.name) }}
-                      >
-                        {member.name.charAt(0).toUpperCase()}
+                return (
+                  <li key={member.id} className='flex items-center gap-3 px-2 py-3'>
+                    <Avatar
+                      user={member}
+                      size='lg'
+                      singleInitial
+                      ring={isCurrentUser ? 'viewer' : 'none'}
+                    />
+                    <div className='min-w-0 flex-1'>
+                      <div className='flex min-w-0 items-center gap-2'>
+                        <p className='truncate font-medium text-foreground'>
+                          {member.name}
+                          {isCurrentUser && (
+                            <span className='font-normal text-muted-foreground'>{' '}(you)</span>
+                          )}
+                        </p>
+                        {member.role === 'owner' && (
+                          <SettingsBadge className='flex-shrink-0'>Owner</SettingsBadge>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-gray-900 truncate">{member.name}</p>
-                      {member.role === 'owner' && (
-                        <span className="px-2 py-1 bg-primary/10 text-primary text-xs rounded flex-shrink-0">
-                          Owner
-                        </span>
-                      )}
                     </div>
-                    <p className="text-sm text-gray-600 truncate">{member.email}</p>
-                  </div>
-                  {canRemove && (
-                    <button
-                      onClick={() => handleRemoveMember(member.id)}
-                      disabled={removingUserId === member.id}
-                      className="px-3 py-1.5 text-sm text-red-600 border border-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {removingUserId === member.id ? 'Removing...' : 'Remove'}
-                    </button>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-    </AnimatedModal>
+                    {canRemove && (
+                      <Button
+                        type='button'
+                        variant='outline-destructive'
+                        size='sm'
+                        onClick={() => setPendingRemove(member)}
+                        disabled={removingUserId === member.id}
+                        className='h-10'
+                      >
+                        {removingUserId === member.id ? 'Removing...' : 'Remove'}
+                      </Button>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+      </ModalBody>
+
+      <ConfirmModal
+        open={pendingRemove !== null}
+        title={pendingRemove ? `Remove ${pendingRemove.name}?` : ''}
+        description={
+          <p>
+            They&apos;ll lose access to {roomName}{' '}
+            and its titles. They can rejoin later with the invite code.
+          </p>
+        }
+        confirmLabel='Remove'
+        busyLabel='Removing…'
+        destructive
+        onConfirm={() => (pendingRemove ? removeMember(pendingRemove) : undefined)}
+        onClose={() => setPendingRemove(null)}
+      />
+    </>
   )
 }

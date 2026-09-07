@@ -1,37 +1,21 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { useRouter, usePathname, useSearchParams } from 'next/navigation'
-import { EyeOff, Globe, Sofa } from 'lucide-react'
-
-interface Room {
-  id: string
-  name: string
-  inviteCode: string
-  role: string
-  memberCount: number
-}
+import { ReactNode, useEffect, useRef, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { ChevronDown, EyeOff, Globe, LucideIcon, Sofa } from 'lucide-react'
+import { formatTitleCount } from '@/lib/rooms'
+import { cn } from '@/lib/utils'
+import { useRooms } from '@/components/useRooms'
 
 export function RoomSelector() {
-  const [rooms, setRooms] = useState<Room[]>([])
-  const [loading, setLoading] = useState(true)
+  const { rooms, allRoomsCount, watchedCount, loaded } = useRooms()
+  const loading = !loaded
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const currentRoomId = searchParams.get('roomId')
-
-  useEffect(() => {
-    fetch('/api/rooms')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.rooms) {
-          setRooms(data.rooms)
-        }
-      })
-      .finally(() => setLoading(false))
-  }, [])
 
   // Default to "All Rooms" when no roomId is in the URL
   useEffect(() => {
@@ -56,13 +40,25 @@ export function RoomSelector() {
   }, [isOpen])
 
   if (loading) {
-    return <div className="px-3 py-2 text-sm text-muted-foreground">Loading...</div>
+    return (
+      <div
+        className='h-9 w-28 animate-pulse rounded-full bg-secondary'
+        aria-label='Loading rooms'
+        role='status'
+      />
+    )
   }
 
   const currentRoom = rooms.find((r) => r.id === currentRoomId)
   const isAllRooms = currentRoomId === 'all-rooms' || !currentRoomId
   const isWatchedRoom = currentRoomId === 'watched'
-  const displayName = isAllRooms ? 'All Rooms' : isWatchedRoom ? 'Watched' : currentRoom ? currentRoom.name : 'All Rooms'
+  const displayName = isAllRooms
+    ? 'All Rooms'
+    : isWatchedRoom
+    ? 'Watched'
+    : currentRoom
+    ? currentRoom.name
+    : 'All Rooms'
 
   const handleSelect = (roomId: string | null) => {
     setIsOpen(false)
@@ -74,80 +70,100 @@ export function RoomSelector() {
   }
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className='relative min-w-0' ref={dropdownRef}>
       <button
+        type='button'
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1 pl-3 pr-1.5 py-2 text-sm font-medium text-foreground rounded-md transition-all duration-200 neumorphic-button"
+        aria-haspopup='listbox'
+        aria-expanded={isOpen}
+        className='flex h-9 max-w-[11rem] items-center gap-1 rounded-full border border-input bg-background pl-3 pr-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
       >
-        <span className="whitespace-nowrap">{displayName}</span>
-        <svg
-          className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        <span className='truncate'>{displayName}</span>
+        <ChevronDown
+          className={cn(
+            'h-4 w-4 flex-shrink-0 text-muted-foreground transition-transform',
+            isOpen && 'rotate-180',
+          )}
+        />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1 w-56 bg-popover border border-border rounded-md shadow-lg z-50">
-          <div className="py-1">
-            <button
-              onClick={() => handleSelect('all-rooms')}
-              className={`w-full text-left pl-3 pr-4 py-2 text-sm hover:bg-accent ${
-                isAllRooms ? 'bg-accent font-medium' : ''
-              }`}
-            >
-              <div className="flex items-start gap-1.5">
-                <Globe className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                <div className="flex flex-col min-w-0">
-                  <div className="whitespace-nowrap">All Rooms</div>
-                  <div className="text-xs text-muted-foreground whitespace-nowrap">All items across rooms</div>
-                </div>
-              </div>
-            </button>
-            {rooms.map((room) => {
-              const otherCount = room.memberCount - 1
-              return (
-                <button
-                  key={room.id}
-                  onClick={() => handleSelect(room.id)}
-                  className={`w-full text-left pl-3 pr-4 py-2 text-sm hover:bg-accent ${
-                    currentRoomId === room.id ? 'bg-accent font-medium' : ''
-                  }`}
-                >
-                  <div className="flex items-start gap-1.5">
-                    <Sofa className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                    <div className="flex flex-col min-w-0 flex-1">
-                      <div className="whitespace-nowrap truncate">{room.name}</div>
-                      <div className="text-xs text-muted-foreground whitespace-nowrap">
-                        Shared with {otherCount} other{otherCount !== 1 ? 's' : ''}
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              )
-            })}
-            <div className="my-1 border-t border-border" />
-            <button
-              onClick={() => handleSelect('watched')}
-              className={`w-full text-left pl-3 pr-4 py-2 text-sm hover:bg-accent ${
-                isWatchedRoom ? 'bg-accent font-medium' : ''
-              }`}
-            >
-              <div className="flex items-start gap-1.5">
-                <EyeOff className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                <div className="flex flex-col min-w-0">
-                  <div className="whitespace-nowrap text-muted-foreground">Watched</div>
-                  <div className="text-xs text-muted-foreground whitespace-nowrap">Titles you&apos;ve already seen</div>
-                </div>
-              </div>
-            </button>
-          </div>
+        <div
+          role='listbox'
+          className='absolute left-0 top-full z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-border bg-popover py-1 shadow-pop'
+        >
+          <RoomOption
+            icon={Globe}
+            label='All Rooms'
+            hint='All items across rooms'
+            count={formatTitleCount(allRoomsCount)}
+            selected={isAllRooms}
+            onSelect={() => handleSelect('all-rooms')}
+          />
+          {rooms.map((room) => {
+            const otherCount = room.memberCount - 1
+            // Unwatched-for-me rather than the room's full catalog, so the number
+            // equals the cards Browse shows when this room is picked.
+            return (
+              <RoomOption
+                key={room.id}
+                icon={Sofa}
+                label={room.name}
+                hint={`Shared with ${otherCount} other${otherCount !== 1 ? 's' : ''}`}
+                count={formatTitleCount(room.unwatchedCount)}
+                selected={currentRoomId === room.id}
+                onSelect={() => handleSelect(room.id)}
+              />
+            )
+          })}
+          <div className='my-1 border-t border-border' />
+          <RoomOption
+            icon={EyeOff}
+            label='Watched'
+            hint="Titles you've already seen"
+            count={formatTitleCount(watchedCount)}
+            selected={isWatchedRoom}
+            muted
+            onSelect={() => handleSelect('watched')}
+          />
         </div>
       )}
     </div>
   )
 }
 
+interface RoomOptionProps {
+  icon: LucideIcon
+  label: ReactNode
+  hint: ReactNode
+  count: string
+  selected: boolean
+  muted?: boolean
+  onSelect: () => void
+}
+
+function RoomOption(
+  { icon: Icon, label, hint, count, selected, muted, onSelect }: RoomOptionProps,
+) {
+  return (
+    <button
+      type='button'
+      role='option'
+      aria-selected={selected}
+      onClick={onSelect}
+      className={cn(
+        'flex w-full items-start gap-2.5 px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent',
+        selected && 'bg-accent font-medium',
+      )}
+    >
+      <Icon className='mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground' />
+      <div className='min-w-0 flex-1'>
+        <div className={cn('truncate', muted && 'text-muted-foreground')}>{label}</div>
+        <div className='truncate text-xs font-normal text-muted-foreground'>{hint}</div>
+      </div>
+      <span className='flex-shrink-0 pt-0.5 text-xs font-normal tabular-nums text-muted-foreground'>
+        {count}
+      </span>
+    </button>
+  )
+}

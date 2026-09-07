@@ -1,13 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { formatTitleCount } from '@/lib/rooms'
 
 interface Room {
   id: string
   name: string
   inviteCode: string
   role: string
+  unwatchedCount: number
 }
 
 export function RoomSwitcher() {
@@ -36,7 +38,7 @@ export function RoomSwitcher() {
   const currentRoom = rooms.find((r) => r.id === currentRoomId)
 
   return (
-    <div className="px-4 py-2 bg-background border-b border-border">
+    <div className='px-4 py-2 bg-background border-b border-border'>
       <select
         value={currentRoomId || ''}
         onChange={(e) => {
@@ -45,15 +47,14 @@ export function RoomSwitcher() {
             router.push(`${pathname}?roomId=${roomId}`)
           }
         }}
-        className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background text-foreground"
+        className='w-full px-3 py-2 text-sm border border-input rounded-md bg-background text-foreground'
       >
         {rooms.map((room) => (
           <option key={room.id} value={room.id}>
-            {room.name}
+            {room.name} · {formatTitleCount(room.unwatchedCount)}
           </option>
         ))}
       </select>
     </div>
   )
 }
-

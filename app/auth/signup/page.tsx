@@ -3,7 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
-import Link from 'next/link'
+import { AuthLink, AuthShell } from '@/components/AuthShell'
+import { Button } from '@/components/ui/button'
+import { Field } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Notice } from '@/components/ui/notice'
 
 export default function SignUpPage() {
   const [name, setName] = useState('')
@@ -52,126 +56,61 @@ export default function SignUpPage() {
   }
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          #name::placeholder,
-          #name::-webkit-input-placeholder {
-            color: #d1d5db !important;
-            -webkit-text-fill-color: #d1d5db !important;
-          }
-          #email::placeholder,
-          #email::-webkit-input-placeholder {
-            color: #d1d5db !important;
-            -webkit-text-fill-color: #d1d5db !important;
-          }
-          #password::placeholder,
-          #password::-webkit-input-placeholder {
-            color: #d1d5db !important;
-            -webkit-text-fill-color: #d1d5db !important;
-          }
-        `
-      }} />
-      <div className="min-h-screen flex items-start justify-center px-4 pt-4" style={{ backgroundColor: '#F9F3E4' }}>
-      <div className="w-full max-w-md">
-        <div className="mb-4 flex justify-center">
-          <div className="w-full overflow-hidden rounded-xl aspect-[16/8] sm:aspect-[16/7]">
-            <video
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="h-full w-full object-cover object-center"
-            >
-              <source src="/welcome.mp4" type="video/mp4" />
-            </video>
-          </div>
-        </div>
+    <AuthShell
+      hero
+      title='Create your account'
+      footer={
+        <>
+          <p>
+            Already have an account? <AuthLink href='/auth/signin'>Sign in</AuthLink>
+          </p>
+          <p>
+            Forgot your password? <AuthLink href='/auth/forgot-password'>Reset it</AuthLink>
+          </p>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className='space-y-4'>
+        {error && <Notice variant='error'>{error}</Notice>}
 
-        <div className="text-center mb-4">
-          <h1 className="text-3xl font-bold mb-2 text-foreground">Looksee</h1>
-          <p className="text-sm text-black mb-4">Share and compare movies and shows with your friends and housemates</p>
-          <p className="text-muted-foreground">Create your account</p>
-        </div>
+        <Field label='Name' htmlFor='name'>
+          <Input
+            id='name'
+            type='text'
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            placeholder='Your name'
+          />
+        </Field>
 
-        <form onSubmit={handleSubmit} className="p-6">
-          {error && (
-            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 text-destructive rounded">
-              {error}
-            </div>
-          )}
+        <Field label='Email' htmlFor='email'>
+          <Input
+            id='email'
+            type='email'
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            placeholder='you@example.com'
+          />
+        </Field>
 
-          <div className="mb-4">
-            <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1">
-              Name
-            </label>
-            <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              placeholder="Your name"
-            />
-          </div>
+        <Field label='Password' htmlFor='password' help='At least 6 characters'>
+          <Input
+            id='password'
+            type='password'
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
+            placeholder='••••••••'
+          />
+        </Field>
 
-          <div className="mb-4">
-            <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div className="mb-6">
-            <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              placeholder="••••••••"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">At least 6 characters</p>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary text-primary-foreground py-3 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {loading ? 'Creating account...' : 'Sign Up'}
-          </button>
-        </form>
-
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          Already have an account?{' '}
-          <Link href="/auth/signin" className="text-primary hover:underline">
-            Sign in
-          </Link>
-        </p>
-        <p className="mt-2 text-center text-sm text-muted-foreground">
-          Forgot your password?{' '}
-          <Link href="/auth/forgot-password" className="text-primary hover:underline">
-            Reset it
-          </Link>
-        </p>
-      </div>
-    </div>
-    </>
+        <Button type='submit' disabled={loading} size='lg' className='w-full'>
+          {loading ? 'Creating account...' : 'Sign Up'}
+        </Button>
+      </form>
+    </AuthShell>
   )
 }
-

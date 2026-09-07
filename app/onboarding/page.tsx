@@ -1,9 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { RatingFields } from '@/components/RatingFields'
 
 interface UnratedItem {
   id: string
@@ -105,10 +109,8 @@ export default function OnboardingPage() {
 
   if (loading || !roomId) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+      <div className='flex min-h-[100dvh] items-center justify-center bg-canvas'>
+        <p className='text-sm text-muted-foreground'>Loading...</p>
       </div>
     )
   }
@@ -121,141 +123,70 @@ export default function OnboardingPage() {
   const progress = ((currentIndex + 1) / items.length) * 100
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="bg-background border-b border-border p-4">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-muted-foreground">
+    <div className='flex min-h-[100dvh] flex-col bg-canvas safe-bottom'>
+      <div className='border-b border-border bg-background p-4'>
+        <div className='mx-auto max-w-2xl'>
+          <div className='mb-2 flex items-center justify-between'>
+            <span className='text-sm text-muted-foreground'>
               {currentIndex + 1} of {items.length}
             </span>
             <button
               onClick={handleSkip}
-              className="text-sm text-primary hover:underline"
+              className='text-sm font-medium text-foreground underline-offset-4 hover:underline'
             >
               Skip for now
             </button>
           </div>
-          <div className="w-full bg-secondary rounded-full h-2">
+          <div className='h-2 w-full rounded-full bg-secondary'>
             <div
-              className="bg-primary h-2 rounded-full transition-all"
+              className='h-2 rounded-full bg-primary transition-all'
               style={{ width: `${progress}%` }}
             />
           </div>
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-card rounded-lg shadow-lg p-6 border border-border">
-          <div className="text-center mb-6">
+      <div className='flex flex-1 items-center justify-center p-4'>
+        <Card className='w-full max-w-md p-6 shadow-pop'>
+          <div className='mb-6 text-center'>
             {currentItem.posterUrl && (
-              <div className="mb-4 flex justify-center">
+              <div className='mb-4 flex justify-center'>
                 <Image
                   src={currentItem.posterUrl}
                   alt={currentItem.title}
                   width={200}
                   height={300}
-                  className="rounded"
+                  className='rounded-xl shadow-card'
                 />
               </div>
             )}
-            <h2 className="text-2xl font-bold mb-2 text-foreground">{currentItem.title}</h2>
-            <p className="text-sm text-muted-foreground capitalize mb-1">{currentItem.type}</p>
+            <h2 className='mb-1 text-2xl font-bold text-foreground'>{currentItem.title}</h2>
+            <p className='mb-2 text-sm capitalize text-muted-foreground'>{currentItem.type}</p>
             {currentItem.genres.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-1 mb-2">
-                {currentItem.genres.slice(0, 3).map((genre, i) => (
-                  <span
-                    key={i}
-                    className="px-2 py-1 bg-secondary text-secondary-foreground text-xs rounded"
-                  >
-                    {genre}
-                  </span>
-                ))}
+              <div className='mb-2 flex flex-wrap justify-center gap-1.5'>
+                {currentItem.genres.slice(0, 3).map((genre, i) => <Badge key={i}>{genre}</Badge>)}
               </div>
             )}
             {currentItem.description && (
-              <p className="text-sm text-muted-foreground mt-2 line-clamp-3">
+              <p className='mt-2 line-clamp-3 text-sm text-muted-foreground'>
                 {currentItem.description}
               </p>
             )}
           </div>
 
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium mb-3">Status</label>
-              <div className="space-y-2">
-                {[
-                  { value: 'have_not_seen', label: 'Have not seen' },
-                  { value: 'already_seen', label: 'Already seen' },
-                ].map((opt) => (
-                  <label
-                    key={opt.value}
-                    className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                      status === opt.value
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border bg-background'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="status"
-                      value={opt.value}
-                      checked={status === opt.value}
-                      onChange={(e) => setStatus(e.target.value)}
-                      className="mr-3"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-            </div>
+          <RatingFields
+            status={status}
+            excitement={excitement}
+            onStatusChange={setStatus}
+            onExcitementChange={setExcitement}
+            className='mb-6'
+          />
 
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Excitement
-              </label>
-              <div className="space-y-2">
-                {[
-                  { value: 1, label: 'Not excited' },
-                  { value: 3, label: 'Neutral' },
-                  { value: 5, label: 'Excited' },
-                ].map((opt) => (
-                  <label
-                    key={opt.value}
-                    className={`flex items-center p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                      excitement === opt.value
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border bg-background'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="excitement"
-                      value={opt.value}
-                      checked={excitement === opt.value}
-                      onChange={(e) => setExcitement(parseInt(e.target.value))}
-                      className="mr-3"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={handleNext}
-              disabled={saving}
-              className="w-full bg-primary text-primary-foreground py-3 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50"
-            >
-              {saving
-                ? 'Saving...'
-                : currentIndex + 1 >= items.length
-                  ? 'Finish'
-                  : 'Next'}
-            </button>
-          </div>
-        </div>
+          <Button onClick={handleNext} disabled={saving} size='lg' className='w-full'>
+            {saving ? 'Saving...' : currentIndex + 1 >= items.length ? 'Finish' : 'Next'}
+          </Button>
+        </Card>
       </div>
     </div>
   )
 }
-

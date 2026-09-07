@@ -1,10 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { KeyRound, Sofa } from 'lucide-react'
 import { RoomJoinModal } from '@/components/RoomJoinModal'
 import { JoinRoomWatchlistPromptModal } from '@/components/JoinRoomWatchlistPromptModal'
+import { AuthShell } from '@/components/AuthShell'
+import { Button } from '@/components/ui/button'
+import { ChoiceCard } from '@/components/ui/choice-card'
+import { Field } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Notice } from '@/components/ui/notice'
 
 export default function RoomSetupPage() {
   const { data: session, status } = useSession()
@@ -105,13 +112,6 @@ export default function RoomSetupPage() {
     }
   }
 
-  const handleAddWatchlistNow = () => {
-    setShowWatchlistPrompt(false)
-    if (joinedRoomId) {
-      router.push(`/add?roomId=${joinedRoomId}`)
-    }
-  }
-
   const handleSkipQueue = () => {
     setShowJoinModal(false)
     if (joinedRoomId) {
@@ -133,36 +133,38 @@ export default function RoomSetupPage() {
 
   if (mode === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 bg-background">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-4">
-            <h1 className="text-3xl font-bold mb-2 text-foreground">Welcome to Looksee</h1>
-            <p className="text-black mb-6" style={{ textWrap: 'balance' }}>Add movies and shows you like to rooms you share with others. Looksee will help you find things you all want to watch.</p>
-            <p className="text-muted-foreground">Get started by creating or joining a room</p>
+      <div className='flex min-h-[100dvh] flex-col items-center justify-center bg-canvas px-4 py-8 safe-bottom'>
+        <div className='w-full max-w-md'>
+          <div className='mb-6 text-center'>
+            <h1 className='text-3xl font-bold tracking-tight text-foreground'>
+              Welcome to Looksee
+            </h1>
+            <p className='mt-2 text-sm text-muted-foreground' style={{ textWrap: 'balance' }}>
+              Add movies and shows you like to rooms you share with others. Looksee will help you
+              find things you all want to watch.
+            </p>
           </div>
 
-          <div className="space-y-4">
-            <button
+          <div className='space-y-3'>
+            <ChoiceCard
+              icon={Sofa}
+              title='Create a room'
+              description='Add movies and shows and invite others later'
+              primary
               onClick={() => setMode('create')}
-              className="w-full bg-primary text-primary-foreground py-4 rounded-lg font-medium hover:bg-primary/90 transition-colors text-lg flex flex-col items-center"
-            >
-              <span>Create a Room</span>
-              <span className="text-sm opacity-90 mt-1">Add movies and shows and invite others later</span>
-            </button>
-            <button
+            />
+            <ChoiceCard
+              icon={KeyRound}
+              title='Join a room'
+              description='Enter an invite code'
               onClick={() => setMode('join')}
-              className="w-full bg-card border-2 border-border text-foreground py-4 rounded-lg font-medium hover:bg-accent transition-colors text-lg flex flex-col items-center"
-            >
-              <span>Join a Room</span>
-              <span className="text-sm text-muted-foreground mt-1">Enter an invite code</span>
-            </button>
-            <button
+            />
+            <ChoiceCard
+              title='Skip for now'
+              description='Just add some things for yourself'
+              subtle
               onClick={() => router.push('/add')}
-              className="w-full text-foreground py-4 rounded-lg font-medium hover:bg-accent transition-colors text-lg flex flex-col items-center"
-            >
-              <span>Skip for now</span>
-              <span className="text-sm text-muted-foreground mt-1">Just add some things for yourself</span>
-            </button>
+            />
           </div>
         </div>
       </div>
@@ -171,106 +173,73 @@ export default function RoomSetupPage() {
 
   if (mode === 'create') {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 bg-background">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold mb-2 text-foreground">Create a Room</h1>
-            <p className="text-muted-foreground">Give your room a name</p>
+      <AuthShell title='Create a room' description='Give your room a name.'>
+        <form onSubmit={handleCreateRoom} className='space-y-4'>
+          {error && <Notice variant='error'>{error}</Notice>}
+
+          <Field label='Room name' htmlFor='roomName'>
+            <Input
+              id='roomName'
+              type='text'
+              value={roomName}
+              onChange={(e) => setRoomName(e.target.value)}
+              required
+              placeholder='e.g., Our Apartment'
+            />
+          </Field>
+
+          <div className='flex gap-3'>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => setMode(null)}
+              className='flex-1'
+            >
+              Back
+            </Button>
+            <Button type='submit' disabled={loading} className='flex-1'>
+              {loading ? 'Creating...' : 'Create'}
+            </Button>
           </div>
-
-          <form onSubmit={handleCreateRoom} className="bg-card rounded-lg shadow-md p-6 border border-border">
-            {error && (
-              <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 text-destructive rounded">
-                {error}
-              </div>
-            )}
-
-            <div className="mb-6">
-              <label htmlFor="roomName" className="block text-sm font-medium text-foreground mb-1">
-                Room Name
-              </label>
-              <input
-                id="roomName"
-                type="text"
-                value={roomName}
-                onChange={(e) => setRoomName(e.target.value)}
-                required
-                className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                placeholder="e.g., Our Apartment"
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setMode(null)}
-                className="flex-1 bg-secondary text-secondary-foreground py-3 rounded-md font-medium hover:bg-secondary/80 transition-colors"
-              >
-                Back
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 bg-primary text-primary-foreground py-3 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading ? 'Creating...' : 'Create'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
+        </form>
+      </AuthShell>
     )
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-background">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold mb-2 text-foreground">Join a Room</h1>
-          <p className="text-muted-foreground">Enter the invite code</p>
-        </div>
+    <>
+      <AuthShell title='Join a room' description='Enter the invite code.'>
+        <form onSubmit={handleJoinRoom} className='space-y-4'>
+          {error && <Notice variant='error'>{error}</Notice>}
 
-        <form onSubmit={handleJoinRoom} className="bg-card rounded-lg shadow-md p-6 border border-border">
-          {error && (
-            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 text-destructive rounded">
-              {error}
-            </div>
-          )}
-
-          <div className="mb-6">
-            <label htmlFor="inviteCode" className="block text-sm font-medium text-foreground mb-1">
-              Invite Code
-            </label>
-            <input
-              id="inviteCode"
-              type="text"
+          <Field label='Invite code' htmlFor='inviteCode'>
+            <Input
+              id='inviteCode'
+              type='text'
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
               required
               maxLength={6}
-              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-center text-2xl font-mono tracking-widest uppercase"
-              placeholder="ABC123"
+              className='h-14 text-center font-mono text-2xl uppercase tracking-[0.3em] sm:text-2xl'
+              placeholder='ABC123'
             />
-          </div>
+          </Field>
 
-          <div className="flex gap-3">
-            <button
-              type="button"
+          <div className='flex gap-3'>
+            <Button
+              type='button'
+              variant='outline'
               onClick={() => setMode(null)}
-              className="flex-1 bg-secondary text-secondary-foreground py-3 rounded-md font-medium hover:bg-secondary/80 transition-colors"
+              className='flex-1'
             >
               Back
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-primary text-primary-foreground py-3 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
+            </Button>
+            <Button type='submit' disabled={loading} className='flex-1'>
               {loading ? 'Joining...' : 'Join'}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
+      </AuthShell>
 
       <RoomJoinModal
         isOpen={showJoinModal}
@@ -281,11 +250,10 @@ export default function RoomSetupPage() {
       />
       <JoinRoomWatchlistPromptModal
         isOpen={showWatchlistPrompt}
+        roomId={joinedRoomId}
         roomName={joinedRoomName}
         onSkip={handleSkipWatchlistPrompt}
-        onAddNow={handleAddWatchlistNow}
       />
-    </div>
+    </>
   )
 }
-

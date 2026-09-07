@@ -1,13 +1,33 @@
 'use client'
 
 import { ReactNode } from 'react'
+import { Calendar, LucideIcon, Plus, Sofa } from 'lucide-react'
 import { PosterImage } from './PosterImage'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardBand } from '@/components/ui/card'
+import { DuotoneIcon } from '@/components/DuotoneIcon'
+import { cn } from '@/lib/utils'
+
+export { CardBand }
 
 interface MediaCardProps {
   children: ReactNode
   onClick?: () => void
   className?: string
   variant?: 'default' | 'highlighted' | 'clickable'
+}
+
+/** Media card: the shared `Card` surface with media-specific children below. */
+export function MediaCard({ children, onClick, className, variant = 'default' }: MediaCardProps) {
+  return (
+    <Card
+      onClick={onClick}
+      variant={variant === 'clickable' ? 'interactive' : variant}
+      className={className}
+    >
+      {children}
+    </Card>
+  )
 }
 
 interface CardPosterProps {
@@ -18,19 +38,62 @@ interface CardPosterProps {
   className?: string
 }
 
-interface CardHeaderProps {
-  children: ReactNode
+export function CardPoster({ src, alt, width = 80, height = 120, className }: CardPosterProps) {
+  if (!src) return null
+
+  return (
+    <div className={cn('flex-shrink-0', className)}>
+      <PosterImage
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        className='rounded-lg object-cover shadow-sm'
+      />
+    </div>
+  )
+}
+
+export function CardHeader({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn('mb-3', className)}>{children}</div>
+}
+
+export function CardTitle({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <h3 className={cn('mb-0.5 text-lg font-semibold leading-snug text-foreground', className)}>
+      {children}
+    </h3>
+  )
+}
+
+export function CardSubtitle({ children, className }: { children: ReactNode; className?: string }) {
+  return <p className={cn('text-xs capitalize text-muted-foreground', className)}>{children}</p>
+}
+
+interface CardMetaProps {
+  icon: LucideIcon
+  type: string
+  releaseDate?: string | null
   className?: string
 }
 
-interface CardTitleProps {
-  children: ReactNode
-  className?: string
-}
-
-interface CardSubtitleProps {
-  children: ReactNode
-  className?: string
+/** "▣ Movie · 📅 2010" line under a title. */
+export function CardMeta({ icon, type, releaseDate, className }: CardMetaProps) {
+  const year = releaseDate ? new Date(releaseDate).getFullYear() : null
+  return (
+    <div className={cn('mb-1 flex items-center gap-1.5 text-xs text-muted-foreground', className)}>
+      <span className='inline-flex items-center gap-1 capitalize'>
+        <DuotoneIcon icon={icon} size={12} />
+        {type}
+      </span>
+      {year !== null && !isNaN(year) && (
+        <span className='inline-flex items-center gap-1'>
+          <DuotoneIcon icon={Calendar} size={12} />
+          {year}
+        </span>
+      )}
+    </div>
+  )
 }
 
 interface CardDescriptionProps {
@@ -39,10 +102,40 @@ interface CardDescriptionProps {
   lineClamp?: number
 }
 
+export function CardDescription({ children, className, lineClamp = 2 }: CardDescriptionProps) {
+  const clampClasses: Record<number, string> = {
+    1: 'line-clamp-1',
+    2: 'line-clamp-2',
+    3: 'line-clamp-3',
+    4: 'line-clamp-4',
+    5: 'line-clamp-5',
+  }
+  const clampClass = lineClamp > 0 && lineClamp <= 5 ? clampClasses[lineClamp] : ''
+  return (
+    <p className={cn('mb-2 text-sm leading-relaxed text-muted-foreground', clampClass, className)}>
+      {children}
+    </p>
+  )
+}
+
 interface CardGenresProps {
   genres: string[]
   maxDisplay?: number
   className?: string
+}
+
+export function CardGenres({ genres, maxDisplay = 3, className }: CardGenresProps) {
+  if (!genres || genres.length === 0) return null
+
+  return (
+    <div className={cn('mb-1.5 flex flex-wrap gap-1', className)}>
+      {genres.slice(0, maxDisplay).map((genre, i) => (
+        <Badge key={i} size='sm'>
+          {genre}
+        </Badge>
+      ))}
+    </div>
+  )
 }
 
 interface CardBadgeProps {
@@ -51,135 +144,84 @@ interface CardBadgeProps {
   className?: string
 }
 
-interface CardActionsProps {
-  children: ReactNode
+export function CardBadge({ children, variant = 'primary', className }: CardBadgeProps) {
+  return (
+    <Badge variant={variant === 'primary' ? 'solid' : 'default'} size='lg' className={className}>
+      {children}
+    </Badge>
+  )
+}
+
+export function CardActions({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn('mt-4', className)}>{children}</div>
+}
+
+interface CardRoomsBandProps {
+  rooms: Array<{ id: string; name: string }>
+  /** Makes the band a button (Browse opens Edit Rooms). */
+  onClick?: () => void
+  emptyLabel?: string
   className?: string
 }
 
-interface CardMenuProps {
-  children: ReactNode
-  className?: string
-}
-
-interface CardContentProps {
-  children: ReactNode
-  className?: string
-}
-
-// Main Card Component
-export function MediaCard({ children, onClick, className = '', variant = 'default' }: MediaCardProps) {
-  const baseClasses = 'bg-card rounded-lg border border-border p-4 transition-shadow shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-1px_rgba(0,0,0,0.06),inset_0_-1px_3px_rgba(0,0,0,0.05)]'
-  const variantClasses = {
-    default: '',
-    highlighted: 'border-2 border-primary shadow-lg',
-    clickable: 'cursor-pointer hover:shadow-lg',
-  }
-
-  const combinedClasses = `${baseClasses} ${variantClasses[variant]} ${className}`.trim()
+/** Room chips strip across the top of a media card. */
+export function CardRoomsBand({ rooms, onClick, emptyLabel, className }: CardRoomsBandProps) {
+  const content = (
+    <>
+      <DuotoneIcon icon={Sofa} size={14} className='flex-shrink-0' />
+      {rooms.length > 0
+        ? rooms.map((room) => (
+          <Badge key={room.id} variant='outline' size='sm'>
+            {room.name}
+          </Badge>
+        ))
+        : emptyLabel && <span className='text-xs text-muted-foreground'>{emptyLabel}</span>}
+    </>
+  )
 
   if (onClick) {
     return (
-      <div onClick={onClick} className={combinedClasses}>
-        {children}
-      </div>
+      <CardBand
+        position='top'
+        className={cn(
+          'group relative flex min-h-[40px] cursor-pointer items-center gap-2 transition-colors hover:bg-muted',
+          className,
+        )}
+        onClick={(e) => {
+          e.stopPropagation()
+          onClick()
+        }}
+        role='button'
+        aria-label='Edit rooms'
+      >
+        <div className='flex flex-1 flex-wrap items-center gap-1.5 pr-8'>{content}</div>
+        <span className='absolute right-4 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full border border-muted-foreground/60 text-muted-foreground transition-colors group-hover:border-foreground group-hover:text-foreground'>
+          <Plus size={10} strokeWidth={3} />
+        </span>
+      </CardBand>
     )
   }
 
-  return <div className={combinedClasses}>{children}</div>
-}
-
-// Card Subcomponents
-export function CardPoster({ src, alt, width = 80, height = 120, className = '' }: CardPosterProps) {
-  if (!src) return null
-
   return (
-    <div className={`flex-shrink-0 ${className}`}>
-      <PosterImage
-        src={src}
-        alt={alt}
-        width={width}
-        height={height}
-        className="rounded object-cover"
-      />
-    </div>
+    <CardBand position='top' className={cn('flex min-h-[40px] items-center gap-2', className)}>
+      <div className='flex flex-1 flex-wrap items-center gap-1.5'>{content}</div>
+    </CardBand>
   )
 }
 
-export function CardHeader({ children, className = '' }: CardHeaderProps) {
-  return <div className={`mb-3 ${className}`}>{children}</div>
-}
-
-export function CardTitle({ children, className = '' }: CardTitleProps) {
+export function CardMenu({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <h3 className={`font-semibold text-lg mb-0.5 text-foreground ${className}`}>{children}</h3>
-  )
-}
-
-export function CardSubtitle({ children, className = '' }: CardSubtitleProps) {
-  return <p className={`text-xs text-muted-foreground capitalize ${className}`}>{children}</p>
-}
-
-export function CardDescription({ children, className = '', lineClamp = 2 }: CardDescriptionProps) {
-  const clampClasses: Record<number, string> = {
-    1: 'line-clamp-1',
-    2: 'line-clamp-2',
-    3: 'line-clamp-3',
-    4: 'line-clamp-4',
-    5: 'line-clamp-5',
-  }
-  const clampClass = lineClamp > 0 && lineClamp <= 5 ? clampClasses[lineClamp] || 'line-clamp-2' : ''
-  return (
-    <p className={`text-sm text-muted-foreground mb-2 ${clampClass} ${className}`}>{children}</p>
-  )
-}
-
-export function CardGenres({ genres, maxDisplay = 3, className = '' }: CardGenresProps) {
-  if (!genres || genres.length === 0) return null
-
-  return (
-    <div className={`flex flex-wrap gap-1 mb-1 ${className}`}>
-      {genres.slice(0, maxDisplay).map((genre, i) => (
-        <span
-          key={i}
-          className="px-2 py-1 bg-secondary text-muted-foreground text-xs rounded"
-        >
-          {genre}
-        </span>
-      ))}
-    </div>
-  )
-}
-
-export function CardBadge({ children, variant = 'primary', className = '' }: CardBadgeProps) {
-  const variantClasses = {
-    primary: 'bg-primary text-primary-foreground',
-    secondary: 'bg-secondary text-secondary-foreground',
-  }
-
-  return (
-    <span className={`px-3 py-1 rounded-full text-sm font-medium ${variantClasses[variant]} ${className}`}>
-      {children}
-    </span>
-  )
-}
-
-export function CardActions({ children, className = '' }: CardActionsProps) {
-  return <div className={`mt-4 ${className}`}>{children}</div>
-}
-
-export function CardMenu({ children, className = '' }: CardMenuProps) {
-  return (
-    <div className={`absolute top-2 right-2 z-0 ${className}`} data-menu-container>
+    <div className={cn('absolute right-1 top-1 z-[1]', className)} data-menu-container>
       {children}
     </div>
   )
 }
 
-export function CardContent({ children, className = '' }: CardContentProps) {
-  return <div className={`flex-1 min-w-0 ${className}`}>{children}</div>
+export function CardContent({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn('min-w-0 flex-1', className)}>{children}</div>
 }
 
-// Layout wrapper for horizontal card layout
-export function CardLayout({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`flex gap-4 ${className}`}>{children}</div>
+/** Horizontal poster + content layout. */
+export function CardLayout({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn('flex gap-4', className)}>{children}</div>
 }

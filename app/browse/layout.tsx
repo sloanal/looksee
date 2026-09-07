@@ -1,15 +1,9 @@
-import { BottomNav } from '@/components/BottomNav'
+import { TabShell } from '@/components/TabShell'
 
 export default function BrowseLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return (
-    <div className="min-h-screen bg-background bottom-nav-spacing safe-x">
-      {children}
-      <BottomNav />
-    </div>
-  )
+  return <TabShell>{children}</TabShell>
 }
-

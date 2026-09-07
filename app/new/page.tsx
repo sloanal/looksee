@@ -1,22 +1,34 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
-import { Film, Tv, Video, Link as LinkIcon, Calendar, Star, Sofa, Frown, Meh, Smile } from 'lucide-react'
-import { DuotoneIcon } from '@/components/DuotoneIcon'
-import { useModalAnimation } from '@/lib/useModalAnimation'
-import { Button } from '@/components/ui/button'
+import { Film, Link as LinkIcon, PartyPopper, Tv, Video } from 'lucide-react'
 import {
-  MediaCard,
-  CardLayout,
-  CardPoster,
+  pageContainerClassName,
+  PageContent,
+  PageHeader,
+  PageHeaderBar,
+} from '@/components/PageHeader'
+import { Avatar } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Modal, ModalBody, ModalFooter, ModalHeader, useModal } from '@/components/ui/modal'
+import { FavoriteButton, FavoritedByBadge } from '@/components/FavoriteButton'
+import { SubmissionInfo, SubmissionMeta } from '@/components/SubmissionMeta'
+import { MediaDetailBody } from '@/components/MediaDetail'
+import { RatingFields } from '@/components/RatingFields'
+import {
+  CardBand,
   CardContent,
-  CardTitle,
-  CardSubtitle,
   CardDescription,
   CardGenres,
+  CardLayout,
+  CardMeta,
+  CardPoster,
+  CardRoomsBand,
+  CardTitle,
+  MediaCard,
 } from '@/components/MediaCard'
 
 interface QueueItem {
@@ -41,16 +53,26 @@ interface QueueItem {
     addedByUserId: string
     addedByName: string
   }>
+  myPreference?: {
+    status: string
+    excitement: number
+    isFavorite?: boolean
+  } | null
   otherPreferences?: Array<{
     status: string
     excitement: number
+    isFavorite?: boolean
     user: {
       id: string
       name: string
       imageUrl?: string | null
     }
   }>
+  submission?: SubmissionInfo | null
 }
+
+const favoritedByNames = (item: QueueItem): string[] =>
+  (item.otherPreferences ?? []).filter((pref) => pref.isFavorite).map((pref) => pref.user.name)
 
 function getTypeIcon(type: string) {
   const normalizedType = type.toLowerCase()
@@ -64,31 +86,6 @@ function getTypeIcon(type: string) {
     return LinkIcon
   }
   return Film // default
-}
-
-const getStatusLabel = (status?: string) => {
-  if (!status) return 'Unrated'
-  const normalizedStatus = status.toLowerCase()
-  const labels: Record<string, string> = {
-    have_not_seen: 'Have not seen',
-    already_seen: 'Already seen',
-    // Handle old status values that might still exist
-    not_seen_want: 'Have not seen',
-    not_seen_dont_want: 'Have not seen',
-    seen_would_rewatch: 'Already seen',
-    seen_wont_rewatch: 'Already seen',
-  }
-  return labels[normalizedStatus] || 'Unrated'
-}
-
-const getExcitementLabel = (excitement?: number) => {
-  if (!excitement || (excitement !== 1 && excitement !== 3 && excitement !== 5)) return ''
-  const labels: Record<number, string> = {
-    1: 'Not excited',
-    3: 'Neutral',
-    5: 'Excited',
-  }
-  return labels[excitement] || ''
 }
 
 export default function NewPage() {
@@ -126,7 +123,7 @@ export default function NewPage() {
           // Try multiple methods for Safari compatibility
           window.scrollTo({
             top: position,
-            behavior: 'instant' as ScrollBehavior
+            behavior: 'instant' as ScrollBehavior,
           })
           // Fallback for older Safari versions
           if (window.scrollY !== position && document.documentElement) {
@@ -155,7 +152,7 @@ export default function NewPage() {
               // Try multiple methods for Safari compatibility
               window.scrollTo({
                 top: position,
-                behavior: 'instant' as ScrollBehavior
+                behavior: 'instant' as ScrollBehavior,
               })
               // Fallback for older Safari versions
               if (window.scrollY !== position && document.documentElement) {
@@ -226,145 +223,122 @@ export default function NewPage() {
     }
   }
 
-  const getInitials = (name?: string) => {
-    if (!name) return '?'
-    const parts = name.trim().split(/\s+/).filter(Boolean)
-    if (parts.length === 0) return '?'
-    if (parts.length === 1) return parts[0][0]?.toUpperCase() || '?'
-    return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase()
+  // Favoriting creates an unrated (ratedAt null) preference server-side, so the
+  // title stays in the queue; mirror the new flag locally.
+  const applyFavorite = (itemId: string, isFavorite: boolean) => {
+    const patch = (item: QueueItem): QueueItem =>
+      item.id !== itemId ? item : {
+        ...item,
+        myPreference: {
+          ...(item.myPreference ?? { status: 'have_not_seen', excitement: 3 }),
+          isFavorite,
+        },
+      }
+    setQueue((prev) => prev.map(patch))
+    setSelectedQueueItem((prev) => (prev ? patch(prev) : prev))
   }
 
+  const openItem = (item: QueueItem) => {
+    // Get scroll position with multiple fallbacks for Safari compatibility
+    scrollPositionRef.current = window.scrollY ||
+      document.documentElement.scrollTop ||
+      document.body.scrollTop ||
+      0
+    setSelectedQueueItem(item)
+    loadTrailer(item)
+  }
 
   return (
-    <div className="max-w-4xl xl:max-w-5xl mx-auto">
-      <div className="sticky top-0 z-10">
-        <div className="absolute inset-y-0 left-1/2 w-screen -translate-x-1/2 bg-background border-b border-border pointer-events-none" />
-        <div className="relative max-w-4xl xl:max-w-5xl mx-auto p-4">
-          <h1 className="text-2xl font-bold text-foreground mb-2">New</h1>
-          <p className="text-sm text-muted-foreground">Add your excitement to these movies and shows added by other people in your rooms.</p>
-        </div>
-      </div>
+    <div className={pageContainerClassName}>
+      <PageHeaderBar>
+        <PageHeader title='New' subtitle='Rate titles other people in your rooms have added.' />
+      </PageHeaderBar>
 
-      <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] lg:w-full lg:left-0 lg:right-0 lg:ml-0 lg:mr-0">
-        <div ref={queueContainerRef} className="p-4 space-y-4 bg-content min-h-[calc(100vh-200px)]">
-          {loading ? (
-            <div className="text-center text-muted-foreground py-8">Loading...</div>
-          ) : queue.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">
-              <p className="text-lg">No items in your queue</p>
-              <p className="text-sm mt-2">All media items have been rated!</p>
-            </div>
-          ) : (
-            queue.map((item) => (
-              <MediaCard key={item.id} variant="default" className="relative">
-                {item.rooms && item.rooms.length > 0 && (
-                  <div className="flex items-center justify-between -mx-4 -mt-4 px-4 pt-3 pb-2 mb-2 border-b border-border bg-muted/50">
-                    <div className="flex items-center gap-2 flex-wrap flex-1">
-                      <DuotoneIcon icon={Sofa} size={14} />
-                      {item.rooms.map((room) => (
-                        <span
-                          key={room.id}
-                          className="px-2 py-0.5 bg-foreground/10 text-foreground text-xs rounded"
-                        >
-                          {room.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <CardLayout>
-                  <div
-                onClick={(e) => {
-                  e.stopPropagation()
-                  // Get scroll position with multiple fallbacks for Safari compatibility
-                  scrollPositionRef.current = window.scrollY || 
-                                              document.documentElement.scrollTop || 
-                                              document.body.scrollTop || 
-                                              0
-                  setSelectedQueueItem(item)
-                  loadTrailer(item)
-                }}
-                    className="cursor-pointer pt-2"
-                  >
-                    <CardPoster src={item.posterUrl} alt={item.title} width={80} height={120} />
-                  </div>
-                  <CardContent className="pr-0 py-2">
+      <PageContent>
+        <div ref={queueContainerRef} className='space-y-4'>
+          {loading
+            ? <div className='py-8 text-center text-sm text-muted-foreground'>Loading...</div>
+            : queue.length === 0
+            ? (
+              <EmptyState
+                icon={PartyPopper}
+                title='No items in your queue'
+                description='All media items have been rated!'
+              />
+            )
+            : (
+              queue.map((item) => (
+                <MediaCard key={item.id} variant='default' className='relative'>
+                  {item.rooms && item.rooms.length > 0 && <CardRoomsBand rooms={item.rooms} />}
+                  <CardLayout>
                     <div
-                onClick={(e) => {
-                  e.stopPropagation()
-                  // Get scroll position with multiple fallbacks for Safari compatibility
-                  scrollPositionRef.current = window.scrollY || 
-                                              document.documentElement.scrollTop || 
-                                              document.body.scrollTop || 
-                                              0
-                  setSelectedQueueItem(item)
-                  loadTrailer(item)
-                }}
-                      className="cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openItem(item)
+                      }}
+                      className='cursor-pointer'
                     >
-                      <CardTitle>{item.title}</CardTitle>
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <DuotoneIcon icon={getTypeIcon(item.type)} size={12} />
-                        <CardSubtitle className="mb-0">{item.type}</CardSubtitle>
-                        {item.releaseDate && (
-                          <>
-                            <DuotoneIcon icon={Calendar} size={12} />
-                            <p className="text-xs text-muted-foreground mb-0">
-                              {new Date(item.releaseDate).getFullYear()}
-                            </p>
-                          </>
-                        )}
-                      </div>
-                      <CardGenres genres={item.genres} maxDisplay={3} />
-                      {item.description && (
-                        <CardDescription>{item.description}</CardDescription>
-                      )}
+                      <CardPoster src={item.posterUrl} alt={item.title} width={80} height={120} />
                     </div>
-                  </CardContent>
-                </CardLayout>
-                <div className="space-y-0.5 -mx-4 -mb-4 px-4 pt-1 pb-1 border-t border-border mt-2 bg-muted/50">
-                  <div className="flex items-center justify-center gap-2 pt-2">
-                    {item.createdByImageUrl ? (
-                      <Image
-                        src={item.createdByImageUrl}
-                        alt={`${item.createdBy} avatar`}
-                        width={20}
-                        height={20}
-                        className="h-5 w-5 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="h-5 w-5 rounded-full bg-foreground/10 text-[10px] font-medium text-foreground flex items-center justify-center">
-                        {getInitials(item.createdBy)}
+                    <CardContent>
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openItem(item)
+                        }}
+                        className='cursor-pointer'
+                      >
+                        <CardTitle>{item.title}</CardTitle>
+                        <CardMeta
+                          icon={getTypeIcon(item.type)}
+                          type={item.type}
+                          releaseDate={item.releaseDate}
+                        />
+                        <CardGenres genres={item.genres} maxDisplay={3} />
+                        {item.description && <CardDescription>{item.description}</CardDescription>}
                       </div>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Added by {item.createdBy}
-                    </p>
-                  </div>
-                  <div className="flex justify-center pt-1 pb-2">
+                    </CardContent>
+                  </CardLayout>
+                  <CardBand
+                    position='bottom'
+                    className='flex flex-wrap items-center gap-x-3 gap-y-2'
+                  >
+                    <div className='flex min-w-0 flex-1 items-center gap-2 py-1'>
+                      <Avatar
+                        user={{
+                          id: item.createdByUserId ?? item.id,
+                          name: item.createdBy,
+                          imageUrl: item.createdByImageUrl,
+                        }}
+                        size='sm'
+                      />
+                      <p className='truncate text-xs text-muted-foreground'>
+                        Added by {item.createdBy}
+                      </p>
+                      <FavoritedByBadge names={favoritedByNames(item)} />
+                    </div>
                     <Button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  // Get scroll position with multiple fallbacks for Safari compatibility
-                  scrollPositionRef.current = window.scrollY || 
-                                              document.documentElement.scrollTop || 
-                                              document.body.scrollTop || 
-                                              0
-                  setSelectedQueueItem(item)
-                  loadTrailer(item)
-                }}
-                      size="sm"
-                      className="h-7 px-2.5 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openItem(item)
+                      }}
+                      size='sm'
+                      className='order-last w-full sm:order-none sm:w-auto'
                     >
                       Add your excitement
                     </Button>
-                  </div>
-                </div>
-              </MediaCard>
-            ))
-          )}
+                    <FavoriteButton
+                      mediaItemId={item.id}
+                      isFavorite={item.myPreference?.isFavorite === true}
+                      onChange={(isFavorite) => applyFavorite(item.id, isFavorite)}
+                      className='-mr-3 sm:order-last'
+                    />
+                  </CardBand>
+                </MediaCard>
+              ))
+            )}
         </div>
-      </div>
+      </PageContent>
 
       {selectedQueueItem && (
         <QueueItemModal
@@ -380,29 +354,41 @@ export default function NewPage() {
             setTrailerUrl(null)
             loadData()
           }}
+          onFavoriteChange={(isFavorite) => applyFavorite(selectedQueueItem.id, isFavorite)}
         />
       )}
     </div>
   )
 }
 
-function QueueItemModal({
-  item,
-  trailerUrl,
-  loadingTrailer,
-  onClose,
-  onSave,
-}: {
+interface QueueItemModalProps {
   item: QueueItem
   trailerUrl: string | null
   loadingTrailer: boolean
   onClose: () => void
   onSave: () => void
-}) {
+  onFavoriteChange: (isFavorite: boolean) => void
+}
+
+function QueueItemModal({ onClose, ...rest }: QueueItemModalProps) {
+  return (
+    <Modal isOpen onClose={onClose} size='xl' tall aria-label={`Rate ${rest.item.title}`}>
+      <QueueItemBody {...rest} />
+    </Modal>
+  )
+}
+
+function QueueItemBody({
+  item,
+  trailerUrl,
+  loadingTrailer,
+  onSave,
+  onFavoriteChange,
+}: Omit<QueueItemModalProps, 'onClose'>) {
   const [status, setStatus] = useState('have_not_seen')
   const [excitement, setExcitement] = useState(3)
   const [saving, setSaving] = useState(false)
-  const { isClosing, handleClose } = useModalAnimation(onClose)
+  const { handleClose } = useModal()
 
   const handleSave = async () => {
     setSaving(true)
@@ -431,172 +417,38 @@ function QueueItemModal({
   }
 
   return (
-    <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center pt-4 px-4 pb-20 modal-overlay ${isClosing ? 'closing' : ''}`} onClick={handleClose}>
-      <div 
-        className={`bg-card rounded-lg max-w-4xl w-full h-[calc(100vh-6rem)] flex flex-col modal-content relative ${isClosing ? 'closing' : ''}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button 
-          onClick={handleClose} 
-          className="absolute top-4 right-4 z-10 text-muted-foreground text-2xl hover:text-foreground"
-        >
-          ×
-        </button>
-        <div className="p-6 pt-4 overflow-y-auto flex-1">
-          <div className="mb-4 pr-8">
-            <h2 className="text-2xl font-bold text-foreground">{item.title}</h2>
-          </div>
+    <>
+      <ModalHeader
+        title={item.title}
+        action={
+          <FavoriteButton
+            mediaItemId={item.id}
+            isFavorite={item.myPreference?.isFavorite === true}
+            onChange={onFavoriteChange}
+            size={22}
+            className='-mt-1.5'
+          />
+        }
+        description={<SubmissionMeta submission={item.submission} />}
+      />
+      <ModalBody>
+        <MediaDetailBody item={item} trailerUrl={trailerUrl} loadingTrailer={loadingTrailer} />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            {item.posterUrl && (
-              <div className="flex-shrink-0">
-                <Image
-                  src={item.posterUrl}
-                  alt={item.title}
-                  width={300}
-                  height={450}
-                  className="rounded object-cover w-full"
-                />
-              </div>
-            )}
-
-            <div className="space-y-4">
-              {item.description && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-2 text-foreground">Description</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
-                </div>
-              )}
-
-              {item.genres.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-2 text-foreground">Genres</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {item.genres.map((genre, i) => (
-                      <span
-                        key={i}
-                        className="px-2 py-1 bg-secondary text-muted-foreground text-xs rounded"
-                      >
-                        {genre}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {item.releaseDate && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-2 text-foreground">Release Date</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(item.releaseDate).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
-                </div>
-              )}
-
-              {item.rating && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-2 text-foreground">Rating</h3>
-                  <p className="text-sm text-muted-foreground flex items-center gap-2">
-                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    {item.rating.toFixed(1)} / 10
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {loadingTrailer ? (
-            <div className="mb-6">
-              <div className="bg-muted rounded-lg aspect-video flex items-center justify-center">
-                <p className="text-muted-foreground">Loading trailer...</p>
-              </div>
-            </div>
-          ) : trailerUrl ? (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-2 text-foreground">Trailer</h3>
-              <div className="bg-black rounded-lg overflow-hidden aspect-video">
-                <iframe
-                  src={trailerUrl}
-                  title={`${item.title} Trailer`}
-                  className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-            </div>
-          ) : item.tmdbId && item.sourceType?.toLowerCase() === 'tmdb' ? (
-            <div className="mb-6">
-              <div className="bg-muted rounded-lg aspect-video flex items-center justify-center">
-                <p className="text-muted-foreground">No trailer available</p>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="border-t border-border pt-6 mt-6">
-            <h3 className="text-lg font-semibold mb-4 text-foreground">Add Your Rating</h3>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2 text-foreground">Your status</label>
-              <div className="space-y-2">
-                {[
-                  { value: 'have_not_seen', label: 'Have not seen' },
-                  { value: 'already_seen', label: 'Already seen' },
-                ].map((opt) => (
-                  <label key={opt.value} className="flex items-center">
-                    <input
-                      type="radio"
-                      name="status"
-                      value={opt.value}
-                      checked={status === opt.value}
-                      onChange={(e) => setStatus(e.target.value)}
-                      className="mr-2"
-                    />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2 text-foreground">
-                Your excitement
-              </label>
-              <div className="space-y-2">
-                {[
-                  { value: 1, label: 'Not excited', icon: Frown },
-                  { value: 3, label: 'Neutral', icon: Meh },
-                  { value: 5, label: 'Excited', icon: Smile },
-                ].map((opt) => (
-                  <label key={opt.value} className="flex items-center">
-                    <input
-                      type="radio"
-                      name="excitement"
-                      value={opt.value}
-                      checked={excitement === opt.value}
-                      onChange={(e) => setExcitement(parseInt(e.target.value))}
-                      className="mr-2"
-                    />
-                    <opt.icon className="w-4 h-4 mr-2" />
-                    {opt.label}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full bg-primary text-primary-foreground py-3 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-          </div>
+        <div className='border-t border-border pt-5'>
+          <h3 className='mb-3 text-base font-semibold text-foreground'>Add your rating</h3>
+          <RatingFields
+            status={status}
+            excitement={excitement}
+            onStatusChange={setStatus}
+            onExcitementChange={setExcitement}
+          />
         </div>
-      </div>
-    </div>
+      </ModalBody>
+      <ModalFooter>
+        <Button onClick={handleSave} disabled={saving} className='w-full'>
+          {saving ? 'Saving...' : 'Save'}
+        </Button>
+      </ModalFooter>
+    </>
   )
 }

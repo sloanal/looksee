@@ -3,7 +3,11 @@
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { AuthLink, AuthShell } from '@/components/AuthShell'
+import { Button } from '@/components/ui/button'
+import { Field } from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
+import { Notice } from '@/components/ui/notice'
 
 export default function SignInPage() {
   const [email, setEmail] = useState('')
@@ -53,103 +57,47 @@ export default function SignInPage() {
   }
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          #email::placeholder,
-          #email::-webkit-input-placeholder {
-            color: #d1d5db !important;
-            -webkit-text-fill-color: #d1d5db !important;
-          }
-          #password::placeholder,
-          #password::-webkit-input-placeholder {
-            color: #d1d5db !important;
-            -webkit-text-fill-color: #d1d5db !important;
-          }
-        `
-      }} />
-      <div className="min-h-screen flex items-start justify-center px-4 pt-4" style={{ backgroundColor: '#F9F3E4' }}>
-      <div className="w-full max-w-md">
-        <div className="mb-4 flex justify-center">
-          <div className="w-full overflow-hidden rounded-xl aspect-[16/8] sm:aspect-[16/7]">
-            <video
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="h-full w-full object-cover object-center"
-            >
-              <source src="/welcome.mp4" type="video/mp4" />
-            </video>
-          </div>
-        </div>
-
-        <div className="text-center mb-4">
-          <h1 className="text-3xl font-bold mb-2 text-foreground">Looksee</h1>
-          <p className="text-sm text-black mb-4">Share and compare movies and shows with your friends and housemates</p>
-          <p className="text-muted-foreground">Sign in to your account</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6">
-          {error && (
-            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 text-destructive rounded">
-              {error}
-            </div>
-          )}
-
-          <div className="mb-4">
-            <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div className="mb-6">
-            <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-input rounded-md bg-background text-foreground placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              placeholder="••••••••"
-            />
-            <div className="mt-2 text-right">
-              <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
-                Forgot password?
-              </Link>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary text-primary-foreground py-3 rounded-md font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
-        </form>
-
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{' '}
-          <Link href="/auth/signup" className="text-primary hover:underline">
-            Sign up
-          </Link>
+    <AuthShell
+      hero
+      title='Sign in to your account'
+      footer={
+        <p>
+          Don&apos;t have an account? <AuthLink href='/auth/signup'>Sign up</AuthLink>
         </p>
-      </div>
-    </div>
-    </>
+      }
+    >
+      <form onSubmit={handleSubmit} className='space-y-4'>
+        {error && <Notice variant='error'>{error}</Notice>}
+
+        <Field label='Email' htmlFor='email'>
+          <Input
+            id='email'
+            type='email'
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            placeholder='you@example.com'
+          />
+        </Field>
+
+        <Field label='Password' htmlFor='password'>
+          <Input
+            id='password'
+            type='password'
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            placeholder='••••••••'
+          />
+          <div className='mt-2 text-right'>
+            <AuthLink href='/auth/forgot-password'>Forgot password?</AuthLink>
+          </div>
+        </Field>
+
+        <Button type='submit' disabled={loading} size='lg' className='w-full'>
+          {loading ? 'Signing in...' : 'Sign In'}
+        </Button>
+      </form>
+    </AuthShell>
   )
 }
-

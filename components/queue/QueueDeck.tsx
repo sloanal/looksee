@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { QueueCard } from '@/components/queue/QueueCard'
 import { QueueItem, SwipeDirection } from '@/components/queue/types'
 
-/** How many cards either side of the centered one fetch their streaming providers. */
+/** How many cards either side of the one in the frame fetch streaming providers. */
 const DETAIL_WINDOW = 1
 
 interface QueueDeckProps {
@@ -22,9 +22,9 @@ interface QueueDeckProps {
 }
 
 /**
- * The horizontal deck of full-height cards. Panning the gutter either side of a
- * card moves through the queue without rating anything, and mandatory snapping
- * means the deck always comes to rest with one card centered.
+ * The queue as a vertical list of cards, each at least a frame tall. Scrolling
+ * is the only way through it, which leaves left and right entirely to the swipe
+ * gesture, and rating a card lets the ones below simply close the gap.
  */
 export function QueueDeck({
   items,
@@ -44,20 +44,33 @@ export function QueueDeck({
     if (frameRef.current !== null) cancelAnimationFrame(frameRef.current)
   }, [])
 
+  /**
+   * The card "in front" is whichever one covers most of the frame, which holds
+   * up for cards taller than the frame as well as short ones.
+   */
   const handleScroll = useCallback(() => {
     if (frameRef.current !== null) return
     frameRef.current = requestAnimationFrame(() => {
       frameRef.current = null
       const scroller = scrollerRef.current
-      const first = scroller?.firstElementChild as HTMLElement | undefined
-      if (!scroller || !first) return
+      if (!scroller) return
 
-      const second = scroller.children[1] as HTMLElement | undefined
-      const step = second ? second.offsetLeft - first.offsetLeft : first.offsetWidth
-      if (step <= 0) return
+      // Measured against the frame rather than through offsetTop, which is
+      // relative to whichever ancestor happens to be positioned.
+      const frame = scroller.getBoundingClientRect()
+      let best = 0
+      let bestVisible = -1
 
-      const index = Math.round(scroller.scrollLeft / step)
-      onActiveIndexChange(Math.max(0, Math.min(items.length - 1, index)))
+      Array.from(scroller.children).forEach((child, index) => {
+        const rect = (child as HTMLElement).getBoundingClientRect()
+        const visible = Math.min(frame.bottom, rect.bottom) - Math.max(frame.top, rect.top)
+        if (visible > bestVisible) {
+          bestVisible = visible
+          best = index
+        }
+      })
+
+      onActiveIndexChange(Math.max(0, Math.min(items.length - 1, best)))
     })
   }, [items.length, onActiveIndexChange])
 
@@ -68,17 +81,15 @@ export function QueueDeck({
       role='region'
       aria-label='Titles waiting for your rating'
       tabIndex={0}
-      className='no-scrollbar mx-auto flex h-full w-full max-w-md snap-x snap-mandatory gap-4 overflow-x-auto overflow-y-hidden px-7 focus-visible:outline-none'
+      className='no-scrollbar mx-auto h-full w-full max-w-md snap-y snap-proximity space-y-3 overflow-y-auto overflow-x-hidden px-4 focus-visible:outline-none'
     >
       {items.map((item, index) => (
-        <div key={item.id} className='h-full w-full flex-none snap-center py-1'>
+        <div key={item.id} className='min-h-full snap-start pb-1'>
           <QueueCard
             item={item}
             status={statusById[item.id] ?? 'have_not_seen'}
-            onStatusChange={(status) =>
-              onStatusChange(item.id, status)}
-            onRate={(direction) =>
-              onRate(item, direction)}
+            onStatusChange={(status) => onStatusChange(item.id, status)}
+            onRate={(direction) => onRate(item, direction)}
             onFavoriteChange={(isFavorite) => onFavoriteChange(item.id, isFavorite)}
             active={index === activeIndex}
             detailed={Math.abs(index - activeIndex) <= DETAIL_WINDOW}

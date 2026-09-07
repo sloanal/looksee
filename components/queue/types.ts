@@ -35,12 +35,12 @@ export interface QueueItem {
 }
 
 /** Which way a card leaves the deck, and therefore what it is rated. */
-export type SwipeDirection = 'left' | 'down' | 'right'
+export type SwipeDirection = 'left' | 'up' | 'right'
 
 /** Swipe directions map onto the existing three-value excitement scale. */
 export const EXCITEMENT_BY_DIRECTION: Record<SwipeDirection, number> = {
   left: 1,
-  down: 3,
+  up: 3,
   right: 5,
 }
 

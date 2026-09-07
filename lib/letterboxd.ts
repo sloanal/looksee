@@ -31,6 +31,54 @@ export const LETTERBOXD_BATCH_SIZE = 20
 /** Guard against someone picking a whole export zip or an unrelated file. */
 export const LETTERBOXD_MAX_FILE_BYTES = 5 * 1024 * 1024
 
+/** Ceiling on how many rooms one import may fan out to. */
+export const LETTERBOXD_MAX_ROOMS = 20
+
+/** The two values UserMediaPreference.status can hold. */
+export type ImportStatus = 'HAVE_NOT_SEEN' | 'ALREADY_SEEN'
+
+/**
+ * How the rows an export has no opinion of its own about should land. Both
+ * halves are pickers in the import dialog; rows that do carry stars keep the
+ * rating the export gave them.
+ */
+export type ImportDefaults = {
+  status: ImportStatus
+  /** 1 (Not excited), 3 (Neutral) or 5 (Excited). */
+  excitement: number
+}
+
+/**
+ * A film on a Letterboxd watchlist is already a statement of interest, so
+ * "excited about something I haven't seen" is the starting point.
+ */
+export const LETTERBOXD_IMPORT_DEFAULTS: ImportDefaults = {
+  status: 'HAVE_NOT_SEEN',
+  excitement: 5,
+}
+
+const EXCITEMENT_VALUES = [1, 3, 5]
+
+/**
+ * Read the chosen defaults out of an untrusted body. Anything missing or
+ * unrecognized falls back to LETTERBOXD_IMPORT_DEFAULTS field by field, which
+ * is also what a client that predates the pickers gets. Status is accepted in
+ * either case so the client can send the lowercase form the rating pickers use.
+ */
+export function parseImportDefaults(value: unknown): ImportDefaults {
+  const input = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+  const status = typeof input.status === 'string' ? input.status.toUpperCase() : ''
+  const excitement = typeof input.excitement === 'number' ? input.excitement : NaN
+  return {
+    status: status === 'ALREADY_SEEN' || status === 'HAVE_NOT_SEEN'
+      ? status
+      : LETTERBOXD_IMPORT_DEFAULTS.status,
+    excitement: EXCITEMENT_VALUES.includes(excitement)
+      ? excitement
+      : LETTERBOXD_IMPORT_DEFAULTS.excitement,
+  }
+}
+
 export type LetterboxdParse =
   | {
     ok: true

@@ -19,18 +19,15 @@ export async function POST(request: NextRequest) {
 
   const room = await prisma.room.findUnique({
     where: { inviteCode: inviteCode.toUpperCase() },
-    include: {
-      _count: {
-        select: {
-          mediaItems: true,
-        },
-      },
-    },
   })
 
   if (!room) {
     return NextResponse.json({ error: 'Room not found' }, { status: 404 })
   }
+
+  // Titles in a room are MediaItemRoom rows; the legacy MediaItem.roomId
+  // column is only the "original room" and must not be counted.
+  const mediaItemCount = await prisma.mediaItemRoom.count({ where: { roomId: room.id } })
 
   // Check if user is already a member
   const existingMembership = await prisma.roomMembership.findUnique({
@@ -43,14 +40,14 @@ export async function POST(request: NextRequest) {
   })
 
   if (existingMembership) {
-    return NextResponse.json({ 
+    return NextResponse.json({
       room: {
         id: room.id,
         name: room.name,
         inviteCode: room.inviteCode,
       },
       alreadyMember: true,
-      mediaItemCount: room._count.mediaItems,
+      mediaItemCount,
     })
   }
 
@@ -63,13 +60,12 @@ export async function POST(request: NextRequest) {
     },
   })
 
-  return NextResponse.json({ 
+  return NextResponse.json({
     room: {
       id: room.id,
       name: room.name,
       inviteCode: room.inviteCode,
     },
-    mediaItemCount: room._count.mediaItems,
+    mediaItemCount,
   })
 }
-

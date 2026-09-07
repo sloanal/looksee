@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import {
+  filterMediaVisibility,
+  getVisibleMemberIds,
+  itemsInRoomsWhere,
+  loadMembersByRoomId,
+  personalCatalogClauses,
+  unionMemberIds,
+  visiblePreferenceInclude,
+  visibleRoomInclude,
+} from '@/lib/visibility'
+import {
+  resolveSubmission,
+  resolveVisibleAttribution,
+  serializePublicMediaItem,
+} from '@/lib/media-attribution'
+import { matchMediaSearch, myStatusWhere } from '@/lib/media-search'
 
 // GET /api/media - Get media items from all rooms the user is a member of
 export async function GET(request: NextRequest) {
@@ -19,17 +35,16 @@ export async function GET(request: NextRequest) {
   })
 
   const roomIds = memberships.map((m) => m.roomId)
-  const watched = searchParams.get('watched') === 'true'
-
-  if (roomIds.length === 0 && !watched) {
-    return NextResponse.json({ items: [] })
-  }
+  const myStatus = searchParams.get('myStatus')
+  const watched = searchParams.get('watched') === 'true' || myStatus === 'watched'
+  const membersByRoomId = await loadMembersByRoomId(roomIds)
+  const visiblePrefUserIds = unionMemberIds(membersByRoomId, [session.user.id])
 
   // Build query filters
   // Check if allRooms mode is requested (show everything: all rooms plus Just My Stuff)
   const allRooms = searchParams.get('allRooms') === 'true'
   let where: any
-  
+
   if (watched) {
     // "Watched" mode: show items the current user explicitly marked watched.
     where = {
@@ -41,228 +56,107 @@ export async function GET(request: NextRequest) {
       },
     }
   } else if (allRooms) {
-    // "Everything" mode: show all items from rooms the user is a member of
-    // PLUS items created by the user with no room associations (Just My Stuff)
+    // "Everything" mode: titles in any of my rooms plus my personal catalog.
+    // Keep in lockstep with allRoomsCount in GET /api/rooms.
     where = {
       OR: [
-        {
-          mediaItemRooms: {
-            some: {
-              roomId: { in: roomIds },
-            },
-          },
-        },
-        {
-          createdByUserId: session.user.id,
-          mediaItemRooms: {
-            none: {}, // Items with no room associations
-          },
-        },
+        ...(roomIds.length > 0 ? [itemsInRoomsWhere(roomIds)] : []),
+        ...personalCatalogClauses(session.user.id),
       ],
     }
   } else {
-    // "My stuff" mode: show items created by the user that either:
-    // 1. Have no MediaItemRoom entries (items added via "Just My Stuff")
-    // 2. Or have MediaItemRoom entries in rooms the user is a member of
+    // "Just My Stuff" mode: my personal catalog (see personalCatalogClauses).
     where = {
-      createdByUserId: session.user.id,
-      OR: [
-        {
-          mediaItemRooms: {
-            none: {}, // Items with no room associations
-          },
-        },
-        {
-          mediaItemRooms: {
-            some: {
-              roomId: { in: roomIds },
-            },
-          },
-        },
-      ],
+      OR: personalCatalogClauses(session.user.id),
     }
   }
 
-  // Search by title
-  const search = searchParams.get('search')
-  if (search) {
-    // PostgreSQL supports case-insensitive search
-    where.title = { contains: search, mode: 'insensitive' }
-  }
+  const filters: any[] = [where]
 
   // Filter by type
   const type = searchParams.get('type')
   if (type && type !== 'all') {
-    where.type = type.toUpperCase()
+    filters.push({ type: type.toUpperCase() })
   }
 
   // Filter by genre
   const genres = searchParams.get('genres')
   if (genres) {
     const genreList = genres.split(',').map((g) => g.trim())
-    where.genres = {
-      contains: JSON.stringify(genreList[0]), // Simple contains check
-    }
+    filters.push({
+      genres: {
+        contains: JSON.stringify(genreList[0]), // Simple contains check
+      },
+    })
   }
 
-  // Build preferences filters - handle both recommendedBy and myStatus
+  // recommendedBy is matched in memory below against the viewer's own preference
+  // only; other users' recommender fields are private.
   const recommendedBy = searchParams.get('recommendedBy')
-  const myStatus = searchParams.get('myStatus')
 
   if (!watched) {
-    if (recommendedBy && (myStatus && myStatus !== 'unrated')) {
-      // Both filters: need items that have BOTH conditions
-      // Item must have a preference with recommendedByName AND
-      // the current user must have a preference with the specified status
-      // We need to combine base conditions with preference filters using AND
-      const baseConditions: any = { ...where }
-      delete baseConditions.preferences
-      delete baseConditions.AND
+    const statusWhere = myStatusWhere(session.user.id, myStatus)
+    if (statusWhere) filters.push(statusWhere)
 
-      where = {
-        AND: [
-          baseConditions,
-          {
-            preferences: {
-              some: {
-                recommendedByName: recommendedBy,
-              },
-            },
+    // Hide watched items from all non-watched views.
+    filters.push({
+      NOT: {
+        preferences: {
+          some: {
+            userId: session.user.id,
+            isWatched: true,
           },
-          {
-            preferences: {
-              some: {
-                userId: session.user.id,
-                status: myStatus.toUpperCase(),
-              },
-            },
-          },
-        ],
-      }
-    } else if (recommendedBy) {
-      where.preferences = {
-        some: {
-          recommendedByName: recommendedBy,
         },
-      }
-    } else if (myStatus && myStatus !== 'unrated') {
-      where.preferences = {
-        some: {
-          userId: session.user.id,
-          status: myStatus.toUpperCase(),
-        },
-      }
-    }
+      },
+    })
   }
 
-  // Hide watched items from all non-watched views.
-  if (!watched) {
-    where = {
-      AND: [
-        where,
-        {
-          NOT: {
-            preferences: {
-              some: {
-                userId: session.user.id,
-                isWatched: true,
-              },
-            },
-          },
-        },
-      ],
-    }
-  }
+  // Search is matched in memory over the viewer's scoped set (below), never in SQL:
+  // normalization (punctuation/diacritics) can't be expressed there, and household
+  // catalogs are small. Reintroduce a SQL prefilter if a catalog grows past a few
+  // thousand titles.
+  const search = (searchParams.get('search') ?? '').trim()
 
-  // Get media items with all preferences (including user info)
   const mediaItems = await prisma.mediaItem.findMany({
-    where,
+    where: { AND: filters },
     include: {
       preferences: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              imageUrl: true,
-            },
-          },
-        },
+        where: { userId: { in: visiblePrefUserIds } },
+        include: visiblePreferenceInclude,
       },
       createdBy: {
-        select: { name: true },
-      },
-      room: {
         select: { id: true, name: true },
       },
       mediaItemRooms: {
-        include: {
-          room: {
-            select: { id: true, name: true },
-          },
-          addedBy: {
-            select: { id: true, name: true },
-          },
-        },
-      },
-      _count: {
-        select: { preferences: true },
+        include: visibleRoomInclude,
       },
     },
     orderBy: { createdAt: 'desc' },
   })
 
-  // Map items and filter rooms to only include rooms the user is a member of
-  const itemsMap = new Map<string, any>()
-  
-  mediaItems.forEach((item) => {
-    // Deduplicate by item ID - if we've already seen this item, merge the rooms
-    if (itemsMap.has(item.id)) {
-      const existingItem = itemsMap.get(item.id)
-      // Add any new rooms from this item that aren't already in the list
-      const existingRoomIds = new Set(existingItem.rooms.map((r: any) => r.id))
-      item.mediaItemRooms.forEach((mir) => {
-        if (roomIds.includes(mir.roomId) && !existingRoomIds.has(mir.room.id)) {
-          existingItem.rooms.push({
-            id: mir.room.id,
-            name: mir.room.name,
-            addedByUserId: mir.addedByUserId,
-            addedByName: mir.addedBy.name,
-          })
-        }
-      })
-      return
-    }
+  type LoadedItem = (typeof mediaItems)[number]
 
+  const serialize = (item: LoadedItem) => {
     const genres = item.genres ? JSON.parse(item.genres) : []
-    
-    // Find current user's preference
-    const myPref = item.preferences.find((p) => p.userId === session.user.id)
-    
-    // Get other users' preferences (exclude current user)
-    const otherPreferences = item.preferences
-      .filter((p) => p.userId !== session.user.id)
-      .map((p) => ({
-        status: p.status.toLowerCase(),
-        excitement: p.excitement,
-        user: {
-          id: p.user.id,
-          name: p.user.name,
-          imageUrl: p.user.imageUrl,
-        },
-      }))
+    const visibility = filterMediaVisibility(item, {
+      viewerUserId: session.user.id,
+      viewerRoomIds: roomIds,
+      membersByRoomId,
+    })
+    const visibleRoomIds = visibility.rooms.map((room) => room.id)
+    const visibleMemberIds = getVisibleMemberIds(visibleRoomIds, membersByRoomId)
+    const addedBy = resolveVisibleAttribution(
+      item,
+      session.user.id,
+      visibleRoomIds,
+      visibleMemberIds,
+    )
+    const matchedOn = search
+      ? matchMediaSearch(item, search, session.user.id, visibleMemberIds)
+      : undefined
+    if (matchedOn === null) return null
 
-    // Filter mediaItemRooms to only include rooms the user is a member of
-    const userRooms = item.mediaItemRooms
-      .filter((mir) => roomIds.includes(mir.roomId))
-      .map((mir) => ({
-        id: mir.room.id,
-        name: mir.room.name,
-        addedByUserId: mir.addedByUserId,
-        addedByName: mir.addedBy.name,
-      }))
-
-    itemsMap.set(item.id, {
+    return {
       id: item.id,
       title: item.title,
       type: item.type.toLowerCase(),
@@ -275,27 +169,27 @@ export async function GET(request: NextRequest) {
       runtimeMinutes: item.runtimeMinutes,
       rating: item.rating,
       releaseDate: item.releaseDate,
-      createdBy: item.createdBy.name,
-      createdByUserId: item.createdByUserId,
+      createdBy: addedBy?.name ?? 'Unknown',
+      createdByUserId: addedBy?.id ?? null,
       createdAt: item.createdAt,
-      roomName: item.room.name,
-      rooms: userRooms,
-      myPreference: myPref
-        ? {
-            status: myPref.status.toLowerCase(),
-            isWatched: myPref.isWatched,
-            excitement: myPref.excitement,
-            notes: myPref.notes,
-            recommendedByName: myPref.recommendedByName,
-            recommendationContext: myPref.recommendationContext,
-          }
-        : null,
-      otherPreferences,
-      preferenceCount: item._count.preferences,
-    })
-  })
+      roomName: visibility.rooms[0]?.name ?? null,
+      rooms: visibility.rooms,
+      myPreference: visibility.myPreference,
+      otherPreferences: visibility.otherPreferences,
+      preferenceCount: visibility.visiblePreferenceCount,
+      submission: resolveSubmission(item, session.user.id, visibleRoomIds, visibleMemberIds),
+      ...(matchedOn ? { matchedOn } : {}),
+    }
+  }
 
-  const items = Array.from(itemsMap.values())
+  type SerializedItem = NonNullable<ReturnType<typeof serialize>>
+  let items = mediaItems
+    .map(serialize)
+    .filter((item): item is SerializedItem => item !== null)
+
+  if (recommendedBy && !watched) {
+    items = items.filter((item) => item.myPreference?.recommendedByName === recommendedBy)
+  }
 
   // Sort options
   const sortBy = searchParams.get('sortBy') || 'recent'
@@ -345,59 +239,31 @@ export async function POST(request: NextRequest) {
     if (!title || !type || !status || !excitement) {
       return NextResponse.json(
         { error: 'Title, type, status, and excitement are required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
     const validExcitementValues = [1, 3, 5]
     if (!validExcitementValues.includes(parseInt(excitement))) {
-      return NextResponse.json({ error: 'Excitement must be 1 (Not excited), 3 (Neutral), or 5 (Excited)' }, { status: 400 })
+      return NextResponse.json({
+        error: 'Excitement must be 1 (Not excited), 3 (Neutral), or 5 (Excited)',
+      }, { status: 400 })
     }
 
     const validStatusValues = ['HAVE_NOT_SEEN', 'ALREADY_SEEN']
     const statusUpper = status.toUpperCase()
     if (!validStatusValues.includes(statusUpper)) {
-      return NextResponse.json({ error: 'Status must be "have_not_seen" or "already_seen"' }, { status: 400 })
+      return NextResponse.json({
+        error: 'Status must be "have_not_seen" or "already_seen"',
+      }, { status: 400 })
     }
 
-    // Get user's first room for the required roomId field (backward compatibility)
-    // The item won't be added to any room because we don't create a MediaItemRoom entry
-    let memberships = await prisma.roomMembership.findMany({
-      where: { userId: session.user.id },
-      select: { roomId: true },
-      take: 1,
-    })
-
-    let roomId: string
-
-    // If user has no rooms, automatically create a default personal room
-    if (memberships.length === 0) {
-      const { generateInviteCode } = await import('@/lib/utils')
-      
-      // Generate unique invite code
-      let inviteCode = generateInviteCode()
-      let exists = await prisma.room.findUnique({ where: { inviteCode } })
-      while (exists) {
-        inviteCode = generateInviteCode()
-        exists = await prisma.room.findUnique({ where: { inviteCode } })
-      }
-
-      const defaultRoom = await prisma.room.create({
-        data: {
-          name: 'My Stuff',
-          inviteCode,
-          memberships: {
-            create: {
-              userId: session.user.id,
-              role: 'owner',
-            },
-          },
-        },
-      })
-
-      roomId = defaultRoom.id
-    } else {
-      roomId = memberships[0].roomId
+    const validSourceTypes = ['TMDB', 'MANUAL']
+    const sourceTypeUpper = typeof sourceType === 'string' ? sourceType.toUpperCase() : ''
+    if (!validSourceTypes.includes(sourceTypeUpper)) {
+      return NextResponse.json({
+        error: 'sourceType must be "tmdb" or "manual"',
+      }, { status: 400 })
     }
 
     // Check if item already exists (by tmdbId if provided)
@@ -411,15 +277,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (!mediaItem) {
-      // Create new media item without adding it to any room
-      // We set roomId for backward compatibility, but don't create a MediaItemRoom entry
+      // Create the global title without any MediaItemRoom join: it lives only in
+      // this user's personal catalog until someone adds it to a room.
       mediaItem = await prisma.mediaItem.create({
         data: {
-          roomId,
           title: title.trim(),
           type: type.toUpperCase(),
           tmdbId: tmdbId ? String(tmdbId) : null,
-          sourceType: sourceType.toUpperCase(),
+          sourceType: sourceTypeUpper,
           externalUrl: externalUrl || null,
           posterUrl: posterUrl || null,
           description: description || null,
@@ -428,19 +293,14 @@ export async function POST(request: NextRequest) {
           rating: rating ? parseFloat(rating) : null,
           releaseDate: releaseDate || null,
           createdByUserId: session.user.id,
-          // Note: We intentionally do NOT create a MediaItemRoom entry
-          // This means the item won't appear in any room's media list
         },
       })
-    } else {
-      // Item already exists - ensure it's NOT in any room when adding to "Just My Stuff"
-      // Remove it from all rooms if it was previously added to any room
-      await prisma.mediaItemRoom.deleteMany({
-        where: { mediaItemId: mediaItem.id },
-      })
     }
+    // Existing titles stay in their current rooms. Just My Stuff only upserts
+    // this user's preference — it must never strip other households' joins.
 
     // Create or update user preference
+    const now = new Date()
     await prisma.userMediaPreference.upsert({
       where: {
         userId_mediaItemId: {
@@ -457,6 +317,7 @@ export async function POST(request: NextRequest) {
         notes: notes || null,
         recommendedByName: recommendedByName || null,
         recommendationContext: recommendationContext || null,
+        ratedAt: now,
       },
       update: {
         status: status.toUpperCase(),
@@ -465,17 +326,17 @@ export async function POST(request: NextRequest) {
         notes: notes || null,
         recommendedByName: recommendedByName || null,
         recommendationContext: recommendationContext || null,
-        updatedAt: new Date(),
+        updatedAt: now,
+        ratedAt: now,
       },
     })
 
-    return NextResponse.json({ mediaItem })
+    return NextResponse.json({ mediaItem: serializePublicMediaItem(mediaItem) })
   } catch (error: any) {
     console.error('Error creating media item:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to create media item' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
-

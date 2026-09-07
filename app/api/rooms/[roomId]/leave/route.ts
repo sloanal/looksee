@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 // POST /api/rooms/[roomId]/leave - Leave a room (only if user is not owner)
 export async function POST(
   request: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: { roomId: string } },
 ) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
@@ -33,11 +33,14 @@ export async function POST(
   if (membership.role === 'owner') {
     return NextResponse.json(
       { error: 'Room owners cannot leave. Please delete the room instead.' },
-      { status: 403 }
+      { status: 403 },
     )
   }
 
-  // Delete the membership
+  // Only the membership goes. The user's UserMediaPreference rows and the titles
+  // they added stay: lib/visibility.ts hides their ratings from remaining
+  // members because they no longer share a room, while the ratings remain
+  // theirs in Just My Stuff and any other rooms they still belong to.
   await prisma.roomMembership.delete({
     where: {
       userId_roomId: {
@@ -49,4 +52,3 @@ export async function POST(
 
   return NextResponse.json({ success: true })
 }
-

@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { userCanAccessMediaItem } from '@/lib/visibility'
 
 // POST /api/media/[mediaItemId]/watched - mark as watched for current user
 export async function POST(
   _request: Request,
-  { params }: { params: { mediaItemId: string } }
+  { params }: { params: { mediaItemId: string } },
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -16,29 +17,15 @@ export async function POST(
 
     const mediaItem = await prisma.mediaItem.findUnique({
       where: { id: params.mediaItemId },
-      include: {
-        mediaItemRooms: {
-          select: { roomId: true },
-        },
-      },
+      select: { id: true },
     })
 
     if (!mediaItem) {
       return NextResponse.json({ error: 'Media item not found' }, { status: 404 })
     }
 
-    const roomIds = mediaItem.mediaItemRooms.map((mir) => mir.roomId)
-    if (roomIds.length > 0) {
-      const membershipCount = await prisma.roomMembership.count({
-        where: {
-          userId: session.user.id,
-          roomId: { in: roomIds },
-        },
-      })
-
-      if (membershipCount === 0) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-      }
+    if (!(await userCanAccessMediaItem(session.user.id, params.mediaItemId))) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const existingPreference = await prisma.userMediaPreference.findUnique({
@@ -50,6 +37,7 @@ export async function POST(
       },
     })
 
+    const now = new Date()
     await prisma.userMediaPreference.upsert({
       where: {
         userId_mediaItemId: {
@@ -66,11 +54,13 @@ export async function POST(
         notes: existingPreference?.notes || null,
         recommendedByName: existingPreference?.recommendedByName || null,
         recommendationContext: existingPreference?.recommendationContext || null,
+        ratedAt: now,
       },
       update: {
         status: 'ALREADY_SEEN',
         isWatched: true,
-        updatedAt: new Date(),
+        updatedAt: now,
+        ratedAt: now,
       },
     })
 
@@ -79,15 +69,20 @@ export async function POST(
     console.error('Error marking item as watched:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to mark item as watched' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }
 
-// DELETE /api/media/[mediaItemId]/watched - remove watched marker for current user
+// DELETE /api/media/[mediaItemId]/watched - un-mark watched for current user.
+// POST flips status to ALREADY_SEEN alongside isWatched, so DELETE reverses
+// both: the title goes back to HAVE_NOT_SEEN (the user is interested again and
+// loses the seen marker). We can't tell a watched-route ALREADY_SEEN from one
+// set via the rating flow, so a user who only meant "seen, not watched here"
+// re-rates the title. Like POST, this is an explicit rating action (ratedAt).
 export async function DELETE(
   _request: Request,
-  { params }: { params: { mediaItemId: string } }
+  { params }: { params: { mediaItemId: string } },
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -108,6 +103,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Preference not found' }, { status: 404 })
     }
 
+    const now = new Date()
     await prisma.userMediaPreference.update({
       where: {
         userId_mediaItemId: {
@@ -116,8 +112,10 @@ export async function DELETE(
         },
       },
       data: {
+        status: 'HAVE_NOT_SEEN',
         isWatched: false,
-        updatedAt: new Date(),
+        updatedAt: now,
+        ratedAt: now,
       },
     })
 
@@ -126,7 +124,7 @@ export async function DELETE(
     console.error('Error removing item from watched:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to remove item from watched' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

@@ -18,11 +18,12 @@ model User {
   imageUrl  String?
   createdAt DateTime @default(now())
 
-  roomMemberships RoomMembership[]
-  mediaItems      MediaItem[]           @relation("CreatedBy")
-  preferences     UserMediaPreference[]
-  addedToRooms    MediaItemRoom[]       @relation("AddedToRoom")
+  roomMemberships     RoomMembership[]
+  mediaItems          MediaItem[]           @relation("CreatedBy")
+  preferences         UserMediaPreference[]
+  addedToRooms        MediaItemRoom[]       @relation("AddedToRoom")
   passwordResetTokens PasswordResetToken[]
+  pushSubscriptions   PushSubscription[]
 }
 
 model Room {
@@ -31,8 +32,8 @@ model Room {
   inviteCode String   @unique
   createdAt  DateTime @default(now())
 
-  memberships RoomMembership[]
-  mediaItems  MediaItem[]
+  memberships    RoomMembership[]
+  mediaItems     MediaItem[]
   mediaItemRooms MediaItemRoom[]
 }
 
@@ -52,25 +53,25 @@ model RoomMembership {
 }
 
 model MediaItem {
-  id            String   @id @default(cuid())
-  roomId        String   // Kept for backward compatibility - represents the original room
-  title         String
-  type          String   // MOVIE, SHOW, VIDEO, LINK
-  tmdbId        String?
-  sourceType    String   // TMDB, MANUAL
-  externalUrl   String?
-  posterUrl     String?
-  description   String?
-  genres        String // JSON array stored as string
-  runtimeMinutes Int?
-  rating        Float? // TMDB rating (vote_average)
-  releaseDate   String? // Release date from TMDB
+  id              String   @id @default(cuid())
+  roomId          String? // LEGACY: pre-join-table "original room". Not membership; never written or read. Use MediaItemRoom.
+  title           String
+  type            String // MOVIE, SHOW, VIDEO, LINK
+  tmdbId          String?
+  sourceType      String // TMDB, MANUAL
+  externalUrl     String?
+  posterUrl       String?
+  description     String?
+  genres          String // JSON array stored as string
+  runtimeMinutes  Int?
+  rating          Float? // TMDB rating (vote_average)
+  releaseDate     String? // Release date from TMDB
   createdByUserId String
-  createdAt     DateTime    @default(now())
+  createdAt       DateTime @default(now())
 
-  room      Room                  @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  createdBy User                  @relation("CreatedBy", fields: [createdByUserId], references: [id])
-  preferences UserMediaPreference[]
+  room           Room?                 @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  createdBy      User                  @relation("CreatedBy", fields: [createdByUserId], references: [id])
+  preferences    UserMediaPreference[]
   mediaItemRooms MediaItemRoom[]
 
   @@index([roomId])
@@ -79,16 +80,20 @@ model MediaItem {
 }
 
 model UserMediaPreference {
-  id                    String   @id @default(cuid())
+  id                    String    @id @default(cuid())
   userId                String
   mediaItemId           String
-  status                String   // HAVE_NOT_SEEN, ALREADY_SEEN
-  isWatched             Boolean  @default(false)
+  status                String // HAVE_NOT_SEEN, ALREADY_SEEN
+  isWatched             Boolean   @default(false)
+  isFavorite            Boolean   @default(false)
   excitement            Int // 1, 3, or 5 (Not excited, Neutral, Excited)
   notes                 String?
   recommendedByName     String?
   recommendationContext String?
-  updatedAt             DateTime          @default(now())
+  updatedAt             DateTime  @default(now())
+  // When the user last rated (status/excitement/watched). Null = a placeholder
+  // row (e.g. favorite-only) that must still count as "unrated" for the queue.
+  ratedAt               DateTime?
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   mediaItem MediaItem @relation(fields: [mediaItemId], references: [id], onDelete: Cascade)
@@ -98,14 +103,17 @@ model UserMediaPreference {
   @@index([mediaItemId])
   @@index([status])
   @@index([isWatched])
+  @@index([userId, isFavorite])
 }
 
 model MediaItemRoom {
   id            String   @id @default(cuid())
   mediaItemId   String
   roomId        String
-  addedByUserId String   // Track who added this item to this room
+  addedByUserId String // Track who added this item to this room
   createdAt     DateTime @default(now())
+  // Per-room submission context: { timezone?, locale?, submittedAt } (server-stamped, no geolocation).
+  sourceMeta    Json?
 
   mediaItem MediaItem @relation(fields: [mediaItemId], references: [id], onDelete: Cascade)
   room      Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
@@ -118,12 +126,12 @@ model MediaItemRoom {
 }
 
 model PasswordResetToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  tokenHash String   @unique
+  tokenHash String    @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -131,3 +139,17 @@ model PasswordResetToken {
   @@index([expiresAt])
 }
 
+model PushSubscription {
+  id         String    @id @default(cuid())
+  userId     String
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

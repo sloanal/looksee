@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 // GET /api/rooms/[roomId]/members - Get all members of a room
 export async function GET(
   request: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: { roomId: string } },
 ) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
@@ -26,7 +26,9 @@ export async function GET(
   })
 
   if (!membership) {
-    return NextResponse.json({ error: 'Not a member of this room' }, { status: 403 })
+    return NextResponse.json({ error: 'Not a member of this room' }, {
+      status: 403,
+    })
   }
 
   // Get all members of the room
@@ -38,40 +40,30 @@ export async function GET(
           id: true,
           name: true,
           imageUrl: true,
-          email: true,
         },
       },
     },
     orderBy: { createdAt: 'asc' },
   })
 
-  // Deduplicate members by userId and email (in case of duplicate memberships or duplicate users)
-  // Keep the first membership for each user (by creation date)
+  // Deduplicate members by userId (in case of duplicate memberships)
   const seenUserIds = new Set<string>()
-  const seenEmails = new Set<string>()
   const members = memberships
     .map((m) => ({
       id: m.user.id,
       name: m.user.name,
       imageUrl: m.user.imageUrl,
-      email: m.user.email,
       role: m.role,
     }))
     .filter((member) => {
-      // Deduplicate by userId first (most common case: duplicate memberships)
       if (seenUserIds.has(member.id)) {
         return false
       }
-      // Also deduplicate by email as a fallback (in case of duplicate User records)
-      if (seenEmails.has(member.email.toLowerCase())) {
-        return false
-      }
       seenUserIds.add(member.id)
-      seenEmails.add(member.email.toLowerCase())
       return true
     })
 
-  return NextResponse.json({ 
+  return NextResponse.json({
     members,
     currentUserRole: membership.role,
   })
@@ -80,7 +72,7 @@ export async function GET(
 // DELETE /api/rooms/[roomId]/members - Remove a member from a room (only for owners)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: { roomId: string } },
 ) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
@@ -108,16 +100,23 @@ export async function DELETE(
   })
 
   if (!membership) {
-    return NextResponse.json({ error: 'Not a member of this room' }, { status: 403 })
+    return NextResponse.json({ error: 'Not a member of this room' }, {
+      status: 403,
+    })
   }
 
   if (membership.role !== 'owner') {
-    return NextResponse.json({ error: 'Only room owners can remove members' }, { status: 403 })
+    return NextResponse.json({ error: 'Only room owners can remove members' }, {
+      status: 403,
+    })
   }
 
   // Prevent owners from removing themselves
   if (userId === session.user.id) {
-    return NextResponse.json({ error: 'Cannot remove yourself from the room' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Cannot remove yourself from the room' },
+      { status: 400 },
+    )
   }
 
   // Check if the user to remove is a member
@@ -131,10 +130,15 @@ export async function DELETE(
   })
 
   if (!memberToRemove) {
-    return NextResponse.json({ error: 'User is not a member of this room' }, { status: 404 })
+    return NextResponse.json({ error: 'User is not a member of this room' }, {
+      status: 404,
+    })
   }
 
-  // Delete the membership
+  // Only the membership goes. The removed user's UserMediaPreference rows and
+  // the titles they added stay: lib/visibility.ts hides their ratings from
+  // remaining members because they no longer share a room, while the ratings
+  // remain theirs in Just My Stuff and any other rooms they still belong to.
   await prisma.roomMembership.delete({
     where: {
       userId_roomId: {

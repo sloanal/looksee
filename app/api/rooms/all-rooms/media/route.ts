@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { buildSourceMeta, serializePublicMediaItem } from '@/lib/media-attribution'
+import { notifyRoomAdditions } from '@/lib/push'
 
 // POST /api/rooms/all-rooms/media - Create a media item and add it to all rooms the user is a member of
 export async function POST(request: NextRequest) {
@@ -36,19 +38,23 @@ export async function POST(request: NextRequest) {
     if (!title || !type || !status || !excitement) {
       return NextResponse.json(
         { error: 'Title, type, status, and excitement are required' },
-        { status: 400 }
+        { status: 400 },
       )
     }
 
     const validExcitementValues = [1, 3, 5]
     if (!validExcitementValues.includes(parseInt(excitement))) {
-      return NextResponse.json({ error: 'Excitement must be 1 (Not excited), 3 (Neutral), or 5 (Excited)' }, { status: 400 })
+      return NextResponse.json({
+        error: 'Excitement must be 1 (Not excited), 3 (Neutral), or 5 (Excited)',
+      }, { status: 400 })
     }
 
     const validStatusValues = ['HAVE_NOT_SEEN', 'ALREADY_SEEN']
     const statusUpper = status.toUpperCase()
     if (!validStatusValues.includes(statusUpper)) {
-      return NextResponse.json({ error: 'Status must be "have_not_seen" or "already_seen"' }, { status: 400 })
+      return NextResponse.json({ error: 'Status must be "have_not_seen" or "already_seen"' }, {
+        status: 400,
+      })
     }
 
     // Get all rooms the user is a member of
@@ -58,13 +64,12 @@ export async function POST(request: NextRequest) {
     })
 
     if (memberships.length === 0) {
-      return NextResponse.json({ error: 'You must be a member of at least one room' }, { status: 400 })
+      return NextResponse.json({ error: 'You must be a member of at least one room' }, {
+        status: 400,
+      })
     }
 
     const roomIds = memberships.map((m) => m.roomId)
-
-    // Get user's first room for the required roomId field (backward compatibility)
-    const firstRoomId = roomIds[0]
 
     // Check if item already exists (by tmdbId if provided)
     let mediaItem = null
@@ -80,7 +85,6 @@ export async function POST(request: NextRequest) {
     if (!mediaItem) {
       mediaItem = await prisma.mediaItem.create({
         data: {
-          roomId: firstRoomId, // Required for backward compatibility
           title: title.trim(),
           type: type.toUpperCase(),
           tmdbId: tmdbId ? String(tmdbId) : null,
@@ -99,10 +103,12 @@ export async function POST(request: NextRequest) {
 
     // Add the item to all rooms the user is a member of
     // Use createMany with skipDuplicates to handle cases where item might already be in some rooms
+    const sourceMeta = buildSourceMeta(body)
     const mediaItemRoomData = roomIds.map((roomId) => ({
       mediaItemId: mediaItem.id,
       roomId,
       addedByUserId: session.user.id,
+      sourceMeta,
     }))
 
     // Check which rooms the item is already in
@@ -122,9 +128,17 @@ export async function POST(request: NextRequest) {
         data: roomsToAdd,
         skipDuplicates: true,
       })
+      roomsToAdd.forEach((data) => {
+        void notifyRoomAdditions({
+          actorUserId: session.user.id,
+          roomId: data.roomId,
+          mediaItemIds: [data.mediaItemId],
+        })
+      })
     }
 
     // Create or update user preference
+    const now = new Date()
     await prisma.userMediaPreference.upsert({
       where: {
         userId_mediaItemId: {
@@ -141,6 +155,7 @@ export async function POST(request: NextRequest) {
         notes: notes || null,
         recommendedByName: recommendedByName || null,
         recommendationContext: recommendationContext || null,
+        ratedAt: now,
       },
       update: {
         status: status.toUpperCase(),
@@ -149,16 +164,17 @@ export async function POST(request: NextRequest) {
         notes: notes || null,
         recommendedByName: recommendedByName || null,
         recommendationContext: recommendationContext || null,
-        updatedAt: new Date(),
+        updatedAt: now,
+        ratedAt: now,
       },
     })
 
-    return NextResponse.json({ mediaItem })
+    return NextResponse.json({ mediaItem: serializePublicMediaItem(mediaItem) })
   } catch (error: any) {
     console.error('Error creating media item for all rooms:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to create media item' },
-      { status: 500 }
+      { status: 500 },
     )
   }
 }

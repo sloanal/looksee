@@ -6,11 +6,11 @@ import { buildSourceMeta } from '@/lib/media-attribution'
 import { notifyRoomAdditions } from '@/lib/push'
 import { isTmdbConfigured } from '@/lib/tmdb-client'
 import {
-  excitementFromStars,
   LETTERBOXD_BATCH_SIZE,
   LETTERBOXD_MAX_ROOMS,
   LetterboxdRow,
   parseImportDefaults,
+  resolveImportRow,
 } from '@/lib/letterboxd'
 import { fetchMovieRuntime, LetterboxdMatch, matchLetterboxdRow } from '@/lib/letterboxd-match'
 
@@ -223,11 +223,14 @@ export async function POST(request: NextRequest) {
         entry.mediaItemId !== undefined
       )
 
-    // A row the export rated is seen whatever the dialog says; the rest take
-    // the caller's chosen status. Only titles they have not seen are worth
-    // sharing, so an "already seen" import fills the library and no room.
-    const isSeen = (row: LetterboxdRow) => row.rating !== null || defaults.status === 'ALREADY_SEEN'
-    const shareable = resolved.filter((entry) => !isSeen(entry.row))
+    const landing = new Map(
+      resolved.map((entry) => [entry.mediaItemId, resolveImportRow(entry.row, defaults)]),
+    )
+    // Only films the caller has not seen are worth putting in front of everyone
+    // else, so an "already seen" import fills the library and no room.
+    const shareable = resolved.filter((entry) =>
+      landing.get(entry.mediaItemId)!.status === 'HAVE_NOT_SEEN'
+    )
 
     const newJoinsByRoom = roomIds.map((roomId) => ({
       roomId,
@@ -253,17 +256,12 @@ export async function POST(request: NextRequest) {
     const now = new Date()
     const newPreferences = resolved
       .filter((entry) => !ratedIds.has(entry.mediaItemId))
-      .map(({ mediaItemId, row }) => {
-        const seen = isSeen(row)
-        return {
-          userId,
-          mediaItemId,
-          status: seen ? 'ALREADY_SEEN' : 'HAVE_NOT_SEEN',
-          isWatched: seen,
-          excitement: row.rating !== null ? excitementFromStars(row.rating) : defaults.excitement,
-          ratedAt: now,
-        }
-      })
+      .map(({ mediaItemId }) => ({
+        userId,
+        mediaItemId,
+        ...landing.get(mediaItemId)!,
+        ratedAt: now,
+      }))
 
     if (newPreferences.length > 0) {
       await prisma.userMediaPreference.createMany({

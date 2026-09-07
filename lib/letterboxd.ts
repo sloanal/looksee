@@ -212,3 +212,32 @@ export function excitementFromStars(stars: number): number {
   if (stars <= 2) return 1
   return 3
 }
+
+/** The preference fields one row turns into. */
+export type ResolvedRow = {
+  status: ImportStatus
+  isWatched: boolean
+  excitement: number
+}
+
+/**
+ * Where one row lands. A row the export rated carries its own opinion —
+ * already seen, with the stars folded onto excitement — and every other row
+ * takes the defaults the caller picked in the import dialog. Callers also read
+ * the status back to decide what may enter a room: only films the caller has
+ * not seen are worth putting in front of everyone else.
+ */
+export function resolveImportRow(row: LetterboxdRow, defaults: ImportDefaults): ResolvedRow {
+  if (row.rating !== null) {
+    return {
+      status: 'ALREADY_SEEN',
+      isWatched: true,
+      excitement: excitementFromStars(row.rating),
+    }
+  }
+  return {
+    status: defaults.status,
+    isWatched: defaults.status === 'ALREADY_SEEN',
+    excitement: defaults.excitement,
+  }
+}

@@ -544,6 +544,8 @@ export default function BrowsePage() {
               items.map((item) => {
                 const canDelete = item.createdByUserId === session?.user?.id
                 const hint = searchMatchHint(item, debouncedSearch)
+                const hasRatingRows = Boolean(item.myPreference) ||
+                  Boolean(item.otherPreferences?.length)
                 const openDetail = (e: React.MouseEvent) => {
                   e.stopPropagation()
                   setDetailModalItem(item)
@@ -669,46 +671,48 @@ export default function BrowsePage() {
                         </div>
                       </CardContent>
                     </CardLayout>
-                    <CardBand position='bottom' className='flex items-start gap-2'>
-                      <div className='min-w-0 flex-1'>
-                        {item.myPreference && (
-                          <RatingLine
-                            user={viewer}
-                            excitement={item.myPreference.excitement}
-                            status={item.myPreference.status}
-                            isViewer
-                            onClick={() => setSelectedItem(item)}
-                          />
-                        )}
-                        {item.otherPreferences?.map((pref) => (
-                          <RatingLine
-                            key={pref.user.id}
-                            user={pref.user}
-                            excitement={pref.excitement}
-                            status={pref.status}
-                            isFavorite={pref.isFavorite}
-                          />
-                        ))}
-                        {!item.myPreference && (
-                          <div className='py-1.5'>
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedItem(item)
-                              }}
-                              size='sm'
-                              className='w-full'
-                            >
-                              Add your excitement
-                            </Button>
-                          </div>
-                        )}
-                      </div>
+                    <CardBand position='bottom' className='relative'>
+                      {hasRatingRows && (
+                        <div className='min-w-0 pr-10'>
+                          {item.myPreference && (
+                            <RatingLine
+                              user={viewer}
+                              excitement={item.myPreference.excitement}
+                              status={item.myPreference.status}
+                              isViewer
+                              onClick={() => setSelectedItem(item)}
+                            />
+                          )}
+                          {item.otherPreferences?.map((pref) => (
+                            <RatingLine
+                              key={pref.user.id}
+                              user={pref.user}
+                              excitement={pref.excitement}
+                              status={pref.status}
+                              isFavorite={pref.isFavorite}
+                            />
+                          ))}
+                        </div>
+                      )}
+                      {!item.myPreference && (
+                        <div className='py-1.5'>
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedItem(item)
+                            }}
+                            size='sm'
+                            className='w-full'
+                          >
+                            Add your excitement
+                          </Button>
+                        </div>
+                      )}
                       <FavoriteButton
                         mediaItemId={item.id}
                         isFavorite={item.myPreference?.isFavorite === true}
                         onChange={(isFavorite) => applyFavorite(item.id, isFavorite)}
-                        className='-mr-3 -mt-1'
+                        className='absolute right-1 top-1'
                       />
                     </CardBand>
                   </MediaCard>

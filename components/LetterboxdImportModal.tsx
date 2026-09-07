@@ -356,9 +356,12 @@ function ImportBody({
     const excitementOption = EXCITEMENT_OPTIONS.find((option) => option.value === excitement)
     const excitementWord = (excitementOption?.label ?? 'neutral').toLowerCase()
 
+    // With stars in the file the pickers only cover what is left, so say so
+    // before describing them.
+    const subject = file.rated ? 'Everything else comes' : 'They come'
     const landingNote = markSeen
-      ? `They come in as films you have already seen, marked ${excitementWord}.`
-      : `They come in as films you haven't seen yet, marked ${excitementWord}, so Watch can rank them straight away.`
+      ? `${subject} in as films you have already seen, marked ${excitementWord}.`
+      : `${subject} in as films you haven't seen yet, marked ${excitementWord}, so Watch can rank them straight away.`
     const roomNote = selectedRooms.length === 0
       ? null
       : markSeen
@@ -436,14 +439,14 @@ function ImportBody({
                 you added most recently will come in.
               </p>
             )}
-            <p>{landingNote}</p>
-            {roomNote && <p>{roomNote}</p>}
             {file.rated && (
               <p>
-                Films you gave stars on Letterboxd keep them instead: those come in as already seen,
-                with the stars mapped onto Looksee&apos;s excitement.
+                Films you gave stars on Letterboxd come in as already seen, with the stars mapped
+                onto Looksee&apos;s excitement.
               </p>
             )}
+            <p>{landingNote}</p>
+            {roomNote && <p>{roomNote}</p>}
             <p>Ratings you have already made in Looksee are never overwritten.</p>
           </div>
           {fileInput}

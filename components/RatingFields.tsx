@@ -24,6 +24,16 @@ interface RatingFieldsProps {
   className?: string
 }
 
+/** The pill look shared by every "pick one of these" row, including the swipe deck's footer. */
+export const choiceClassName = (checked: boolean, className?: string) =>
+  cn(
+    'flex min-h-[44px] flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-sm font-medium transition-colors',
+    checked
+      ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+      : 'border-input bg-background text-foreground hover:bg-accent',
+    className,
+  )
+
 interface ChoiceProps {
   name: string
   value: string | number
@@ -34,14 +44,7 @@ interface ChoiceProps {
 
 function Choice({ name, value, checked, onChange, children }: ChoiceProps) {
   return (
-    <label
-      className={cn(
-        'flex min-h-[44px] flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-sm font-medium transition-colors',
-        checked
-          ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-          : 'border-input bg-background text-foreground hover:bg-accent',
-      )}
-    >
+    <label className={choiceClassName(checked)}>
       <input
         type='radio'
         name={name}

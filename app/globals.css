@@ -78,6 +78,14 @@
   .font-heading {
     font-family: var(--font-archivo), sans-serif;
   }
+  /* Scroll regions that are navigated by gesture, snapping or buttons. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* iOS Safari fix for invisible text - must be after Tailwind layers */

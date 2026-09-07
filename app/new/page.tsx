@@ -1,94 +1,24 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Film, Link as LinkIcon, PartyPopper, Tv, Video } from 'lucide-react'
-import {
-  pageContainerClassName,
-  PageContent,
-  PageHeader,
-  PageHeaderBar,
-} from '@/components/PageHeader'
-import { Avatar } from '@/components/ui/avatar'
+import { CheckCheck, PartyPopper } from 'lucide-react'
+import { pageContainerClassName, PageHeader, PageHeaderBar } from '@/components/PageHeader'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
-import { Modal, ModalBody, ModalFooter, ModalHeader, useModal } from '@/components/ui/modal'
-import { FavoriteButton, FavoritedByBadge } from '@/components/FavoriteButton'
-import { SubmissionInfo, SubmissionMeta } from '@/components/SubmissionMeta'
-import { MediaDetailBody } from '@/components/MediaDetail'
-import { RatingFields } from '@/components/RatingFields'
-import {
-  CardBand,
-  CardContent,
-  CardDescription,
-  CardGenres,
-  CardLayout,
-  CardMeta,
-  CardPoster,
-  CardRoomsBand,
-  CardTitle,
-  MediaCard,
-} from '@/components/MediaCard'
-import { MediaCardSkeletonList } from '@/components/MediaCardSkeleton'
+import { Notice } from '@/components/ui/notice'
+import { ConfirmModal } from '@/components/settings/ConfirmModal'
+import { QueueDeck } from '@/components/queue/QueueDeck'
+import { QueueDeckSkeleton } from '@/components/queue/QueueDeckSkeleton'
+import { SwipeKey } from '@/components/queue/SwipeKey'
+import { EXCITEMENT_BY_DIRECTION, QueueItem, SwipeDirection } from '@/components/queue/types'
+import { cn } from '@/lib/utils'
 
-interface QueueItem {
-  id: string
-  title: string
-  type: string
-  posterUrl?: string
-  description?: string
-  genres: string[]
-  releaseDate?: string
-  runtimeMinutes?: number | null
-  rating?: number
-  createdBy: string
-  createdByUserId?: string
-  createdByImageUrl?: string | null
-  roomId: string
-  roomName: string
-  tmdbId?: string | null
-  sourceType?: string
-  rooms?: Array<{
-    id: string
-    name: string
-    addedByUserId: string
-    addedByName: string
-  }>
-  myPreference?: {
-    status: string
-    excitement: number
-    isFavorite?: boolean
-  } | null
-  otherPreferences?: Array<{
-    status: string
-    excitement: number
-    isFavorite?: boolean
-    user: {
-      id: string
-      name: string
-      imageUrl?: string | null
-    }
-  }>
-  submission?: SubmissionInfo | null
-}
-
-const favoritedByNames = (item: QueueItem): string[] =>
-  (item.otherPreferences ?? []).filter((pref) => pref.isFavorite).map((pref) => pref.user.name)
-
-function getTypeIcon(type: string) {
-  const normalizedType = type.toLowerCase()
-  if (normalizedType === 'movie' || normalizedType === 'movies') {
-    return Film
-  } else if (normalizedType === 'show' || normalizedType === 'tv' || normalizedType === 'shows') {
-    return Tv
-  } else if (normalizedType === 'video' || normalizedType === 'videos') {
-    return Video
-  } else if (normalizedType === 'link' || normalizedType === 'links') {
-    return LinkIcon
-  }
-  return Film // default
-}
+/** What "accept all" writes to every title left in the queue. */
+const ACCEPT_ALL_STATUS = 'have_not_seen'
+const ACCEPT_ALL_EXCITEMENT = 3
 
 export default function NewPage() {
   const { data: session, status } = useSession()
@@ -96,12 +26,11 @@ export default function NewPage() {
 
   const [queue, setQueue] = useState<QueueItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedQueueItem, setSelectedQueueItem] = useState<QueueItem | null>(null)
-  const [myAvatar, setMyAvatar] = useState<string | null>(null)
-  const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
-  const [loadingTrailer, setLoadingTrailer] = useState(false)
-  const queueContainerRef = useRef<HTMLDivElement>(null)
-  const scrollPositionRef = useRef<number | null>(null)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [statusById, setStatusById] = useState<Record<string, string>>({})
+  const [exit, setExit] = useState<{ itemId: string; direction: SwipeDirection } | null>(null)
+  const [error, setError] = useState('')
+  const [confirmingAcceptAll, setConfirmingAcceptAll] = useState(false)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -110,79 +39,22 @@ export default function NewPage() {
       router.push('/auth/signin')
       return
     }
-    loadData()
-    loadMyAvatar()
+
+    loadQueue()
   }, [session, status, router])
 
-  // Restore scroll position after queue loads
+  // The deck shrinks as cards are rated; keep the centered index inside it.
   useEffect(() => {
-    if (!loading && queue.length > 0 && scrollPositionRef.current !== null) {
-      const position = scrollPositionRef.current
-      // Use double requestAnimationFrame for Safari compatibility
-      // Safari needs more time for DOM to be fully rendered
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          // Try multiple methods for Safari compatibility
-          window.scrollTo({
-            top: position,
-            behavior: 'instant' as ScrollBehavior,
-          })
-          // Fallback for older Safari versions
-          if (window.scrollY !== position && document.documentElement) {
-            document.documentElement.scrollTop = position
-          }
-          if (document.body && document.body.scrollTop !== position) {
-            document.body.scrollTop = position
-          }
-          scrollPositionRef.current = null
-        })
-      })
-    }
-  }, [loading, queue.length])
+    setActiveIndex((current) => Math.min(current, Math.max(0, queue.length - 1)))
+  }, [queue.length])
 
-  // Restore scroll position when modal closes (Safari fix)
-  useEffect(() => {
-    if (selectedQueueItem === null && scrollPositionRef.current !== null) {
-      const position = scrollPositionRef.current
-      // Safari can reset scroll position when modal closes, so we need to restore it
-      // Wait for modal animation to complete (200ms) plus extra time for Safari
-      setTimeout(() => {
-        // Use triple requestAnimationFrame for Safari - needs even more time
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              // Try multiple methods for Safari compatibility
-              window.scrollTo({
-                top: position,
-                behavior: 'instant' as ScrollBehavior,
-              })
-              // Fallback for older Safari versions
-              if (window.scrollY !== position && document.documentElement) {
-                document.documentElement.scrollTop = position
-              }
-              if (document.body && document.body.scrollTop !== position) {
-                document.body.scrollTop = position
-              }
-              // Also try scrolling the container if it exists
-              if (queueContainerRef.current) {
-                queueContainerRef.current.scrollTop = position
-              }
-              scrollPositionRef.current = null
-            })
-          })
-        })
-      }, 250) // Wait for modal animation (200ms) + buffer
-    }
-  }, [selectedQueueItem])
-
-  const loadData = async () => {
+  const loadQueue = async () => {
     setLoading(true)
     try {
-      const queueRes = await fetch('/api/user/queue')
-
-      if (queueRes.ok) {
-        const queueData = await queueRes.json()
-        setQueue(queueData.items || [])
+      const res = await fetch('/api/user/queue')
+      if (res.ok) {
+        const data = await res.json()
+        setQueue(data.items || [])
       }
     } catch (err) {
       console.error('Failed to load queue data:', err)
@@ -191,265 +63,148 @@ export default function NewPage() {
     }
   }
 
-  const loadMyAvatar = async () => {
-    try {
-      const res = await fetch('/api/user/profile')
-      if (res.ok) {
-        const data = await res.json()
-        setMyAvatar(data.user?.imageUrl || null)
-      }
-    } catch (err) {
-      console.error('Failed to load avatar:', err)
-    }
-  }
-
-  async function loadTrailer(item: QueueItem) {
-    if (!item.tmdbId || !item.sourceType || item.sourceType.toLowerCase() !== 'tmdb') {
-      return
-    }
-
-    setLoadingTrailer(true)
-    try {
-      const type = item.type.toLowerCase() === 'movie' ? 'movie' : 'tv'
-      const res = await fetch(`/api/tmdb/videos?id=${item.tmdbId}&type=${type}`)
-      if (res.ok) {
-        const data = await res.json()
-        if (data.trailer?.url) {
-          setTrailerUrl(data.trailer.url)
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load trailer:', err)
-    } finally {
-      setLoadingTrailer(false)
-    }
-  }
-
   // Favoriting creates an unrated (ratedAt null) preference server-side, so the
   // title stays in the queue; mirror the new flag locally.
   const applyFavorite = (itemId: string, isFavorite: boolean) => {
-    const patch = (item: QueueItem): QueueItem =>
-      item.id !== itemId ? item : {
-        ...item,
-        myPreference: {
-          ...(item.myPreference ?? { status: 'have_not_seen', excitement: 3 }),
-          isFavorite,
-        },
-      }
-    setQueue((prev) => prev.map(patch))
-    setSelectedQueueItem((prev) => (prev ? patch(prev) : prev))
+    setQueue((prev) =>
+      prev.map((item) =>
+        item.id !== itemId ? item : {
+          ...item,
+          myPreference: {
+            ...(item.myPreference ?? { status: 'have_not_seen', excitement: 3 }),
+            isFavorite,
+          },
+        }
+      )
+    )
   }
 
-  const openItem = (item: QueueItem) => {
-    // Get scroll position with multiple fallbacks for Safari compatibility
-    scrollPositionRef.current = window.scrollY ||
-      document.documentElement.scrollTop ||
-      document.body.scrollTop ||
-      0
-    setSelectedQueueItem(item)
-    loadTrailer(item)
+  const requestExit = (direction: SwipeDirection) => {
+    const item = queue[activeIndex]
+    if (!item || exit) return
+    setExit({ itemId: item.id, direction })
   }
 
-  return (
-    <div className={pageContainerClassName}>
-      <PageHeaderBar>
-        <PageHeader title='New' subtitle='Rate titles other people in your rooms have added.' />
-      </PageHeaderBar>
+  const rate = async (item: QueueItem, direction: SwipeDirection) => {
+    const index = queue.findIndex((entry) => entry.id === item.id)
 
-      <PageContent>
-        <div ref={queueContainerRef} className='space-y-4'>
-          {loading ? <MediaCardSkeletonList count={2} /> : queue.length === 0
-            ? (
-              <EmptyState
-                icon={PartyPopper}
-                title='No items in your queue'
-                description='All media items have been rated!'
-              />
-            )
-            : (
-              queue.map((item) => (
-                <MediaCard key={item.id} variant='default' className='relative'>
-                  {item.rooms && item.rooms.length > 0 && <CardRoomsBand rooms={item.rooms} />}
-                  <CardLayout>
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        openItem(item)
-                      }}
-                      className='cursor-pointer'
-                    >
-                      <CardPoster src={item.posterUrl} alt={item.title} width={80} height={120} />
-                    </div>
-                    <CardContent>
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          openItem(item)
-                        }}
-                        className='cursor-pointer'
-                      >
-                        <CardTitle>{item.title}</CardTitle>
-                        <CardMeta
-                          icon={getTypeIcon(item.type)}
-                          type={item.type}
-                          releaseDate={item.releaseDate}
-                          runtimeMinutes={item.runtimeMinutes}
-                        />
-                        <CardGenres genres={item.genres} maxDisplay={3} />
-                        {item.description && <CardDescription>{item.description}</CardDescription>}
-                      </div>
-                    </CardContent>
-                  </CardLayout>
-                  <CardBand
-                    position='bottom'
-                    className='flex flex-wrap items-center gap-x-3 gap-y-2'
-                  >
-                    <div className='flex min-w-0 flex-1 items-center gap-2 py-1'>
-                      <Avatar
-                        user={{
-                          id: item.createdByUserId ?? item.id,
-                          name: item.createdBy,
-                          imageUrl: item.createdByImageUrl,
-                        }}
-                        size='sm'
-                      />
-                      <p className='truncate text-xs text-muted-foreground'>
-                        Added by {item.createdBy}
-                      </p>
-                      <FavoritedByBadge names={favoritedByNames(item)} />
-                    </div>
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        openItem(item)
-                      }}
-                      size='sm'
-                      className='order-last w-full sm:order-none sm:w-auto'
-                    >
-                      Add your excitement
-                    </Button>
-                    <FavoriteButton
-                      mediaItemId={item.id}
-                      isFavorite={item.myPreference?.isFavorite === true}
-                      onChange={(isFavorite) => applyFavorite(item.id, isFavorite)}
-                      className='-mr-3 sm:order-last'
-                    />
-                  </CardBand>
-                </MediaCard>
-              ))
-            )}
-        </div>
-      </PageContent>
+    setExit(null)
+    setError('')
+    setQueue((prev) => prev.filter((entry) => entry.id !== item.id))
 
-      {selectedQueueItem && (
-        <QueueItemModal
-          item={selectedQueueItem}
-          trailerUrl={trailerUrl}
-          loadingTrailer={loadingTrailer}
-          onClose={() => {
-            setSelectedQueueItem(null)
-            setTrailerUrl(null)
-          }}
-          onSave={() => {
-            setSelectedQueueItem(null)
-            setTrailerUrl(null)
-            loadData()
-          }}
-          onFavoriteChange={(isFavorite) => applyFavorite(selectedQueueItem.id, isFavorite)}
-        />
-      )}
-    </div>
-  )
-}
-
-interface QueueItemModalProps {
-  item: QueueItem
-  trailerUrl: string | null
-  loadingTrailer: boolean
-  onClose: () => void
-  onSave: () => void
-  onFavoriteChange: (isFavorite: boolean) => void
-}
-
-function QueueItemModal({ onClose, ...rest }: QueueItemModalProps) {
-  return (
-    <Modal isOpen onClose={onClose} size='xl' tall aria-label={`Rate ${rest.item.title}`}>
-      <QueueItemBody {...rest} />
-    </Modal>
-  )
-}
-
-function QueueItemBody({
-  item,
-  trailerUrl,
-  loadingTrailer,
-  onSave,
-  onFavoriteChange,
-}: Omit<QueueItemModalProps, 'onClose'>) {
-  const [status, setStatus] = useState('have_not_seen')
-  const [excitement, setExcitement] = useState(3)
-  const [saving, setSaving] = useState(false)
-  const { handleClose } = useModal()
-
-  const handleSave = async () => {
-    setSaving(true)
     try {
       const res = await fetch(`/api/media/${item.id}/preference`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, excitement }),
+        body: JSON.stringify({
+          status: statusById[item.id] ?? 'have_not_seen',
+          excitement: EXCITEMENT_BY_DIRECTION[direction],
+        }),
       })
-
-      if (res.ok) {
-        // Dispatch custom event to update badge count immediately
-        window.dispatchEvent(new CustomEvent('queueUpdated'))
-        handleClose()
-        onSave()
-      } else {
-        const error = await res.json()
-        alert(error.error || 'Failed to save preference')
-      }
+      if (!res.ok) throw new Error(`Preference save failed with ${res.status}`)
+      window.dispatchEvent(new CustomEvent('queueUpdated'))
     } catch (err) {
       console.error('Failed to save preference:', err)
-      alert('Failed to save preference')
-    } finally {
-      setSaving(false)
+      setQueue((prev) => {
+        if (prev.some((entry) => entry.id === item.id)) return prev
+        const next = [...prev]
+        next.splice(Math.max(0, Math.min(index, next.length)), 0, item)
+        return next
+      })
+      setError(`We couldn't save your rating for ${item.title}. It's back in the deck — try again.`)
     }
   }
 
-  return (
-    <>
-      <ModalHeader
-        title={item.title}
-        action={
-          <FavoriteButton
-            mediaItemId={item.id}
-            isFavorite={item.myPreference?.isFavorite === true}
-            onChange={onFavoriteChange}
-            size={22}
-            className='-mt-1.5'
-          />
-        }
-        description={<SubmissionMeta submission={item.submission} />}
-      />
-      <ModalBody>
-        <MediaDetailBody item={item} trailerUrl={trailerUrl} loadingTrailer={loadingTrailer} />
+  const acceptAll = async (): Promise<string | void> => {
+    const res = await fetch('/api/user/queue/accept-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: ACCEPT_ALL_STATUS, excitement: ACCEPT_ALL_EXCITEMENT }),
+    })
 
-        <div className='border-t border-border pt-5'>
-          <h3 className='mb-3 text-base font-semibold text-foreground'>Add your rating</h3>
-          <RatingFields
-            status={status}
-            excitement={excitement}
-            onStatusChange={setStatus}
-            onExcitementChange={setExcitement}
-          />
-        </div>
-      </ModalBody>
-      <ModalFooter>
-        <Button onClick={handleSave} disabled={saving} className='w-full'>
-          {saving ? 'Saving...' : 'Save'}
-        </Button>
-      </ModalFooter>
-    </>
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      return data?.error || 'We could not clear your queue. Please try again.'
+    }
+
+    setError('')
+    setExit(null)
+    setQueue([])
+    setActiveIndex(0)
+    window.dispatchEvent(new CustomEvent('queueUpdated'))
+  }
+
+  const hasCards = queue.length > 0
+
+  return (
+    <div className={cn(pageContainerClassName, 'flex min-h-0 flex-1 flex-col')}>
+      <PageHeaderBar className='space-y-2.5'>
+        <PageHeader
+          title='New'
+          right={hasCards
+            ? (
+              <div className='flex items-center gap-2'>
+                <Badge variant='muted' className='tabular-nums'>
+                  {activeIndex + 1} of {queue.length}
+                </Badge>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={() => setConfirmingAcceptAll(true)}
+                >
+                  <CheckCheck className='h-4 w-4' aria-hidden />
+                  Accept all
+                </Button>
+              </div>
+            )
+            : undefined}
+        />
+
+        {hasCards && <SwipeKey onRate={requestExit} className='mx-auto w-full max-w-md' />}
+        {error && <Notice variant='error'>{error}</Notice>}
+      </PageHeaderBar>
+
+      <div className='min-h-0 flex-1 py-3'>
+        {loading ? <QueueDeckSkeleton /> : !hasCards
+          ? (
+            <EmptyState
+              icon={PartyPopper}
+              title='Nothing left to rate'
+              description='New titles your rooms add will show up here.'
+            />
+          )
+          : (
+            <QueueDeck
+              items={queue}
+              activeIndex={activeIndex}
+              onActiveIndexChange={setActiveIndex}
+              statusById={statusById}
+              onStatusChange={(itemId, value) =>
+                setStatusById((prev) => ({ ...prev, [itemId]: value }))}
+              onRate={rate}
+              onFavoriteChange={applyFavorite}
+              exit={exit}
+            />
+          )}
+      </div>
+
+      <ConfirmModal
+        open={confirmingAcceptAll}
+        title={`Accept all ${queue.length} title${queue.length === 1 ? '' : 's'}?`}
+        description={
+          <>
+            <p>
+              Every title left in your queue is rated <strong>Neutral</strong> and{' '}
+              <strong>Have not seen</strong>, and the queue is cleared.
+            </p>
+            <p>You can change any of them later from Browse.</p>
+          </>
+        }
+        confirmLabel='Accept all'
+        busyLabel='Clearing…'
+        onConfirm={acceptAll}
+        onClose={() => setConfirmingAcceptAll(false)}
+      />
+    </div>
   )
 }

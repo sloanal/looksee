@@ -5,5 +5,5 @@ export default function NewLayout({
 }: {
   children: React.ReactNode
 }) {
-  return <TabShell>{children}</TabShell>
+  return <TabShell fill>{children}</TabShell>
 }

@@ -2,14 +2,14 @@
 
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Upload } from 'lucide-react'
+import { Check, Loader2, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Field } from '@/components/ui/field'
 import { Modal, ModalBody, ModalFooter, ModalHeader, useModal } from '@/components/ui/modal'
 import { Notice } from '@/components/ui/notice'
-import { Select } from '@/components/ui/select'
+import { EXCITEMENT_OPTIONS, RatingFields } from '@/components/RatingFields'
 import {
   LETTERBOXD_BATCH_SIZE,
+  LETTERBOXD_IMPORT_DEFAULTS,
   LETTERBOXD_MAX_FILE_BYTES,
   LETTERBOXD_MAX_ROWS,
   LetterboxdRow,
@@ -17,19 +17,20 @@ import {
 } from '@/lib/letterboxd'
 import { formatTitleCount, notifyRoomsChanged } from '@/lib/rooms'
 import { clientSubmissionContext } from '@/lib/submission-context'
+import { cn } from '@/lib/utils'
 
 export type ImportRoom = { id: string; name: string }
 
 interface LetterboxdImportModalProps {
   isOpen: boolean
   onClose: () => void
-  /** Rooms the films may go into. Empty means the personal library only. */
+  /** Rooms the films may be shared with. Empty means the personal library only. */
   rooms?: ImportRoom[]
-  /** Preselected destination; null is the personal library ("My Stuff"). */
+  /** Preselected room; null shares with nobody. */
   defaultRoomId?: string | null
   /** Fix the destination and hide the picker (onboarding, right after a room is made). */
   lockRoom?: boolean
-  onImported?: (result: { added: number; roomId: string | null }) => void
+  onImported?: (result: { added: number; roomIds: string[] }) => void
 }
 
 /**
@@ -89,7 +90,8 @@ type Phase =
   | { kind: 'pick' }
   | { kind: 'ready'; file: ParsedFile }
   | { kind: 'importing'; file: ParsedFile; done: number }
-  | { kind: 'done'; totals: Totals; roomId: string | null }
+  /** `rooms` is the selection the import actually ran with. */
+  | { kind: 'done'; totals: Totals; rooms: ImportRoom[] }
 
 const emptyTotals = (): Totals => ({
   added: 0,
@@ -100,6 +102,14 @@ const emptyTotals = (): Totals => ({
 })
 
 const UNMATCHED_SHOWN = 5
+
+const DEFAULT_STATUS = LETTERBOXD_IMPORT_DEFAULTS.status.toLowerCase()
+
+/** "Movie Night", "Movie Night and Sunday Club", "A, B and C". */
+function joinNames(names: string[]): string {
+  if (names.length < 2) return names[0] ?? ''
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+}
 
 function ImportBody({
   rooms,
@@ -115,14 +125,25 @@ function ImportBody({
   const { handleClose } = useModal()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [roomId, setRoomId] = useState<string | null>(
-    defaultRoomId && rooms.some((room) => room.id === defaultRoomId) ? defaultRoomId : null,
+  const [roomIds, setRoomIds] = useState<string[]>(
+    defaultRoomId && rooms.some((room) => room.id === defaultRoomId) ? [defaultRoomId] : [],
   )
+  // How the films should land. The export only has an opinion about rows that
+  // carry stars; these fill in everything else.
+  const [status, setStatus] = useState(DEFAULT_STATUS)
+  const [excitement, setExcitement] = useState<number>(LETTERBOXD_IMPORT_DEFAULTS.excitement)
   const [phase, setPhase] = useState<Phase>({ kind: 'pick' })
   const [error, setError] = useState('')
 
-  const roomName = rooms.find((room) => room.id === roomId)?.name ?? null
-  const destination = roomName ?? 'My Stuff'
+  const selectedRooms = rooms.filter((room) => roomIds.includes(room.id))
+  const roomNames = joinNames(selectedRooms.map((room) => room.name))
+  const destination = roomNames || 'My Stuff'
+  const markSeen = status === 'already_seen'
+
+  const toggleRoom = (roomId: string) =>
+    setRoomIds((current) =>
+      current.includes(roomId) ? current.filter((id) => id !== roomId) : [...current, roomId]
+    )
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return
@@ -162,6 +183,7 @@ function ImportBody({
 
     const totals = emptyTotals()
     const context = clientSubmissionContext()
+    const importedInto = selectedRooms
 
     const fail = (message: string) => {
       // Importing is idempotent, so retrying only picks up what is left.
@@ -176,7 +198,12 @@ function ImportBody({
         const res = await fetch('/api/import/letterboxd', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...context, roomId, items: batch }),
+          body: JSON.stringify({
+            ...context,
+            roomIds,
+            defaults: { status, excitement },
+            items: batch,
+          }),
         })
         const data = await res.json().catch(() => ({}))
         if (!res.ok) {
@@ -197,8 +224,8 @@ function ImportBody({
     }
 
     notifyRoomsChanged()
-    onImported?.({ added: totals.added, roomId })
-    setPhase({ kind: 'done', totals, roomId })
+    onImported?.({ added: totals.added, roomIds })
+    setPhase({ kind: 'done', totals, rooms: importedInto })
     onImportingChange(false)
   }
 
@@ -206,9 +233,11 @@ function ImportBody({
 
   if (phase.kind === 'done') {
     const { totals } = phase
-    // Rated films never enter a room, so the room is only the whole story when
-    // every film that came in also got a room join.
-    const roomTarget = phase.roomId !== null ? destination : null
+    // Films the caller has already seen never enter a room, so the rooms are
+    // only the whole story when every film that came in also got a room join.
+    const roomTarget = phase.rooms.length > 0
+      ? joinNames(phase.rooms.map((room) => room.name))
+      : null
     const allWentToRoom = roomTarget !== null && totals.addedToRoom === totals.added
 
     // Built as strings so no line wrap can slip a space before a colon or period.
@@ -221,7 +250,7 @@ function ImportBody({
     const seenNote = roomTarget && totals.seen > 0
       ? `${
         formatTitleCount(totals.seen)
-      } you had already rated stayed in My Stuff instead of the room, so nobody else has to rate your watch history.`
+      } came in as already seen, so they stayed in My Stuff instead of ${roomTarget} — nobody else has to rate your watch history.`
       : null
     const unmatchedNote = totals.unmatched.length > 0
       ? `Couldn't find ${
@@ -236,6 +265,8 @@ function ImportBody({
       }. You can search for those on the Add tab.`
       : null
 
+    const firstRoomId = phase.rooms[0]?.id ?? null
+
     return (
       <>
         <ModalHeader title={totals.added > 0 ? 'Imported' : 'Nothing new to add'} />
@@ -247,9 +278,10 @@ function ImportBody({
             <p>{formatTitleCount(totals.alreadyThere)} were already here.</p>
           )}
           {unmatchedNote && <p>{unmatchedNote}</p>}
-          {roomTarget && totals.addedToRoom > 0 && (
+          {totals.added > 0 && (
             <p>
-              Set how excited you are about each one and they&apos;ll start showing up in Watch.
+              They are all rated, so nothing is waiting on you in New. Change any of them from
+              Browse.
             </p>
           )}
         </ModalBody>
@@ -257,21 +289,12 @@ function ImportBody({
           <Button variant='secondary' className='flex-1' onClick={handleClose}>
             Done
           </Button>
-          {phase.roomId !== null && totals.addedToRoom > 0
-            ? (
-              <Button className='flex-1' onClick={() => router.push('/new')}>
-                Rate them now
-              </Button>
-            )
-            : (
-              <Button
-                className='flex-1'
-                onClick={() =>
-                  router.push(phase.roomId ? `/browse?roomId=${phase.roomId}` : '/browse')}
-              >
-                See them
-              </Button>
-            )}
+          <Button
+            className='flex-1'
+            onClick={() => router.push(firstRoomId ? `/browse?roomId=${firstRoomId}` : '/browse')}
+          >
+            See them
+          </Button>
         </ModalFooter>
       </>
     )
@@ -286,7 +309,7 @@ function ImportBody({
         <ModalBody className='space-y-3 text-sm text-muted-foreground'>
           <p>
             Looking up {formatTitleCount(total)} and adding them to{' '}
-            {destination}. This can take a minute — keep this window open.
+            {markSeen ? 'My Stuff' : destination}. This can take a minute — keep this window open.
           </p>
           <div
             className='h-2 w-full overflow-hidden rounded-full bg-secondary'
@@ -314,24 +337,6 @@ function ImportBody({
     )
   }
 
-  const destinationField = !lockRoom && rooms.length > 0 && (
-    <Field label='Add to' htmlFor='letterboxd-destination'>
-      <Select
-        id='letterboxd-destination'
-        value={roomId ?? ''}
-        onChange={(e) =>
-          setRoomId(e.target.value || null)}
-      >
-        {rooms.map((room) => (
-          <option key={room.id} value={room.id}>
-            {room.name}
-          </option>
-        ))}
-        <option value=''>My Stuff (just me)</option>
-      </Select>
-    </Field>
-  )
-
   const fileInput = (
     <input
       ref={fileInputRef}
@@ -348,6 +353,23 @@ function ImportBody({
 
   if (phase.kind === 'ready') {
     const { file } = phase
+    const excitementOption = EXCITEMENT_OPTIONS.find((option) => option.value === excitement)
+    const excitementWord = (excitementOption?.label ?? 'neutral').toLowerCase()
+
+    // With stars in the file the pickers only cover what is left, so say so
+    // before describing them.
+    const subject = file.rated ? 'Everything else comes' : 'They come'
+    const landingNote = markSeen
+      ? `${subject} in as films you have already seen, marked ${excitementWord}.`
+      : `${subject} in as films you haven't seen yet, marked ${excitementWord}, so Watch can rank them straight away.`
+    const roomNote = selectedRooms.length === 0
+      ? null
+      : markSeen
+      ? `Nothing will go into ${roomNames}: films you have already seen stay in My Stuff, so nobody else has to rate your watch history.`
+      : file.rated
+      ? `Everything but your rated films will show up in ${roomNames} too.`
+      : `They will show up in ${roomNames} too.`
+
     return (
       <>
         <ModalHeader
@@ -356,7 +378,59 @@ function ImportBody({
         />
         <ModalBody className='space-y-4'>
           {errorBanner}
-          {destinationField}
+          {!lockRoom && rooms.length > 0 && (
+            <fieldset>
+              <legend className='mb-2 block text-sm font-medium text-foreground'>Share with</legend>
+              <div className='space-y-2'>
+                {rooms.map((room) => {
+                  const isSelected = roomIds.includes(room.id)
+                  return (
+                    <label
+                      key={room.id}
+                      className={cn(
+                        'flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors',
+                        isSelected
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border bg-background hover:bg-accent',
+                      )}
+                    >
+                      <input
+                        type='checkbox'
+                        checked={isSelected}
+                        onChange={() => toggleRoom(room.id)}
+                        className='sr-only'
+                      />
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border transition-colors',
+                          isSelected
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-input bg-background',
+                        )}
+                      >
+                        {isSelected && <Check className='h-3.5 w-3.5' strokeWidth={3} />}
+                      </span>
+                      <span className='min-w-0 flex-1 truncate font-medium text-foreground'>
+                        {room.name}
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+              <p className='mt-1.5 text-xs text-muted-foreground'>
+                They always land in My Stuff. Pick any rooms to share them with too.
+              </p>
+            </fieldset>
+          )}
+          <RatingFields
+            status={status}
+            excitement={excitement}
+            onStatusChange={setStatus}
+            onExcitementChange={setExcitement}
+            statusLegend='Bring them in as'
+            excitementLegend='How excited are you?'
+          />
           <div className='space-y-2 text-sm text-muted-foreground'>
             {file.truncated > 0 && (
               <p>
@@ -365,20 +439,14 @@ function ImportBody({
                 you added most recently will come in.
               </p>
             )}
-            {file.rated
-              ? (
-                <p>
-                  Films you rated come in as already seen, with your stars mapped onto
-                  Looksee&apos;s excitement. Everything else comes in as not seen yet, ready to
-                  rate.
-                </p>
-              )
-              : (
-                <p>
-                  They come in as films you haven&apos;t seen yet, waiting on how excited you are —
-                  you can set that in the queue afterwards.
-                </p>
-              )}
+            {file.rated && (
+              <p>
+                Films you gave stars on Letterboxd come in as already seen, with the stars mapped
+                onto Looksee&apos;s excitement.
+              </p>
+            )}
+            <p>{landingNote}</p>
+            {roomNote && <p>{roomNote}</p>}
             <p>Ratings you have already made in Looksee are never overwritten.</p>
           </div>
           {fileInput}
@@ -403,8 +471,8 @@ function ImportBody({
     <>
       <ModalHeader
         title='Import from Letterboxd'
-        description={lockRoom && roomName
-          ? `Bring your Letterboxd watchlist into ${roomName}.`
+        description={lockRoom && roomNames
+          ? `Bring your Letterboxd watchlist into ${roomNames}.`
           : 'Bring your Letterboxd watchlist into Looksee.'}
       />
       <ModalBody className='space-y-4'>
@@ -425,8 +493,8 @@ function ImportBody({
           <li>
             Unzip the download and pick <span className='font-medium'>watchlist.csv</span> below.
           </li>
+          <li>Choose where the films go and how they come in, then import.</li>
         </ol>
-        {destinationField}
         {fileInput}
       </ModalBody>
       <ModalFooter>

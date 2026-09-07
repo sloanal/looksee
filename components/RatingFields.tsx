@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode } from 'react'
+import { ReactNode, useId } from 'react'
 import { Check } from 'lucide-react'
 import { excitementIcon } from '@/components/HouseholdExcitementRow'
 import { cn } from '@/lib/utils'
@@ -21,6 +21,9 @@ interface RatingFieldsProps {
   excitement: number
   onStatusChange: (status: string) => void
   onExcitementChange: (excitement: number) => void
+  /** Override when the fields set something other than one title's own rating. */
+  statusLegend?: string
+  excitementLegend?: string
   className?: string
 }
 
@@ -64,17 +67,23 @@ export function RatingFields({
   excitement,
   onStatusChange,
   onExcitementChange,
+  statusLegend = 'Your status',
+  excitementLegend = 'Your excitement',
   className,
 }: RatingFieldsProps) {
+  // Two sets of these can share a page (a dialog over a rated card), and radios
+  // group by name, so each instance gets its own.
+  const group = useId()
+
   return (
     <div className={cn('space-y-4', className)}>
       <fieldset>
-        <legend className='mb-2 block text-sm font-medium text-foreground'>Your status</legend>
+        <legend className='mb-2 block text-sm font-medium text-foreground'>{statusLegend}</legend>
         <div className='flex gap-2'>
           {STATUS_OPTIONS.map((opt) => (
             <Choice
               key={opt.value}
-              name='status'
+              name={`${group}-status`}
               value={opt.value}
               checked={status === opt.value}
               onChange={() => onStatusChange(opt.value)}
@@ -87,14 +96,16 @@ export function RatingFields({
       </fieldset>
 
       <fieldset>
-        <legend className='mb-2 block text-sm font-medium text-foreground'>Your excitement</legend>
+        <legend className='mb-2 block text-sm font-medium text-foreground'>
+          {excitementLegend}
+        </legend>
         <div className='flex gap-2'>
           {EXCITEMENT_OPTIONS.map((opt) => {
             const Icon = excitementIcon(opt.value)
             return (
               <Choice
                 key={opt.value}
-                name='excitement'
+                name={`${group}-excitement`}
                 value={opt.value}
                 checked={excitement === opt.value}
                 onChange={() => onExcitementChange(opt.value)}

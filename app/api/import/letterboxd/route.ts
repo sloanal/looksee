@@ -5,7 +5,13 @@ import { prisma } from '@/lib/prisma'
 import { buildSourceMeta } from '@/lib/media-attribution'
 import { notifyRoomAdditions } from '@/lib/push'
 import { isTmdbConfigured } from '@/lib/tmdb-client'
-import { excitementFromStars, LETTERBOXD_BATCH_SIZE, LetterboxdRow } from '@/lib/letterboxd'
+import {
+  LETTERBOXD_BATCH_SIZE,
+  LETTERBOXD_MAX_ROOMS,
+  LetterboxdRow,
+  parseImportDefaults,
+  resolveImportRow,
+} from '@/lib/letterboxd'
 import { fetchMovieRuntime, LetterboxdMatch, matchLetterboxdRow } from '@/lib/letterboxd-match'
 
 /** One batch from the client. Bigger batches risk the function timeout. */
@@ -13,9 +19,6 @@ const MAX_ITEMS = LETTERBOXD_BATCH_SIZE * 2
 
 /** Parallel TMDB lookups. Enough to keep a batch quick, gentle on the rate limit. */
 const TMDB_CONCURRENCY = 5
-
-/** Rows with no rating get the neutral placeholder until the user rates them. */
-const NEUTRAL_EXCITEMENT = 3
 
 async function mapWithConcurrency<T, R>(
   items: T[],
@@ -50,20 +53,35 @@ function parseItems(value: unknown): LetterboxdRow[] | null {
   return rows
 }
 
+/** Accepts the `roomIds` list, or the single `roomId` older clients still send. */
+function parseRoomIds(body: unknown): string[] {
+  const input = body && typeof body === 'object' ? body as Record<string, unknown> : {}
+  const raw = Array.isArray(input.roomIds) ? input.roomIds : [input.roomId]
+  const ids = raw.filter((id): id is string => typeof id === 'string' && id.length > 0)
+  return Array.from(new Set(ids)).slice(0, LETTERBOXD_MAX_ROOMS)
+}
+
 /**
  * POST /api/import/letterboxd - import one batch of rows from a Letterboxd CSV
- * export into the caller's library, optionally adding them to a room too.
+ * export into the caller's library, optionally adding them to rooms too.
  *
  * Each row is matched against TMDB and stored exactly like a title added by
  * hand: the global MediaItem is reused when the film is already in the catalog
- * (titles are global per tmdbId), the room gets a MediaItemRoom join, and the
- * caller gets a UserMediaPreference. Rows the export says the caller has
- * already rated stay out of the room — same rule as
+ * (titles are global per tmdbId), each room gets a MediaItemRoom join, and the
+ * caller gets a UserMediaPreference.
+ *
+ * A row the export has no opinion about lands on the status and excitement the
+ * caller picked in the import dialog; a row that carries stars keeps them, as
+ * already seen with the stars mapped onto excitement. Either way it counts as
+ * a real rating (ratedAt is set), because the caller chose the values — they
+ * are not asked to rate the same films again one at a time.
+ *
+ * Titles the caller has already seen stay out of every room — same rule as
  * POST /api/rooms/[roomId]/import-watchlist, where only want-to-watch titles
  * enter a shared space, so nobody else's queue fills up with a watch history.
  *
  * An existing preference is never overwritten: a rating the caller made in the
- * app always wins over whatever the export says.
+ * app always wins over whatever the export or the dialog says.
  */
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -85,15 +103,15 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const rawRoomId = (body as { roomId?: unknown } | null)?.roomId
-  const roomId = typeof rawRoomId === 'string' && rawRoomId.length > 0 ? rawRoomId : null
+  const roomIds = parseRoomIds(body)
+  const defaults = parseImportDefaults((body as { defaults?: unknown } | null)?.defaults)
 
-  if (roomId) {
-    const membership = await prisma.roomMembership.findUnique({
-      where: { userId_roomId: { userId, roomId } },
-      select: { id: true },
+  if (roomIds.length > 0) {
+    const memberships = await prisma.roomMembership.findMany({
+      where: { userId, roomId: { in: roomIds } },
+      select: { roomId: true },
     })
-    if (!membership) {
+    if (memberships.length !== roomIds.length) {
       return NextResponse.json({ error: 'Not a member of this room' }, { status: 403 })
     }
   }
@@ -129,10 +147,10 @@ export async function POST(request: NextRequest) {
     const existingIds = existingItems.map((item) => item.id)
 
     const [existingJoins, existingPreferences] = await Promise.all([
-      roomId && existingIds.length > 0
+      roomIds.length > 0 && existingIds.length > 0
         ? prisma.mediaItemRoom.findMany({
-          where: { roomId, mediaItemId: { in: existingIds } },
-          select: { mediaItemId: true },
+          where: { roomId: { in: roomIds }, mediaItemId: { in: existingIds } },
+          select: { mediaItemId: true, roomId: true },
         })
         : Promise.resolve([]),
       existingIds.length > 0
@@ -143,11 +161,13 @@ export async function POST(request: NextRequest) {
         : Promise.resolve([]),
     ])
     const joinedIds = new Set(existingJoins.map((join) => join.mediaItemId))
+    const joinedByRoom = new Map(roomIds.map((id) => [id, new Set<string>()]))
+    for (const join of existingJoins) joinedByRoom.get(join.roomId)?.add(join.mediaItemId)
     const ratedIds = new Set(existingPreferences.map((preference) => preference.mediaItemId))
 
     // The catalog can hold more than one row per tmdbId (pre-dedupe history),
-    // so prefer the copy that is already in this room, then one the caller
-    // already has a preference on.
+    // so prefer the copy that is already in one of these rooms, then one the
+    // caller already has a preference on.
     const rank = (mediaItemId: string) =>
       (joinedIds.has(mediaItemId) ? 2 : 0) + (ratedIds.has(mediaItemId) ? 1 : 0)
     const idByTmdbId = new Map<string, string>()
@@ -203,42 +223,45 @@ export async function POST(request: NextRequest) {
         entry.mediaItemId !== undefined
       )
 
-    const newJoinIds = roomId
-      ? resolved
-        .filter((entry) => entry.row.rating === null && !joinedIds.has(entry.mediaItemId))
-        .map((entry) => entry.mediaItemId)
-      : []
+    const landing = new Map(
+      resolved.map((entry) => [entry.mediaItemId, resolveImportRow(entry.row, defaults)]),
+    )
+    // Only films the caller has not seen are worth putting in front of everyone
+    // else, so an "already seen" import fills the library and no room.
+    const shareable = resolved.filter((entry) =>
+      landing.get(entry.mediaItemId)!.status === 'HAVE_NOT_SEEN'
+    )
 
-    if (newJoinIds.length > 0) {
+    const newJoinsByRoom = roomIds.map((roomId) => ({
+      roomId,
+      mediaItemIds: shareable
+        .filter((entry) => !joinedByRoom.get(roomId)?.has(entry.mediaItemId))
+        .map((entry) => entry.mediaItemId),
+    }))
+
+    const joinRows = newJoinsByRoom.flatMap(({ roomId, mediaItemIds }) =>
+      mediaItemIds.map((mediaItemId) => ({ mediaItemId, roomId }))
+    )
+    if (joinRows.length > 0) {
       const sourceMeta = buildSourceMeta(body, { importedFrom: 'letterboxd' })
       await prisma.mediaItemRoom.createMany({
-        data: newJoinIds.map((mediaItemId) => ({
-          mediaItemId,
-          roomId: roomId!,
-          addedByUserId: userId,
-          sourceMeta,
-        })),
+        data: joinRows.map((join) => ({ ...join, addedByUserId: userId, sourceMeta })),
         skipDuplicates: true,
       })
     }
 
-    // A watchlist row records only what the export knows: not seen yet, no
-    // excitement. Leaving ratedAt null keeps it in the rating queue, the same
-    // placeholder the favorite-only rows use. A rated row is a real rating.
+    // The caller picked these values for the whole file, so they are a real
+    // rating (ratedAt set) rather than the placeholder a favorite-only row
+    // leaves behind — the same films should not come back in the New queue.
     const now = new Date()
     const newPreferences = resolved
       .filter((entry) => !ratedIds.has(entry.mediaItemId))
-      .map(({ mediaItemId, row }) => {
-        const seen = row.rating !== null
-        return {
-          userId,
-          mediaItemId,
-          status: seen ? 'ALREADY_SEEN' : 'HAVE_NOT_SEEN',
-          isWatched: seen,
-          excitement: seen ? excitementFromStars(row.rating!) : NEUTRAL_EXCITEMENT,
-          ratedAt: seen ? now : null,
-        }
-      })
+      .map(({ mediaItemId }) => ({
+        userId,
+        mediaItemId,
+        ...landing.get(mediaItemId)!,
+        ratedAt: now,
+      }))
 
     if (newPreferences.length > 0) {
       await prisma.userMediaPreference.createMany({
@@ -247,12 +270,13 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    if (roomId && newJoinIds.length > 0) {
-      void notifyRoomAdditions({ actorUserId: userId, roomId, mediaItemIds: newJoinIds })
+    for (const { roomId, mediaItemIds } of newJoinsByRoom) {
+      if (mediaItemIds.length === 0) continue
+      void notifyRoomAdditions({ actorUserId: userId, roomId, mediaItemIds })
     }
 
     const newPreferenceIds = new Set(newPreferences.map((preference) => preference.mediaItemId))
-    const newJoinIdSet = new Set(newJoinIds)
+    const newJoinIdSet = new Set(joinRows.map((join) => join.mediaItemId))
     // "Added" means new to the caller: a preference or a room join was created.
     const added = resolved.filter((entry) =>
       newPreferenceIds.has(entry.mediaItemId) || newJoinIdSet.has(entry.mediaItemId)
@@ -263,7 +287,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       added,
-      addedToRoom: newJoinIds.length,
+      // Titles that reached at least one room, not the number of joins, so the
+      // client can say "N of them are in Movie Night and Sunday Club".
+      addedToRoom: newJoinIdSet.size,
       seen,
       alreadyThere: resolved.length - added,
       unmatched,

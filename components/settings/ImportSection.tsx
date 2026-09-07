@@ -19,7 +19,7 @@ export function ImportSection({ rooms, onImported }: ImportSectionProps) {
       <SettingsCardHeader
         icon={Download}
         title='Import from Letterboxd'
-        description='Bring your Letterboxd watchlist in as films you want to watch.'
+        description='Bring your Letterboxd watchlist in, and choose how excited you are and which rooms get them.'
       />
       <Button
         type='button'

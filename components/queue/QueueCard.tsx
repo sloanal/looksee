@@ -340,7 +340,11 @@ interface SwipeOverlayProps {
   overlayRef: RefObject<HTMLDivElement>
 }
 
-/** The "Excited" / "Not excited" stamp that fades in as a card is dragged. */
+/**
+ * The "Excited" / "Not excited" stamp that fades in as a card is dragged. Each
+ * stamp sits on the edge the card is dragged away from, so it stays on screen
+ * for the whole gesture instead of leaving with the edge it is chasing.
+ */
 function SwipeOverlay({ tone, overlayRef }: SwipeOverlayProps) {
   return (
     <div
@@ -350,8 +354,8 @@ function SwipeOverlay({ tone, overlayRef }: SwipeOverlayProps) {
       className={cn(
         'pointer-events-none absolute top-16 z-10 rounded-lg border-2 px-3 py-1.5 text-sm font-bold uppercase tracking-wide',
         tone === 'yes'
-          ? 'right-4 rotate-12 border-primary bg-primary text-primary-foreground'
-          : 'left-4 -rotate-12 border-destructive bg-destructive/10 text-destructive',
+          ? 'left-4 -rotate-12 border-primary bg-primary text-primary-foreground'
+          : 'right-4 rotate-12 border-destructive bg-destructive/10 text-destructive',
       )}
     >
       {tone === 'yes' ? 'Excited' : 'Not excited'}

@@ -39,7 +39,12 @@ import { notifyRoomsChanged } from '@/lib/rooms'
 import { movieGenres, tvGenres } from '@/lib/tmdb-genres'
 import { FavoriteButton, FavoritedByBadge, favoritedByLabel } from '@/components/FavoriteButton'
 import { SubmissionInfo, SubmissionMeta } from '@/components/SubmissionMeta'
-import { MediaDetailBody } from '@/components/MediaDetail'
+import {
+  fetchMediaCredits,
+  isTmdbItem,
+  MediaCredits,
+  MediaDetailBody,
+} from '@/components/MediaDetail'
 import {
   HouseholdExcitementRow,
   HouseholdMember,
@@ -134,6 +139,8 @@ export default function WatchPage() {
   const [detailModalItem, setDetailModalItem] = useState<Recommendation | null>(null)
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
   const [loadingTrailer, setLoadingTrailer] = useState(false)
+  const [credits, setCredits] = useState<MediaCredits | null>(null)
+  const [loadingCredits, setLoadingCredits] = useState(false)
   const [markingWatchedId, setMarkingWatchedId] = useState<string | null>(null)
   const [myAvatar, setMyAvatar] = useState<string | null>(null)
   const prevTypePreferenceRef = useRef<string>(typePreference)
@@ -381,6 +388,17 @@ export default function WatchPage() {
       console.error('Failed to load trailer:', err)
     } finally {
       setLoadingTrailer(false)
+    }
+  }
+
+  async function loadCredits(item: Recommendation) {
+    if (!isTmdbItem(item)) return
+
+    setLoadingCredits(true)
+    try {
+      setCredits(await fetchMediaCredits(item))
+    } finally {
+      setLoadingCredits(false)
     }
   }
 
@@ -647,6 +665,7 @@ export default function WatchPage() {
                       e.stopPropagation()
                       setDetailModalItem(rec)
                       loadTrailer(rec)
+                      loadCredits(rec)
                     }}
                     className='cursor-pointer'
                   >
@@ -719,10 +738,13 @@ export default function WatchPage() {
           viewer={viewer}
           trailerUrl={trailerUrl}
           loadingTrailer={loadingTrailer}
+          credits={credits}
+          loadingCredits={loadingCredits}
           onFavoriteChange={(isFavorite) => applyFavorite(detailModalItem.id, isFavorite)}
           onClose={() => {
             setDetailModalItem(null)
             setTrailerUrl(null)
+            setCredits(null)
           }}
         />
       )}
@@ -735,6 +757,8 @@ function DetailModal({
   viewer,
   trailerUrl,
   loadingTrailer,
+  credits,
+  loadingCredits,
   onFavoriteChange,
   onClose,
 }: {
@@ -742,6 +766,8 @@ function DetailModal({
   viewer: HouseholdUser | null
   trailerUrl: string | null
   loadingTrailer: boolean
+  credits: MediaCredits | null
+  loadingCredits: boolean
   onFavoriteChange: (isFavorite: boolean) => void
   onClose: () => void
 }) {
@@ -773,7 +799,13 @@ function DetailModal({
             />
           </div>
         )}
-        <MediaDetailBody item={item} trailerUrl={trailerUrl} loadingTrailer={loadingTrailer} />
+        <MediaDetailBody
+          item={item}
+          trailerUrl={trailerUrl}
+          loadingTrailer={loadingTrailer}
+          credits={credits}
+          loadingCredits={loadingCredits}
+        />
       </ModalBody>
     </Modal>
   )

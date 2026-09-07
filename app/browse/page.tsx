@@ -54,7 +54,13 @@ import { EditRoomsModal } from '@/components/EditRoomsModal'
 import { StreamingProviders } from '@/components/StreamingProviders'
 import { FavoriteButton } from '@/components/FavoriteButton'
 import { SubmissionInfo, SubmissionMeta } from '@/components/SubmissionMeta'
-import { DetailSection, isTmdbItem, MediaDetailBody } from '@/components/MediaDetail'
+import {
+  DetailSection,
+  fetchMediaCredits,
+  isTmdbItem,
+  MediaCredits,
+  MediaDetailBody,
+} from '@/components/MediaDetail'
 import { RatingFields } from '@/components/RatingFields'
 import { RatingLine } from '@/components/RatingLine'
 import { matchesAnyToken } from '@/lib/search-normalize'
@@ -164,6 +170,8 @@ export default function BrowsePage() {
   const [detailModalItem, setDetailModalItem] = useState<MediaItem | null>(null)
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
   const [loadingTrailer, setLoadingTrailer] = useState(false)
+  const [credits, setCredits] = useState<MediaCredits | null>(null)
+  const [loadingCredits, setLoadingCredits] = useState(false)
   const [editingRoomsItem, setEditingRoomsItem] = useState<MediaItem | null>(null)
   const [markingWatchedItemId, setMarkingWatchedItemId] = useState<string | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -388,6 +396,17 @@ export default function BrowsePage() {
     }
   }
 
+  async function loadCredits(item: MediaItem) {
+    if (!isTmdbItem(item)) return
+
+    setLoadingCredits(true)
+    try {
+      setCredits(await fetchMediaCredits(item))
+    } finally {
+      setLoadingCredits(false)
+    }
+  }
+
   const handleMarkAsWatched = async (itemId: string) => {
     setMarkingWatchedItemId(itemId)
     try {
@@ -550,6 +569,7 @@ export default function BrowsePage() {
                   e.stopPropagation()
                   setDetailModalItem(item)
                   loadTrailer(item)
+                  loadCredits(item)
                 }
                 return (
                   <MediaCard key={item.id} variant='default' className='relative'>
@@ -757,10 +777,13 @@ export default function BrowsePage() {
           item={detailModalItem}
           trailerUrl={trailerUrl}
           loadingTrailer={loadingTrailer}
+          credits={credits}
+          loadingCredits={loadingCredits}
           onFavoriteChange={(isFavorite) => applyFavorite(detailModalItem.id, isFavorite)}
           onClose={() => {
             setDetailModalItem(null)
             setTrailerUrl(null)
+            setCredits(null)
           }}
         />
       )}
@@ -1065,12 +1088,16 @@ function DetailModal({
   item,
   trailerUrl,
   loadingTrailer,
+  credits,
+  loadingCredits,
   onFavoriteChange,
   onClose,
 }: {
   item: MediaItem
   trailerUrl: string | null
   loadingTrailer: boolean
+  credits: MediaCredits | null
+  loadingCredits: boolean
   onFavoriteChange: (isFavorite: boolean) => void
   onClose: () => void
 }) {
@@ -1090,7 +1117,13 @@ function DetailModal({
         description={<SubmissionMeta submission={item.submission} />}
       />
       <ModalBody className='pb-6'>
-        <MediaDetailBody item={item} trailerUrl={trailerUrl} loadingTrailer={loadingTrailer}>
+        <MediaDetailBody
+          item={item}
+          trailerUrl={trailerUrl}
+          loadingTrailer={loadingTrailer}
+          credits={credits}
+          loadingCredits={loadingCredits}
+        >
           {item.myPreference?.recommendedByName && (
             <DetailSection title='Recommended by'>
               <p className='text-sm text-muted-foreground'>

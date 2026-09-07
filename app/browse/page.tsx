@@ -51,7 +51,6 @@ import {
 } from '@/components/MediaCard'
 import { MediaCardSkeletonList } from '@/components/MediaCardSkeleton'
 import { EditRoomsModal } from '@/components/EditRoomsModal'
-import { StreamingProviders } from '@/components/StreamingProviders'
 import { FavoriteButton } from '@/components/FavoriteButton'
 import { SubmissionInfo, SubmissionMeta } from '@/components/SubmissionMeta'
 import {
@@ -679,14 +678,6 @@ export default function BrowsePage() {
                           <CardGenres genres={item.genres} maxDisplay={3} />
                           {item.description && (
                             <CardDescription lineClamp={2}>{item.description}</CardDescription>
-                          )}
-                          {isTmdbItem(item) && (
-                            <StreamingProviders
-                              tmdbId={item.tmdbId!}
-                              type={item.type}
-                              compact
-                              className='mb-1'
-                            />
                           )}
                         </div>
                       </CardContent>

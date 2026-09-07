@@ -355,7 +355,7 @@ function SwipeOverlay({ tone, overlayRef }: SwipeOverlayProps) {
         'pointer-events-none absolute top-16 z-10 rounded-lg border-2 px-3 py-1.5 text-sm font-bold uppercase tracking-wide',
         tone === 'yes'
           ? 'left-4 -rotate-12 border-primary bg-primary text-primary-foreground'
-          : 'right-4 rotate-12 border-destructive bg-destructive/10 text-destructive',
+          : 'right-4 rotate-12 border-destructive bg-destructive text-destructive-foreground',
       )}
     >
       {tone === 'yes' ? 'Excited' : 'Not excited'}

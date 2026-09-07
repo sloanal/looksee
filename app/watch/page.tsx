@@ -5,7 +5,6 @@ import { useSession } from 'next-auth/react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   CheckCircle2,
-  ExternalLink,
   Eye,
   Film,
   Link as LinkIcon,
@@ -38,6 +37,7 @@ import { cn } from '@/lib/utils'
 import { notifyRoomsChanged } from '@/lib/rooms'
 import { movieGenres, tvGenres } from '@/lib/tmdb-genres'
 import { FavoriteButton, FavoritedByBadge, favoritedByLabel } from '@/components/FavoriteButton'
+import { StreamingProviders } from '@/components/StreamingProviders'
 import { SubmissionInfo, SubmissionMeta } from '@/components/SubmissionMeta'
 import {
   fetchMediaCredits,
@@ -332,13 +332,6 @@ export default function WatchPage() {
   ])
 
   useEffect(() => cancelInFlightRequest, [cancelInFlightRequest])
-
-  const handleSelectItem = (item: Recommendation) => {
-    const searchQuery = `Where can I watch ${item.title}`
-    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`
-
-    window.open(searchUrl, '_blank', 'noopener,noreferrer,popup=yes')
-  }
 
   const handleMarkAsWatched = async (itemId: string) => {
     setMarkingWatchedId(itemId)
@@ -681,6 +674,14 @@ export default function WatchPage() {
                         />
                         <CardGenres genres={rec.genres} maxDisplay={3} />
                         {rec.description && <CardDescription>{rec.description}</CardDescription>}
+                        {isTmdbItem(rec) && (
+                          <StreamingProviders
+                            tmdbId={rec.tmdbId!}
+                            type={rec.type}
+                            compact
+                            className='mb-1'
+                          />
+                        )}
                       </CardContent>
                     </CardLayout>
                   </div>
@@ -704,10 +705,6 @@ export default function WatchPage() {
 
                   <CardActions className='flex items-center justify-between gap-2'>
                     <div className='flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2'>
-                      <Button onClick={() => handleSelectItem(rec)} size='sm'>
-                        <ExternalLink className='h-4 w-4' />
-                        Where can I watch this?
-                      </Button>
                       <Button
                         variant='ghost'
                         size='sm'

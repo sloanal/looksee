@@ -646,6 +646,7 @@ export default function BrowsePage() {
                             icon={getTypeIcon(item.type)}
                             type={item.type}
                             releaseDate={item.releaseDate}
+                            runtimeMinutes={item.runtimeMinutes}
                           />
                           {hint && (
                             <Badge variant='muted' size='sm' className='mb-1.5'>

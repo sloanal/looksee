@@ -39,6 +39,7 @@ interface QueueItem {
   description?: string
   genres: string[]
   releaseDate?: string
+  runtimeMinutes?: number | null
   rating?: number
   createdBy: string
   createdByUserId?: string
@@ -293,6 +294,7 @@ export default function NewPage() {
                           icon={getTypeIcon(item.type)}
                           type={item.type}
                           releaseDate={item.releaseDate}
+                          runtimeMinutes={item.runtimeMinutes}
                         />
                         <CardGenres genres={item.genres} maxDisplay={3} />
                         {item.description && <CardDescription>{item.description}</CardDescription>}

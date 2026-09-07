@@ -82,6 +82,7 @@ interface Recommendation {
   description?: string
   genres: string[]
   releaseDate?: string
+  runtimeMinutes?: number | null
   rating?: number
   tmdbId?: string | null
   sourceType?: string
@@ -654,6 +655,7 @@ export default function WatchPage() {
                           icon={getTypeIcon(rec.type)}
                           type={rec.type}
                           releaseDate={rec.releaseDate}
+                          runtimeMinutes={rec.runtimeMinutes}
                         />
                         <CardGenres genres={rec.genres} maxDisplay={3} />
                         {rec.description && <CardDescription>{rec.description}</CardDescription>}

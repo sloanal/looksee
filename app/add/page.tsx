@@ -557,6 +557,7 @@ export default function AddPage() {
                           icon={getTypeIcon(type)}
                           type={type}
                           releaseDate={selectedResult?.releaseDate}
+                          runtimeMinutes={selectedResult?.runtimeMinutes}
                         />
                         {parsedGenres.length > 0 && (
                           <CardGenres genres={parsedGenres} maxDisplay={8} />

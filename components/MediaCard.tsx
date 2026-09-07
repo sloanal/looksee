@@ -1,7 +1,7 @@
 'use client'
 
 import { ReactNode } from 'react'
-import { Calendar, LucideIcon, Plus, Sofa } from 'lucide-react'
+import { Calendar, Clock, LucideIcon, Plus, Sofa } from 'lucide-react'
 import { PosterImage } from './PosterImage'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardBand } from '@/components/ui/card'
@@ -74,14 +74,32 @@ interface CardMetaProps {
   icon: LucideIcon
   type: string
   releaseDate?: string | null
+  runtimeMinutes?: number | null
   className?: string
 }
 
-/** "▣ Movie · 📅 2010" line under a title. */
-export function CardMeta({ icon, type, releaseDate, className }: CardMetaProps) {
+/**
+ * "2h 28m" for movies; TMDB gives shows a per-episode runtime, so "45m/ep".
+ */
+export function formatRuntime(minutes: number, type: string): string {
+  const perEpisode = type.toLowerCase() === 'show'
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  const base = h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`
+  return perEpisode ? `${base}/ep` : base
+}
+
+/** "▣ Movie · 📅 2010 · ◷ 2h 28m" line under a title. */
+export function CardMeta({ icon, type, releaseDate, runtimeMinutes, className }: CardMetaProps) {
   const year = releaseDate ? new Date(releaseDate).getFullYear() : null
+  const showRuntime = typeof runtimeMinutes === 'number' && runtimeMinutes > 0
   return (
-    <div className={cn('mb-1 flex items-center gap-1.5 text-xs text-muted-foreground', className)}>
+    <div
+      className={cn(
+        'mb-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground',
+        className,
+      )}
+    >
       <span className='inline-flex items-center gap-1 capitalize'>
         <DuotoneIcon icon={icon} size={12} />
         {type}
@@ -90,6 +108,12 @@ export function CardMeta({ icon, type, releaseDate, className }: CardMetaProps) 
         <span className='inline-flex items-center gap-1'>
           <DuotoneIcon icon={Calendar} size={12} />
           {year}
+        </span>
+      )}
+      {showRuntime && (
+        <span className='inline-flex items-center gap-1'>
+          <DuotoneIcon icon={Clock} size={12} />
+          {formatRuntime(runtimeMinutes, type)}
         </span>
       )}
     </div>

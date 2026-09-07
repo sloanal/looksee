@@ -107,25 +107,69 @@ export function QueueCard({
     if (noRef.current) noRef.current.style.opacity = x < 0 ? String(progress) : '0'
   }, [])
 
+  /**
+   * Fly the card away as a copy pinned to the viewport, and report the rating
+   * straight away so the next card slides into the empty slot behind it. The
+   * deck clips on both axes to scroll horizontally, so a card animating inside
+   * it would simply be cut off at the edge.
+   */
   const startExit = useCallback((direction: SwipeDirection) => {
     if (leavingRef.current) return
     leavingRef.current = true
 
     const el = motionRef.current
-    const instant = prefersReducedMotion()
+    const card = el?.firstElementChild as HTMLElement | null
 
-    if (el && !instant) {
-      const offscreen = direction === 'up'
-        ? 'translate3d(0, -130%, 0)'
+    if (el && card && !prefersReducedMotion()) {
+      // Measure where the card sits without the drag offset, then hand that
+      // offset to the copy so it picks up exactly where the finger left it.
+      const dragTransform = el.style.transform
+      const dragTransition = el.style.transition
+      el.style.transition = 'none'
+      el.style.transform = 'none'
+      const rect = card.getBoundingClientRect()
+      el.style.transform = dragTransform
+      el.style.transition = dragTransition
+
+      const ghost = card.cloneNode(true) as HTMLElement
+      ghost.setAttribute('aria-hidden', 'true')
+      ghost.setAttribute('inert', '')
+      Object.assign(ghost.style, {
+        position: 'fixed',
+        left: `${rect.left}px`,
+        top: `${rect.top}px`,
+        width: `${rect.width}px`,
+        height: `${rect.height}px`,
+        margin: '0',
+        zIndex: '45',
+        pointerEvents: 'none',
+        willChange: 'transform, opacity',
+        transform: dragTransform || 'none',
+      })
+      // A cloned iframe would start a fresh load just to be thrown away.
+      ghost.querySelectorAll('iframe').forEach((frame) => frame.remove())
+      document.body.appendChild(ghost)
+
+      const readingPosition = card.querySelector('[data-card-scroll]')?.scrollTop
+      const ghostBody = ghost.querySelector('[data-card-scroll]')
+      if (ghostBody && readingPosition) ghostBody.scrollTop = readingPosition
+
+      // Neutral drops away under the bottom nav; the header sits above the deck
+      // and a card rising through it would just look like a collision.
+      const offscreen = direction === 'down'
+        ? 'translate3d(0, 125%, 0)'
         : `translate3d(${direction === 'right' ? '' : '-'}135%, 0, 0) rotate(${
           direction === 'right' ? 18 : -18
         }deg)`
-      el.style.transition = `transform ${EXIT_MS}ms ease-out, opacity ${EXIT_MS}ms ease-out`
-      el.style.transform = offscreen
-      el.style.opacity = '0'
+
+      ghost.getBoundingClientRect()
+      ghost.style.transition = `transform ${EXIT_MS}ms ease-out, opacity ${EXIT_MS}ms ease-out`
+      ghost.style.transform = offscreen
+      ghost.style.opacity = '0'
+      window.setTimeout(() => ghost.remove(), EXIT_MS + 80)
     }
 
-    window.setTimeout(() => onRate(direction), instant ? 0 : EXIT_MS)
+    onRate(direction)
   }, [onRate])
 
   useEffect(() => {
@@ -210,49 +254,59 @@ export function QueueCard({
           />
         </div>
 
-        <div className='min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4'>
-          <div className='flex gap-4'>
-            <PosterImage
-              src={item.posterUrl}
-              alt={item.title}
-              width={104}
-              height={156}
-              className='flex-shrink-0 rounded-lg object-cover shadow-sm'
-            />
-            <div className='min-w-0 flex-1'>
-              <h2 className='mb-1 text-xl font-semibold leading-tight text-foreground'>
-                {item.title}
-              </h2>
-              <CardMeta
-                icon={getTypeIcon(item.type)}
-                type={item.type}
-                releaseDate={item.releaseDate}
-                runtimeMinutes={item.runtimeMinutes}
+        <div className='relative min-h-0 flex-1'>
+          <div
+            data-card-scroll
+            className='h-full space-y-4 overflow-y-auto overscroll-contain px-4 py-4'
+          >
+            <div className='flex gap-4'>
+              <PosterImage
+                src={item.posterUrl}
+                alt={item.title}
+                width={104}
+                height={156}
+                className='flex-shrink-0 rounded-lg object-cover shadow-sm'
               />
-              <CardGenres genres={item.genres} maxDisplay={3} />
-              <FavoritedByBadge names={favoritedByNames(item)} />
+              <div className='min-w-0 flex-1'>
+                <h2 className='mb-1 text-xl font-semibold leading-tight text-foreground'>
+                  {item.title}
+                </h2>
+                <CardMeta
+                  icon={getTypeIcon(item.type)}
+                  type={item.type}
+                  releaseDate={item.releaseDate}
+                  runtimeMinutes={item.runtimeMinutes}
+                />
+                <CardGenres genres={item.genres} maxDisplay={3} />
+                <FavoritedByBadge names={favoritedByNames(item)} />
+              </div>
             </div>
+
+            {others.length > 0 && (
+              <DetailSection title='Your rooms'>
+                <HouseholdExcitementRow otherPreferences={others} />
+              </DetailSection>
+            )}
+
+            {item.description && (
+              <DetailSection title='Description'>
+                <p className='text-sm leading-relaxed text-muted-foreground'>{item.description}</p>
+              </DetailSection>
+            )}
+
+            {detailed && isTmdb && <StreamingProviders tmdbId={item.tmdbId!} type={item.type} />}
+
+            {active && (
+              <TrailerSection item={item} trailerUrl={trailerUrl} loadingTrailer={loadingTrailer} />
+            )}
+
+            <SubmissionMeta submission={item.submission} className='pt-1' />
           </div>
-
-          {others.length > 0 && (
-            <DetailSection title='Your rooms'>
-              <HouseholdExcitementRow otherPreferences={others} />
-            </DetailSection>
-          )}
-
-          {item.description && (
-            <DetailSection title='Description'>
-              <p className='text-sm leading-relaxed text-muted-foreground'>{item.description}</p>
-            </DetailSection>
-          )}
-
-          {detailed && isTmdb && <StreamingProviders tmdbId={item.tmdbId!} type={item.type} />}
-
-          {active && (
-            <TrailerSection item={item} trailerUrl={trailerUrl} loadingTrailer={loadingTrailer} />
-          )}
-
-          <SubmissionMeta submission={item.submission} className='pt-1' />
+          {/* Hints that the card keeps going below the fold. */}
+          <div
+            aria-hidden
+            className='pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-card to-transparent'
+          />
         </div>
 
         <div className='flex-shrink-0 border-t border-border bg-muted/60 px-3 py-3'>

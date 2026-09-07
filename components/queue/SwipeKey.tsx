@@ -36,7 +36,7 @@ export function SwipeKey({ onRate, disabled = false, className }: SwipeKeyProps)
         hint='tap'
         icon={Meh}
         disabled={disabled}
-        onClick={() => onRate('up')}
+        onClick={() => onRate('down')}
       />
       <Key
         label='Excited'

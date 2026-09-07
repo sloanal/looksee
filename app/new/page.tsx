@@ -30,6 +30,7 @@ import {
   CardTitle,
   MediaCard,
 } from '@/components/MediaCard'
+import { MediaCardSkeletonList } from '@/components/MediaCardSkeleton'
 
 interface QueueItem {
   id: string
@@ -257,9 +258,7 @@ export default function NewPage() {
 
       <PageContent>
         <div ref={queueContainerRef} className='space-y-4'>
-          {loading
-            ? <div className='py-8 text-center text-sm text-muted-foreground'>Loading...</div>
-            : queue.length === 0
+          {loading ? <MediaCardSkeletonList count={2} /> : queue.length === 0
             ? (
               <EmptyState
                 icon={PartyPopper}

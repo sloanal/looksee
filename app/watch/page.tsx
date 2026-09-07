@@ -59,6 +59,8 @@ import {
   CardTitle,
   MediaCard,
 } from '@/components/MediaCard'
+import { MediaCardSkeletonList } from '@/components/MediaCardSkeleton'
+import { InlineLoading } from '@/components/LoadingScreen'
 
 function getTypeIcon(type: string) {
   const normalizedType = type.toLowerCase()
@@ -596,8 +598,9 @@ export default function WatchPage() {
           )
           : loading && recommendations.length === 0
           ? (
-            <div className='py-12 text-center text-sm text-muted-foreground' aria-live='polite'>
-              <p>Finding recommendations...</p>
+            <div className='space-y-4'>
+              <InlineLoading label='Finding recommendations' className='py-2' />
+              <MediaCardSkeletonList count={2} rooms={false} />
             </div>
           )
           : recommendations.length === 0

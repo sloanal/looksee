@@ -18,6 +18,7 @@ import {
   PageHeader,
   PageHeaderBar,
 } from '@/components/PageHeader'
+import { SettingsCardSkeletonList } from '@/components/settings/SettingsCardSkeleton'
 import { ImportSection } from '@/components/settings/ImportSection'
 import { ProfileSection, ProfileUser } from '@/components/settings/ProfileSection'
 import { RoomsSection } from '@/components/settings/RoomsSection'
@@ -338,7 +339,7 @@ export default function ProfilePage() {
       </PageHeaderBar>
 
       <PageContent className='bottom-nav-spacing min-h-[calc(100vh-200px)]'>
-        {loading ? <div className='py-8 text-center text-muted-foreground'>Loading...</div> : (
+        {loading ? <SettingsCardSkeletonList /> : (
           <>
             <div
               role='tabpanel'

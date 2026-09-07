@@ -49,6 +49,7 @@ import {
   CardTitle,
   MediaCard,
 } from '@/components/MediaCard'
+import { MediaCardSkeletonList } from '@/components/MediaCardSkeleton'
 import { EditRoomsModal } from '@/components/EditRoomsModal'
 import { StreamingProviders } from '@/components/StreamingProviders'
 import { FavoriteButton } from '@/components/FavoriteButton'
@@ -514,7 +515,7 @@ export default function BrowsePage() {
       <PageContent className='space-y-4'>
         <div ref={scrollContainerRef} className='space-y-4'>
           {loading
-            ? <div className='py-8 text-center text-sm text-muted-foreground'>Loading...</div>
+            ? <MediaCardSkeletonList count={3} ratings={2} />
             : items.length === 0
             ? (
               <EmptyState

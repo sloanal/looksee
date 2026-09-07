@@ -8,7 +8,12 @@
  * Contrast (on canvas): foreground 16:1, muted-foreground 5.3:1, destructive 4.6:1.
  */
 :root {
-  --canvas: 43 68% 94%;
+  /*
+   * The canvas is the exact colour the welcome clip's paper decodes to
+   * (rgb 252 244 230), so the video dissolves into the page with no visible
+   * edge. Re-bake public/welcome.mp4 if this ever changes — see BrandVideo.
+   */
+  --canvas: 38.2 78.6% 94.5%;
   --background: 0 0% 100%;
   --foreground: 30 12% 11%;
   --card: 0 0% 100%;
@@ -47,11 +52,17 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+      'Oxygen',
       'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
       sans-serif;
   }
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-archivo), sans-serif;
   }
   button,
@@ -73,7 +84,12 @@
 input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="submit"]):not([type="button"]),
 select,
 textarea,
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   color: hsl(var(--foreground)) !important;
   -webkit-text-fill-color: hsl(var(--foreground)) !important;
 }
@@ -224,5 +240,111 @@ body {
   .modal-content,
   .modal-content.closing {
     animation-duration: 0.01ms;
+  }
+}
+
+/* Skeleton placeholders: a sheen sweeping across a muted block. */
+@keyframes skeleton-sheen {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    hsl(0 0% 100% / 0.7),
+    transparent
+  );
+  animation: skeleton-sheen 1.6s ease-in-out infinite;
+}
+
+/*
+ * Branded loader: a highlight travels around the lens outline while the pupil
+ * breathes. The outline underneath stays whole, so a paused or reduced-motion
+ * frame still reads as the mark.
+ */
+@keyframes lens-travel {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pupil-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.86);
+    opacity: 0.7;
+  }
+}
+
+@keyframes loader-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+@keyframes spinner-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.lens-travel {
+  stroke-dasharray: 0.3 0.7;
+  animation: lens-travel 2.2s linear infinite;
+}
+
+.pupil-breathe {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pupil-breathe 2.6s ease-in-out infinite;
+}
+
+.loader-sweep {
+  animation: loader-sweep 1.5s ease-in-out infinite;
+}
+
+.spinner-spin {
+  animation: spinner-spin 0.7s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after,
+  .loader-sweep {
+    animation: none;
+  }
+  .lens-travel {
+    stroke-dasharray: none;
+    animation: none;
+  }
+  .pupil-breathe {
+    animation: none;
+  }
+  .spinner-spin {
+    animation-duration: 2s;
   }
 }

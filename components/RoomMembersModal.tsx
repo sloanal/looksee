@@ -6,6 +6,7 @@ import { Modal, ModalBody, ModalHeader } from '@/components/ui/modal'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Notice } from '@/components/ui/notice'
+import { Skeleton, SkeletonLine } from '@/components/ui/skeleton'
 import { ConfirmModal } from '@/components/settings/ConfirmModal'
 import { SettingsBadge } from '@/components/settings/SettingsCard'
 
@@ -125,7 +126,20 @@ function MembersBody({ roomId, roomName, onMembersChanged }: MembersBodyProps) {
         {error && <Notice variant='error' className='mb-3'>{error}</Notice>}
 
         {loading
-          ? <div className='py-8 text-center text-sm text-muted-foreground'>Loading members...</div>
+          ? (
+            <div className='-mx-2 space-y-3 py-2' role='status' aria-live='polite'>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className='flex items-center gap-3 px-2'>
+                  <Skeleton className='h-10 w-10 flex-shrink-0 rounded-full' />
+                  <div className='min-w-0 flex-1 space-y-1.5'>
+                    <SkeletonLine className='w-32' />
+                    <SkeletonLine className='w-20' />
+                  </div>
+                </div>
+              ))}
+              <span className='sr-only'>Loading members</span>
+            </div>
+          )
           : members.length === 0
           ? <div className='py-8 text-center text-sm text-muted-foreground'>No members found</div>
           : (

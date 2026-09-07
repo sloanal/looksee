@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { RatingFields } from '@/components/RatingFields'
+import { LoadingScreen } from '@/components/LoadingScreen'
 
 interface UnratedItem {
   id: string
@@ -108,11 +109,7 @@ export default function OnboardingPage() {
   }
 
   if (loading || !roomId) {
-    return (
-      <div className='flex min-h-[100dvh] items-center justify-center bg-canvas'>
-        <p className='text-sm text-muted-foreground'>Loading...</p>
-      </div>
-    )
+    return <LoadingScreen label='Loading your first titles' />
   }
 
   if (items.length === 0) {

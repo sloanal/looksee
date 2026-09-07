@@ -4,6 +4,8 @@ import { ReactNode } from 'react'
 import Image from 'next/image'
 import { Star } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Spinner } from '@/components/ui/spinner'
 import { StreamingProviders } from '@/components/StreamingProviders'
 import { cn } from '@/lib/utils'
 
@@ -46,13 +48,16 @@ export function TrailerSection(
 ) {
   if (loadingTrailer) {
     return (
-      <div
-        className={cn(
-          'flex aspect-video items-center justify-center rounded-xl bg-muted',
-          className,
-        )}
-      >
-        <p className='text-sm text-muted-foreground'>Loading trailer...</p>
+      <div className={className} role='status' aria-live='polite'>
+        <DetailSection title='Trailer'>
+          <div className='relative aspect-video'>
+            <Skeleton className='absolute inset-0 rounded-xl' />
+            <div className='absolute inset-0 flex items-center justify-center'>
+              <Spinner size={20} className='text-muted-foreground' />
+            </div>
+          </div>
+        </DetailSection>
+        <span className='sr-only'>Loading trailer</span>
       </div>
     )
   }

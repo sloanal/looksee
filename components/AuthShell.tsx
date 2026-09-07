@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 import Link from 'next/link'
+import { BrandVideo } from '@/components/BrandVideo'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
@@ -26,17 +27,7 @@ export function AuthShell({ title, description, hero = false, children, footer }
       <div className='w-full max-w-md'>
         {hero && (
           <div className='mb-5 text-center'>
-            <div className='mb-4 aspect-[16/8] w-full overflow-hidden rounded-2xl shadow-card sm:aspect-[16/7]'>
-              <video
-                autoPlay
-                loop
-                muted
-                playsInline
-                className='h-full w-full object-cover object-center'
-              >
-                <source src='/welcome.mp4' type='video/mp4' />
-              </video>
-            </div>
+            <BrandVideo className='mb-2 aspect-[16/10] w-full sm:aspect-[16/9]' />
             <h1 className='text-3xl font-bold tracking-tight text-foreground'>Looksee</h1>
             <p className='mt-1 text-sm text-muted-foreground'>
               Share and compare movies and shows with your friends and housemates

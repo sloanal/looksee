@@ -14,6 +14,9 @@ import {
   User,
   Video,
 } from 'lucide-react'
+import { BrandVideo } from '@/components/BrandVideo'
+import { InlineLoading } from '@/components/LoadingScreen'
+import { MediaCardSkeletonList } from '@/components/MediaCardSkeleton'
 import { RoomSelector } from '@/components/RoomSelector'
 import { RoomMembersAvatars } from '@/components/RoomMembersAvatars'
 import {
@@ -685,17 +688,7 @@ export default function AddPage() {
         {showWelcome && (
           <div className='flex min-h-[calc(100vh-300px)] items-center justify-center'>
             <div className='w-full max-w-md text-center'>
-              <div className='aspect-[16/9] overflow-hidden rounded-2xl shadow-card'>
-                <video
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className='h-full w-full object-cover object-center'
-                >
-                  <source src='/welcome.mp4' type='video/mp4' />
-                </video>
-              </div>
+              <BrandVideo className='aspect-[16/10]' />
               <button
                 type='button'
                 onClick={() => searchInputRef.current?.focus()}
@@ -707,7 +700,10 @@ export default function AddPage() {
           </div>
         )}
         {loading && searchQuery && (
-          <div className='py-8 text-center text-sm text-muted-foreground'>Searching...</div>
+          <div className='space-y-4'>
+            <InlineLoading label='Searching' className='py-2' />
+            <MediaCardSkeletonList count={3} rooms={false} />
+          </div>
         )}
 
         {showNoResults && (

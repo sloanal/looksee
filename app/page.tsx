@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { LoadingScreen } from '@/components/LoadingScreen'
 
 export default function Home() {
   const { data: session, status } = useSession()
@@ -36,13 +37,5 @@ export default function Home() {
     }
   }, [session, status, router])
 
-  return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4 text-foreground">Looksee</h1>
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-  )
+  return <LoadingScreen label={session ? 'Finding your rooms' : 'Getting things ready'} />
 }
-

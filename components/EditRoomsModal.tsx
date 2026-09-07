@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Modal, ModalBody, ModalFooter, ModalHeader, useModal } from '@/components/ui/modal'
+import { Skeleton } from '@/components/ui/skeleton'
 import { clientSubmissionContext } from '@/lib/submission-context'
 import { cn } from '@/lib/utils'
 
@@ -129,7 +130,12 @@ function EditRoomsBody({ mediaItemId, currentRooms, onSave }: EditRoomsModalProp
       />
       <ModalBody>
         {loading
-          ? <p className='py-6 text-center text-sm text-muted-foreground'>Loading...</p>
+          ? (
+            <div className='space-y-2 py-1' role='status' aria-live='polite'>
+              {[0, 1, 2].map((i) => <Skeleton key={i} className='h-14 w-full rounded-lg' />)}
+              <span className='sr-only'>Loading rooms</span>
+            </div>
+          )
           : (
             <div className='space-y-2'>
               {allRooms.map((room) => {

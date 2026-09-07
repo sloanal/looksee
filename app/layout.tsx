@@ -3,13 +3,12 @@ import { Archivo, Inter } from 'next/font/google'
 import './globals.css'
 import { SessionProvider } from '@/components/SessionProvider'
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_APP_URL ??
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL ??
   process.env.NEXTAUTH_URL ??
   'http://localhost:3000'
 
 const appDescription =
-  "Looksee finds the overlap in your friends' watchlists, making \"what should we watch?\" simple."
+  'Looksee finds the overlap in your friends\' watchlists, making "what should we watch?" simple.'
 
 const archivo = Archivo({
   subsets: ['latin'],
@@ -75,11 +74,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${archivo.variable} ${inter.variable}`}>
-      <body className="antialiased overscroll-none">
+    <html lang='en' className={`${archivo.variable} ${inter.variable}`}>
+      <body className='antialiased overscroll-none'>
         <SessionProvider>{children}</SessionProvider>
       </body>
     </html>
   )
 }
-

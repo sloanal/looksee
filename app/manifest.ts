@@ -7,8 +7,10 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Share and discover movies and shows with your friends and household',
     start_url: '/',
     display: 'standalone',
-    background_color: '#faf9f6',
-    theme_color: '#000000',
+    // The canvas cream, so the install splash matches the app's first paint
+    // instead of flashing white. Keep in sync with --canvas in globals.css.
+    background_color: '#fcf4e6',
+    theme_color: '#ffffff',
     orientation: 'portrait-primary',
     icons: [
       {

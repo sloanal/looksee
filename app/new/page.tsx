@@ -30,6 +30,9 @@ export default function NewPage() {
   const [statusById, setStatusById] = useState<Record<string, string>>({})
   const [exit, setExit] = useState<{ itemId: string; direction: SwipeDirection } | null>(null)
   const [error, setError] = useState('')
+  // Held while the dialog is open (including its exit animation) so emptying
+  // the queue can't rewrite the count under the confirmation copy.
+  const [acceptAllCount, setAcceptAllCount] = useState(0)
   const [confirmingAcceptAll, setConfirmingAcceptAll] = useState(false)
 
   useEffect(() => {
@@ -150,7 +153,10 @@ export default function NewPage() {
                 <Button
                   variant='outline'
                   size='sm'
-                  onClick={() => setConfirmingAcceptAll(true)}
+                  onClick={() => {
+                    setAcceptAllCount(queue.length)
+                    setConfirmingAcceptAll(true)
+                  }}
                 >
                   <CheckCheck className='h-4 w-4' aria-hidden />
                   Accept all
@@ -190,7 +196,7 @@ export default function NewPage() {
 
       <ConfirmModal
         open={confirmingAcceptAll}
-        title={`Accept all ${queue.length} title${queue.length === 1 ? '' : 's'}?`}
+        title={`Accept all ${acceptAllCount} title${acceptAllCount === 1 ? '' : 's'}?`}
         description={
           <>
             <p>

@@ -22,9 +22,13 @@ interface QueueDeckProps {
 }
 
 /**
- * The queue as a vertical list of cards, each at least a frame tall. Scrolling
- * is the only way through it, which leaves left and right entirely to the swipe
+ * The queue as a vertical list of cards, one frame tall apiece. Scrolling is
+ * the only way through it, which leaves left and right entirely to the swipe
  * gesture, and rating a card lets the ones below simply close the gap.
+ *
+ * Snapping is mandatory so a card always comes to rest filling the frame
+ * instead of halfway into it, and `snap-always` keeps a hard flick from
+ * skipping over a title on the way past.
  */
 export function QueueDeck({
   items,
@@ -81,10 +85,10 @@ export function QueueDeck({
       role='region'
       aria-label='Titles waiting for your rating'
       tabIndex={0}
-      className='no-scrollbar mx-auto h-full w-full max-w-md snap-y snap-proximity space-y-3 overflow-y-auto overflow-x-hidden px-4 focus-visible:outline-none'
+      className='no-scrollbar mx-auto h-full w-full max-w-md snap-y snap-mandatory space-y-3 overflow-y-auto overflow-x-hidden px-4 focus-visible:outline-none'
     >
       {items.map((item, index) => (
-        <div key={item.id} className='min-h-full snap-start pb-1'>
+        <div key={item.id} className='h-full snap-start snap-always'>
           <QueueCard
             item={item}
             status={statusById[item.id] ?? 'have_not_seen'}

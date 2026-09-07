@@ -251,6 +251,141 @@ body {
   }
 }
 
+/*
+ * Swipe key feedback. Pressing a key throws the card in the frame, so the key
+ * itself takes the recoil and everything on it leans the way the card went.
+ */
+@keyframes key-press {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes key-nudge-left {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  45% {
+    transform: translateX(-5px);
+  }
+}
+
+@keyframes key-nudge-right {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  45% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes key-nudge-up {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  45% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes key-wash-left {
+  from {
+    transform: translateX(0);
+    opacity: 0.85;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes key-wash-right {
+  from {
+    transform: translateX(0);
+    opacity: 0.85;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes key-wash-up {
+  from {
+    transform: translateY(0);
+    opacity: 0.85;
+  }
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+.key-firing {
+  animation: key-press 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.key-nudge-left {
+  animation: key-nudge-left 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.key-nudge-right {
+  animation: key-nudge-right 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.key-nudge-up {
+  animation: key-nudge-up 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.key-wash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(
+    to right,
+    transparent,
+    hsl(var(--accent-foreground) / 0.16),
+    transparent
+  );
+}
+
+.key-wash-left {
+  animation: key-wash-left 420ms ease-out forwards;
+}
+
+.key-wash-right {
+  animation: key-wash-right 420ms ease-out forwards;
+}
+
+.key-wash-up {
+  background-image: linear-gradient(
+    to top,
+    transparent,
+    hsl(var(--accent-foreground) / 0.16),
+    transparent
+  );
+  animation: key-wash-up 420ms ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .key-firing,
+  .key-nudge-left,
+  .key-nudge-right,
+  .key-nudge-up,
+  .key-wash {
+    animation: none;
+  }
+}
+
 /* Skeleton placeholders: a sheen sweeping across a muted block. */
 @keyframes skeleton-sheen {
   from {

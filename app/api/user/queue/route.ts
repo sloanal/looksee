@@ -5,11 +5,11 @@ import { prisma } from '@/lib/prisma'
 import {
   filterMediaVisibility,
   getVisibleMemberIds,
-  itemsInRoomsWhere,
   loadMembersByRoomId,
   unionMemberIds,
   visiblePreferenceInclude,
 } from '@/lib/visibility'
+import { loadQueueScope } from '@/lib/queue'
 import { resolveSubmission, resolveVisibleAttribution } from '@/lib/media-attribution'
 
 // GET /api/user/queue - Get unrated media items across all rooms
@@ -19,50 +19,14 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Get all rooms the user is a member of
-  const memberships = await prisma.roomMembership.findMany({
-    where: { userId: session.user.id },
-    select: { roomId: true },
-  })
+  const { roomIds, unratedItemIds } = await loadQueueScope(session.user.id)
 
-  const roomIds = memberships.map((m) => m.roomId)
-
-  if (roomIds.length === 0) {
+  if (unratedItemIds.length === 0) {
     return NextResponse.json({ items: [] })
   }
 
   const membersByRoomId = await loadMembersByRoomId(roomIds)
   const visiblePrefUserIds = unionMemberIds(membersByRoomId, [session.user.id])
-
-  // Get all media items in user's rooms via MediaItemRoom (not legacy roomId)
-  const allMediaItems = await prisma.mediaItem.findMany({
-    where: itemsInRoomsWhere(roomIds),
-    select: { id: true },
-  })
-
-  const mediaItemIds = allMediaItems.map((m) => m.id)
-
-  if (mediaItemIds.length === 0) {
-    return NextResponse.json({ items: [] })
-  }
-
-  // Items the user has actually rated. A preference row with ratedAt null
-  // (e.g. favorite-only) does not count — the title stays in the queue.
-  const ratedItems = await prisma.userMediaPreference.findMany({
-    where: {
-      userId: session.user.id,
-      mediaItemId: { in: mediaItemIds },
-      ratedAt: { not: null },
-    },
-    select: { mediaItemId: true },
-  })
-
-  const ratedItemIds = new Set(ratedItems.map((r) => r.mediaItemId))
-  const unratedItemIds = mediaItemIds.filter((id) => !ratedItemIds.has(id))
-
-  if (unratedItemIds.length === 0) {
-    return NextResponse.json({ items: [] })
-  }
 
   // Get full details of unrated items
   const unratedItems = await prisma.mediaItem.findMany({

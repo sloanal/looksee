@@ -212,12 +212,13 @@ export function QueueCard({
       })
       // A cloned iframe would start a fresh load just to be thrown away.
       ghost.querySelectorAll('iframe').forEach((frame) => frame.remove())
-      // Outside the scroller the sticky footer would latch onto the viewport
-      // instead of the card, so it flies out where it was drawn.
-      ghost.querySelectorAll<HTMLElement>('[data-card-footer]').forEach((footer) => {
-        footer.style.position = 'static'
-      })
       document.body.appendChild(ghost)
+
+      // A clone comes back scrolled to the top, so the card would jump to its
+      // beginning as it left. Put it back where the reader had it.
+      const read = card.querySelector<HTMLElement>('[data-card-scroll]')
+      const copy = ghost.querySelector<HTMLElement>('[data-card-scroll]')
+      if (read && copy) copy.scrollTop = read.scrollTop
 
       const start = dragTransform || 'translate3d(0, 0, 0)'
       ghost.animate(exitFrames(direction, start, deliberate), {
@@ -364,10 +365,13 @@ export function QueueCard({
       onPointerUp={(event) => endPointerDrag(event, false)}
       onPointerCancel={(event) => endPointerDrag(event, true)}
       // pan-y keeps scrolling the queue native; horizontal drags belong to us.
-      className='relative min-h-full touch-pan-y select-none'
+      className='relative h-full touch-pan-y select-none'
     >
       <article
-        className='flex min-h-full flex-col rounded-2xl border border-border bg-card text-card-foreground shadow-pop'
+        // Exactly as tall as the deck and clipping what it holds, so the card's
+        // chrome and its rounded corners stay put while the detail scrolls
+        // underneath instead of spilling past the corners.
+        className='flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-pop'
         aria-label={item.title}
       >
         <SwipeOverlay overlayRef={noRef} tone='no' />
@@ -392,7 +396,7 @@ export function QueueCard({
           />
         </div>
 
-        <div className='flex-1 space-y-4 px-4 py-4'>
+        <div data-card-scroll className='flex-1 space-y-4 overflow-y-auto px-4 py-4'>
           <div className='flex gap-4'>
             <PosterImage
               src={item.posterUrl}
@@ -437,16 +441,7 @@ export function QueueCard({
           <SubmissionMeta submission={item.submission} className='pt-1' />
         </div>
 
-        {
-          /*
-          Sticks to the bottom of the frame for as long as its card spans it, so
-          the seen choice is always to hand, then leaves with the card.
-        */
-        }
-        <div
-          data-card-footer
-          className='sticky bottom-0 flex-shrink-0 rounded-b-2xl border-t border-border bg-muted/95 px-3 py-3 backdrop-blur-sm'
-        >
+        <div className='flex-shrink-0 border-t border-border bg-muted px-3 py-3'>
           <div className='flex gap-2' role='group' aria-label='Have you seen this?'>
             {STATUS_OPTIONS.map((option) => {
               const checked = status === option.value

@@ -33,6 +33,13 @@ export interface MediaCredits {
 export const isTmdbItem = (item: { tmdbId?: string | null; sourceType?: string | null }) =>
   Boolean(item.tmdbId) && item.sourceType?.toLowerCase() === 'tmdb'
 
+export const formatReleaseDate = (releaseDate: string): string =>
+  new Date(releaseDate).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+
 /** Director/cast for a TMDB item, fetched fresh on open rather than stored on the item. */
 export async function fetchMediaCredits(
   item: { tmdbId?: string | null; sourceType?: string | null; type: string },
@@ -120,8 +127,37 @@ export function TrailerSection(
   return null
 }
 
+/**
+ * A small "where this came from" caption for data pulled in from an external
+ * source rather than entered by a housemate (currently always TMDB, since
+ * that's the only place a numeric rating is sourced from).
+ */
+export function DataSourceNote(
+  { source = 'TMDB', className }: { source?: string; className?: string },
+) {
+  return <span className={cn('text-xs text-muted-foreground/70', className)}>via {source}</span>
+}
+
+/** The TMDB rating (out of 10), with a caption crediting where it came from. */
+export function MediaRating({ rating, className }: { rating: number; className?: string }) {
+  return (
+    <p
+      className={cn(
+        'flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-muted-foreground',
+        className,
+      )}
+    >
+      <span className='inline-flex items-center gap-1.5'>
+        <Star className='h-4 w-4 fill-amber-400 text-amber-400' />
+        {rating.toFixed(1)} / 10
+      </span>
+      <DataSourceNote />
+    </p>
+  )
+}
+
 /** Director/creator and top-billed cast, or a quiet loading state while they're fetched. */
-function CreditsSection({
+export function CreditsSection({
   type,
   credits,
   loadingCredits,
@@ -227,22 +263,13 @@ export function MediaDetailBody(
 
           {item.releaseDate && (
             <DetailSection title='Release date'>
-              <p className='text-sm text-muted-foreground'>
-                {new Date(item.releaseDate).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </p>
+              <p className='text-sm text-muted-foreground'>{formatReleaseDate(item.releaseDate)}</p>
             </DetailSection>
           )}
 
           {item.rating && (
             <DetailSection title='Rating'>
-              <p className='flex items-center gap-2 text-sm text-muted-foreground'>
-                <Star className='h-4 w-4 fill-amber-400 text-amber-400' />
-                {item.rating.toFixed(1)} / 10
-              </p>
+              <MediaRating rating={item.rating} />
             </DetailSection>
           )}
 

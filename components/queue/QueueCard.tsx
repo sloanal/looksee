@@ -11,7 +11,15 @@ import {
 import { Eye, EyeOff, Sofa } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { CardGenres, CardMeta } from '@/components/MediaCard'
-import { DetailSection, TrailerSection } from '@/components/MediaDetail'
+import {
+  CreditsSection,
+  DetailSection,
+  fetchMediaCredits,
+  formatReleaseDate,
+  MediaCredits,
+  MediaRating,
+  TrailerSection,
+} from '@/components/MediaDetail'
 import { DuotoneIcon } from '@/components/DuotoneIcon'
 import { FavoriteButton, FavoritedByBadge } from '@/components/FavoriteButton'
 import { HouseholdExcitementRow } from '@/components/HouseholdExcitementRow'
@@ -87,6 +95,8 @@ export function QueueCard({
 
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
   const [loadingTrailer, setLoadingTrailer] = useState(false)
+  const [credits, setCredits] = useState<MediaCredits | null>(null)
+  const [loadingCredits, setLoadingCredits] = useState(false)
 
   const isTmdb = Boolean(item.tmdbId) && item.sourceType?.toLowerCase() === 'tmdb'
   const others = item.otherPreferences ?? []
@@ -111,6 +121,26 @@ export function QueueCard({
       cancelled = true
     }
   }, [active, isTmdb, item.tmdbId, item.type, trailerUrl])
+
+  // Fetched for the same window as StreamingProviders, so it's ready by the
+  // time a neighboring card becomes active instead of popping in late.
+  useEffect(() => {
+    if (!detailed || !isTmdb || credits) return
+    let cancelled = false
+
+    setLoadingCredits(true)
+    fetchMediaCredits({ tmdbId: item.tmdbId, sourceType: item.sourceType, type: item.type })
+      .then((result) => {
+        if (!cancelled) setCredits(result)
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingCredits(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [detailed, isTmdb, item.tmdbId, item.sourceType, item.type, credits])
 
   const commitDistance = useCallback(
     () => Math.max(MIN_COMMIT_PX, (motionRef.current?.offsetWidth ?? 320) * COMMIT_RATIO),
@@ -420,6 +450,18 @@ export function QueueCard({
             </div>
           </div>
 
+          {typeof item.rating === 'number' && item.rating > 0 && (
+            <DetailSection title='Rating'>
+              <MediaRating rating={item.rating} />
+            </DetailSection>
+          )}
+
+          {item.releaseDate && (
+            <DetailSection title='Release date'>
+              <p className='text-sm text-muted-foreground'>{formatReleaseDate(item.releaseDate)}</p>
+            </DetailSection>
+          )}
+
           {others.length > 0 && (
             <DetailSection title='Your rooms'>
               <HouseholdExcitementRow otherPreferences={others} />
@@ -431,6 +473,8 @@ export function QueueCard({
               <p className='text-sm leading-relaxed text-muted-foreground'>{item.description}</p>
             </DetailSection>
           )}
+
+          <CreditsSection type={item.type} credits={credits} loadingCredits={loadingCredits} />
 
           {detailed && isTmdb && <StreamingProviders tmdbId={item.tmdbId!} type={item.type} />}
 

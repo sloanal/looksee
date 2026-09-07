@@ -1,0 +1,9 @@
+{
+  "fmt": {
+    "singleQuote": true,
+    "semiColons": false,
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "exclude": ["node_modules", ".next", "public", "prisma/migrations"]
+  }
+}

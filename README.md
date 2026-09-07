@@ -43,9 +43,16 @@ Create a `.env` file in the root directory:
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/looksee?schema=public"
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="your-secret-key-here-change-in-production"
-TMDB_API_KEY="your-tmdb-api-key-here"
+TMDB_API_KEY="your-tmdb-v3-api-key-here"
+# Optional: v4 "API Read Access Token" (a JWT starting with eyJ...). Used as a bearer token
+# when set; TMDB_API_KEY is used as the api_key query param otherwise.
+TMDB_API_READ_ACCESS_TOKEN=""
 RESEND_API_KEY="re_your_resend_api_key"
 EMAIL_FROM="Looksee <noreply@your-domain.com>"
+# Web push (optional). Generate a key pair with: npx web-push generate-vapid-keys
+VAPID_PUBLIC_KEY="your-vapid-public-key"
+VAPID_PRIVATE_KEY="your-vapid-private-key"
+VAPID_SUBJECT="mailto:you@your-domain.com"
 ```
 
 Note: This project uses PostgreSQL. A sqlite `file:./dev.db` URL will not work with the current Prisma schema.
@@ -161,10 +168,11 @@ This app is configured for deployment on Vercel with PostgreSQL and Blob Storage
    - Go to **Settings** → **Environment Variables**
    - Add the following:
      - `NEXTAUTH_SECRET`: Generate with `openssl rand -base64 32` (or use any secure random string)
-     - `TMDB_API_KEY`: Your TMDB API key
+     - `TMDB_API_KEY` and/or `TMDB_API_READ_ACCESS_TOKEN`: TMDB credentials (see reference below)
      - `NEXTAUTH_URL`: Will be auto-set by Vercel, but you can override if needed
      - `RESEND_API_KEY`: API key from Resend
      - `EMAIL_FROM`: Verified sender identity in Resend (for example: `Looksee <noreply@your-domain.com>`)
+     - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`: Web push credentials (see below); omit all three to leave push notifications off
 
 6. **Deploy**
    - Click **Deploy** (or push to your main branch for automatic deployment)
@@ -214,12 +222,23 @@ Once connected, every push to your main branch will automatically trigger a new 
 - `BLOB_READ_WRITE_TOKEN` - Automatically set by Vercel Blob Storage
 - `NEXTAUTH_SECRET` - Required: Generate a secure random string
 - `NEXTAUTH_URL` - Automatically set by Vercel (your app URL)
-- `TMDB_API_KEY` - Required: Your TMDB API key
+- `TMDB_API_KEY` / `TMDB_API_READ_ACCESS_TOKEN` - At least one is required. Both come from https://www.themoviedb.org/settings/api. `TMDB_API_READ_ACCESS_TOKEN` must be the v4 "API Read Access Token" (a JWT: three dot-separated segments starting with `eyJ`) and is sent as a bearer token; anything else in that slot is ignored. `TMDB_API_KEY` is the 32-character v3 key, used as the `api_key` query param when no valid token is set and as a fallback if the token is rejected
 - `RESEND_API_KEY` - Required for production password reset emails
 - `EMAIL_FROM` - Required sender identity for password reset emails (must be verified with your email provider)
 - `MIGRATIONS_FAIL_OPEN` - Optional emergency bypass (`true` to continue prod builds when migrations fail)
 - `MIGRATION_TOKEN` - Required if using `/api/admin/migrate` (use 24+ character random secret)
 - `ALLOW_RUNTIME_MIGRATIONS` - Optional, defaults to off in production; set `true` only when you intentionally want `/api/admin/migrate` enabled
+- `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` - Optional: VAPID key pair for web push (`npx web-push generate-vapid-keys`). Generate once and keep the pair stable; rotating it invalidates every existing browser subscription
+- `VAPID_SUBJECT` - Required alongside the VAPID keys: a `mailto:` or `https:` contact URL that push services can use to reach you
+- `PUSH_DEBOUNCE` - Optional: set to `off` to send room-addition pushes immediately instead of batching for ~8s (always immediate when `VERCEL` is set)
+
+## Push Notifications
+
+Members of a room can opt in (Settings → Notifications) to a web push when someone else in the room adds a title. This is standard PWA Web Push — no APNs/FCM SDKs. Subscriptions live in the `PushSubscription` table; a user with no rows is simply opted out.
+
+When one person adds several titles in a row, the server batches them per actor+room for about 8 seconds and sends a single "added N titles" notification, and the service worker uses a per-room `tag` so anything that still arrives in a burst collapses on the device. The batching is an in-process timer, so on serverless hosts (Vercel) it's skipped and each add is sent immediately; the `tag` collapse still applies there.
+
+iOS Safari only supports web push when the app has been added to the Home Screen and is opened from there.
 
 ## License
 

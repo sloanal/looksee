@@ -137,9 +137,28 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Bottom nav clearance: nav height (4rem) + breathing room + home indicator. */
+/*
+ * Bottom nav padding. On phones the nav sits 1.25rem above the safe-area /
+ * home indicator so the outer items aren't clipped by browser chrome or the
+ * gesture bar; on wider screens the safe-area inset alone is enough.
+ */
+.bottom-nav-safe {
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Bottom nav clearance: nav height (4rem) + nav padding + breathing room. */
 .bottom-nav-spacing {
-  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(6.25rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 768px) {
+  .bottom-nav-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .bottom-nav-spacing {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* Modal animations */

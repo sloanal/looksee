@@ -75,7 +75,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label='Main'
-      className='fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur-sm safe-bottom safe-x'
+      className='fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur-sm bottom-nav-safe safe-x'
     >
       <div className='mx-auto flex h-16 max-w-full items-stretch justify-around md:max-w-4xl xl:max-w-5xl'>
         {navItems.map((item) => {

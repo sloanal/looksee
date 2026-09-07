@@ -690,13 +690,14 @@ export default function BrowsePage() {
                           />
                         ))}
                         {!item.myPreference && (
-                          <div className='flex justify-center py-1.5'>
+                          <div className='py-1.5'>
                             <Button
                               onClick={(e) => {
                                 e.stopPropagation()
                                 setSelectedItem(item)
                               }}
                               size='sm'
+                              className='w-full'
                             >
                               Add your excitement
                             </Button>

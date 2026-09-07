@@ -17,6 +17,8 @@ interface JoinRoomWatchlistPromptModalProps {
   onSkip: () => void
   /** Fires after a successful import so the page can refresh its own room data. */
   onImported?: (added: number) => void
+  /** Offers the Letterboxd export as an alternative to the in-app watchlist. */
+  onImportLetterboxd?: () => void
 }
 
 export function JoinRoomWatchlistPromptModal({
@@ -25,6 +27,7 @@ export function JoinRoomWatchlistPromptModal({
   roomName,
   onSkip,
   onImported,
+  onImportLetterboxd,
 }: JoinRoomWatchlistPromptModalProps) {
   return (
     <Modal isOpen={isOpen && roomId !== null} onClose={onSkip} aria-label='Add your watchlist'>
@@ -34,6 +37,7 @@ export function JoinRoomWatchlistPromptModal({
           roomId={roomId}
           roomName={roomName}
           onImported={onImported}
+          onImportLetterboxd={onImportLetterboxd}
         />
       )}
     </Modal>
@@ -52,9 +56,12 @@ interface WatchlistPromptBodyProps {
   roomId: string
   roomName?: string
   onImported?: (added: number) => void
+  onImportLetterboxd?: () => void
 }
 
-function WatchlistPromptBody({ roomId, roomName, onImported }: WatchlistPromptBodyProps) {
+function WatchlistPromptBody(
+  { roomId, roomName, onImported, onImportLetterboxd }: WatchlistPromptBodyProps,
+) {
   const router = useRouter()
   const { handleClose } = useModal()
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' })
@@ -128,6 +135,18 @@ function WatchlistPromptBody({ roomId, roomName, onImported }: WatchlistPromptBo
 
   const errorBanner = error ? <Notice variant='error'>{error}</Notice> : null
 
+  const letterboxdOption = onImportLetterboxd
+    ? (
+      <button
+        type='button'
+        onClick={onImportLetterboxd}
+        className='mx-auto block min-h-[44px] text-sm font-medium text-foreground underline-offset-4 hover:underline'
+      >
+        Or import from Letterboxd
+      </button>
+    )
+    : null
+
   if (phase.kind === 'done') {
     return (
       <>
@@ -169,6 +188,7 @@ function WatchlistPromptBody({ roomId, roomName, onImported }: WatchlistPromptBo
           <p>
             Adding what you&apos;re into makes recommendations better and more fun for everyone.
           </p>
+          {letterboxdOption}
         </ModalBody>
         <ModalFooter>
           <Button variant='secondary' className='flex-1' onClick={handleClose}>
@@ -201,6 +221,7 @@ function WatchlistPromptBody({ roomId, roomName, onImported }: WatchlistPromptBo
         <p>
           Most people do this right away so recommendations get better and more fun for everyone.
         </p>
+        {letterboxdOption}
         {errorBanner}
       </ModalBody>
       <ModalFooter>

@@ -96,7 +96,7 @@ export function normalizeQuery(raw: string): string {
   return raw.trim().replace(/\s+/g, ' ')
 }
 
-const foldText = (value: string) =>
+export const foldText = (value: string) =>
   value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')

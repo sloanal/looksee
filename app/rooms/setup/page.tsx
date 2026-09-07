@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import { KeyRound, Sofa } from 'lucide-react'
 import { RoomJoinModal } from '@/components/RoomJoinModal'
 import { JoinRoomWatchlistPromptModal } from '@/components/JoinRoomWatchlistPromptModal'
+import { ImportRoom, LetterboxdImportModal } from '@/components/LetterboxdImportModal'
 import { AuthShell } from '@/components/AuthShell'
 import { Button } from '@/components/ui/button'
 import { ChoiceCard } from '@/components/ui/choice-card'
@@ -26,6 +27,11 @@ export default function RoomSetupPage() {
   const [joinedRoomId, setJoinedRoomId] = useState<string | null>(null)
   const [joinedRoomName, setJoinedRoomName] = useState<string>('')
   const [joinedMediaCount, setJoinedMediaCount] = useState(0)
+  // Letterboxd import step, and where to go once it is closed: a new room
+  // continues into the rating queue, a joined room resumes the join prompts.
+  const [letterboxd, setLetterboxd] = useState<
+    { room: ImportRoom; next: 'onboarding' | 'joinFlow' } | null
+  >(null)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -54,8 +60,11 @@ export default function RoomSetupPage() {
         return
       }
 
-      // Redirect to onboarding if there are existing items, otherwise to browse
-      router.push(`/onboarding?roomId=${data.room.id}`)
+      // Offer the Letterboxd import first; closing it continues to onboarding.
+      setLetterboxd({
+        room: { id: data.room.id, name: data.room.name || roomName.trim() },
+        next: 'onboarding',
+      })
     } catch (err) {
       setError('Something went wrong. Please try again.')
     } finally {
@@ -112,6 +121,24 @@ export default function RoomSetupPage() {
     }
   }
 
+  const handleImportLetterboxd = () => {
+    if (!joinedRoomId) return
+    setShowWatchlistPrompt(false)
+    setLetterboxd({ room: { id: joinedRoomId, name: joinedRoomName }, next: 'joinFlow' })
+  }
+
+  const handleCloseLetterboxd = () => {
+    const step = letterboxd
+    setLetterboxd(null)
+    if (!step) return
+    if (step.next === 'onboarding') {
+      router.push(`/onboarding?roomId=${step.room.id}`)
+      return
+    }
+    // Resume the step the watchlist prompt would have led to.
+    handleSkipWatchlistPrompt()
+  }
+
   const handleSkipQueue = () => {
     setShowJoinModal(false)
     if (joinedRoomId) {
@@ -130,6 +157,17 @@ export default function RoomSetupPage() {
   if (!session) {
     return null
   }
+
+  // Shared by both branches below so the import survives the mode switch.
+  const letterboxdModal = (
+    <LetterboxdImportModal
+      isOpen={letterboxd !== null}
+      onClose={handleCloseLetterboxd}
+      rooms={letterboxd ? [letterboxd.room] : []}
+      defaultRoomId={letterboxd?.room.id ?? null}
+      lockRoom
+    />
+  )
 
   if (mode === null) {
     return (
@@ -173,36 +211,40 @@ export default function RoomSetupPage() {
 
   if (mode === 'create') {
     return (
-      <AuthShell title='Create a room' description='Give your room a name.'>
-        <form onSubmit={handleCreateRoom} className='space-y-4'>
-          {error && <Notice variant='error'>{error}</Notice>}
+      <>
+        <AuthShell title='Create a room' description='Give your room a name.'>
+          <form onSubmit={handleCreateRoom} className='space-y-4'>
+            {error && <Notice variant='error'>{error}</Notice>}
 
-          <Field label='Room name' htmlFor='roomName'>
-            <Input
-              id='roomName'
-              type='text'
-              value={roomName}
-              onChange={(e) => setRoomName(e.target.value)}
-              required
-              placeholder='e.g., Our Apartment'
-            />
-          </Field>
+            <Field label='Room name' htmlFor='roomName'>
+              <Input
+                id='roomName'
+                type='text'
+                value={roomName}
+                onChange={(e) => setRoomName(e.target.value)}
+                required
+                placeholder='e.g., Our Apartment'
+              />
+            </Field>
 
-          <div className='flex gap-3'>
-            <Button
-              type='button'
-              variant='outline'
-              onClick={() => setMode(null)}
-              className='flex-1'
-            >
-              Back
-            </Button>
-            <Button type='submit' disabled={loading} className='flex-1'>
-              {loading ? 'Creating...' : 'Create'}
-            </Button>
-          </div>
-        </form>
-      </AuthShell>
+            <div className='flex gap-3'>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => setMode(null)}
+                className='flex-1'
+              >
+                Back
+              </Button>
+              <Button type='submit' disabled={loading} className='flex-1'>
+                {loading ? 'Creating...' : 'Create'}
+              </Button>
+            </div>
+          </form>
+        </AuthShell>
+
+        {letterboxdModal}
+      </>
     )
   }
 
@@ -253,7 +295,10 @@ export default function RoomSetupPage() {
         roomId={joinedRoomId}
         roomName={joinedRoomName}
         onSkip={handleSkipWatchlistPrompt}
+        onImportLetterboxd={handleImportLetterboxd}
       />
+
+      {letterboxdModal}
     </>
   )
 }

@@ -38,6 +38,8 @@ export type SourceMeta = {
   timezone?: string
   locale?: string
   submittedAt: string
+  /** Set by bulk importers (e.g. 'letterboxd'); absent for hand-added titles. */
+  importedFrom?: string
 }
 
 const MAX_TIMEZONE_LENGTH = 64
@@ -53,15 +55,21 @@ function boundedString(value: unknown, maxLength: number): string | undefined {
 /**
  * Build the per-room submission record from an untrusted request body. Only
  * timezone/locale are taken from the client (bounded, optional); the timestamp
- * is always the server clock. Never accepts location data.
+ * is always the server clock. Never accepts location data. `trusted` fields come
+ * from the route itself, not the request, so importers can stamp their source.
  */
-export function buildSourceMeta(body: unknown): SourceMeta {
+export function buildSourceMeta(
+  body: unknown,
+  trusted?: { importedFrom?: string },
+): SourceMeta {
   const input = body && typeof body === 'object' ? body as Record<string, unknown> : {}
   const meta: SourceMeta = { submittedAt: new Date().toISOString() }
   const timezone = boundedString(input.timezone, MAX_TIMEZONE_LENGTH)
   if (timezone) meta.timezone = timezone
   const locale = boundedString(input.locale, MAX_LOCALE_LENGTH)
   if (locale) meta.locale = locale
+  const importedFrom = boundedString(trusted?.importedFrom, MAX_LOCALE_LENGTH)
+  if (importedFrom) meta.importedFrom = importedFrom
   return meta
 }
 

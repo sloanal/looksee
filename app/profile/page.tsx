@@ -7,6 +7,7 @@ import { LogOut } from 'lucide-react'
 import { RoomJoinModal } from '@/components/RoomJoinModal'
 import { JoinRoomWatchlistPromptModal } from '@/components/JoinRoomWatchlistPromptModal'
 import { RoomMembersModal } from '@/components/RoomMembersModal'
+import { ImportRoom, LetterboxdImportModal } from '@/components/LetterboxdImportModal'
 import { NotificationSettings } from '@/components/NotificationSettings'
 import { RenamedRoom, RenameRoomModal } from '@/components/RenameRoomModal'
 import { Button } from '@/components/ui/button'
@@ -17,6 +18,7 @@ import {
   PageHeader,
   PageHeaderBar,
 } from '@/components/PageHeader'
+import { ImportSection } from '@/components/settings/ImportSection'
 import { ProfileSection, ProfileUser } from '@/components/settings/ProfileSection'
 import { RoomsSection } from '@/components/settings/RoomsSection'
 import { SettingsRoom } from '@/components/settings/RoomCard'
@@ -61,6 +63,9 @@ export default function ProfilePage() {
   const [joinedRoomId, setJoinedRoomId] = useState<string | null>(null)
   const [joinedRoomName, setJoinedRoomName] = useState('')
   const [joinedMediaCount, setJoinedMediaCount] = useState(0)
+  // Letterboxd import offered as part of that post-join step; the Import card
+  // in the Profile tab owns its own copy for the everyday case.
+  const [letterboxdRoom, setLetterboxdRoom] = useState<ImportRoom | null>(null)
   const promptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const refreshRooms = useCallback(async () => {
@@ -191,6 +196,19 @@ export default function ProfilePage() {
         r.id === joinedRoomId ? { ...r, mediaItemCount: r.mediaItemCount + added } : r
       )
     )
+  }
+
+  const handleImportLetterboxd = () => {
+    if (!joinedRoomId) return
+    setShowWatchlistPrompt(false)
+    setLetterboxdRoom({ id: joinedRoomId, name: joinedRoomName })
+  }
+
+  const handleCloseLetterboxd = () => {
+    setLetterboxdRoom(null)
+    refreshRooms()
+    // Resume the step the prompt would have led to.
+    handleSkipWatchlistPrompt()
   }
 
   const handleSkipQueue = () => {
@@ -334,6 +352,11 @@ export default function ProfilePage() {
 
               <NotificationSettings />
 
+              <ImportSection
+                rooms={rooms.map((room) => ({ id: room.id, name: room.name }))}
+                onImported={refreshRooms}
+              />
+
               <SettingsCard>
                 <SettingsCardHeader
                   title='Account'
@@ -432,6 +455,15 @@ export default function ProfilePage() {
         roomName={joinedRoomName}
         onSkip={handleSkipWatchlistPrompt}
         onImported={handleWatchlistImported}
+        onImportLetterboxd={handleImportLetterboxd}
+      />
+
+      <LetterboxdImportModal
+        isOpen={letterboxdRoom !== null}
+        onClose={handleCloseLetterboxd}
+        rooms={letterboxdRoom ? [letterboxdRoom] : []}
+        defaultRoomId={letterboxdRoom?.id ?? null}
+        lockRoom
       />
     </div>
   )

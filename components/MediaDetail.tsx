@@ -6,6 +6,7 @@ import { Star } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
+import { formatRuntime } from '@/components/MediaCard'
 import { StreamingProviders } from '@/components/StreamingProviders'
 import { cn } from '@/lib/utils'
 
@@ -16,13 +17,39 @@ export interface MediaDetailItem {
   description?: string | null
   genres: string[]
   releaseDate?: string | null
+  runtimeMinutes?: number | null
   rating?: number | null
   tmdbId?: string | null
   sourceType?: string | null
 }
 
+export interface MediaCredits {
+  /** Director(s) for a movie, or creator(s) for a show. */
+  director: string[]
+  /** Top-billed cast, in TMDB's billing order. */
+  cast: string[]
+}
+
 export const isTmdbItem = (item: { tmdbId?: string | null; sourceType?: string | null }) =>
   Boolean(item.tmdbId) && item.sourceType?.toLowerCase() === 'tmdb'
+
+/** Director/cast for a TMDB item, fetched fresh on open rather than stored on the item. */
+export async function fetchMediaCredits(
+  item: { tmdbId?: string | null; sourceType?: string | null; type: string },
+): Promise<MediaCredits | null> {
+  if (!isTmdbItem(item)) return null
+
+  try {
+    const type = item.type.toLowerCase() === 'movie' ? 'movie' : 'tv'
+    const res = await fetch(`/api/tmdb/credits?id=${item.tmdbId}&type=${type}`)
+    if (!res.ok) return null
+    const data = await res.json()
+    return { director: data.director ?? [], cast: data.cast ?? [] }
+  } catch (err) {
+    console.error('Failed to load credits:', err)
+    return null
+  }
+}
 
 export function DetailSection({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -93,10 +120,56 @@ export function TrailerSection(
   return null
 }
 
+/** Director/creator and top-billed cast, or a quiet loading state while they're fetched. */
+function CreditsSection({
+  type,
+  credits,
+  loadingCredits,
+}: {
+  type: string
+  credits?: MediaCredits | null
+  loadingCredits?: boolean
+}) {
+  if (loadingCredits) {
+    return (
+      <div className='space-y-1.5' role='status' aria-live='polite'>
+        <Skeleton className='h-3.5 w-24' />
+        <Skeleton className='h-4 w-2/3' />
+        <span className='sr-only'>Loading cast and crew</span>
+      </div>
+    )
+  }
+
+  if (!credits || (credits.director.length === 0 && credits.cast.length === 0)) return null
+
+  const isShow = type.toLowerCase() === 'show'
+  const directorTitle = isShow
+    ? (credits.director.length > 1 ? 'Creators' : 'Creator')
+    : (credits.director.length > 1 ? 'Directors' : 'Director')
+
+  return (
+    <>
+      {credits.director.length > 0 && (
+        <DetailSection title={directorTitle}>
+          <p className='text-sm text-muted-foreground'>{credits.director.join(', ')}</p>
+        </DetailSection>
+      )}
+      {credits.cast.length > 0 && (
+        <DetailSection title='Cast'>
+          <p className='text-sm text-muted-foreground'>{credits.cast.join(', ')}</p>
+        </DetailSection>
+      )}
+    </>
+  )
+}
+
 interface MediaDetailBodyProps {
   item: MediaDetailItem
   trailerUrl: string | null
   loadingTrailer: boolean
+  /** Director/cast, fetched fresh on open; omit while unavailable (e.g. non-TMDB items). */
+  credits?: MediaCredits | null
+  loadingCredits?: boolean
   /** Extra sections in the facts column (e.g. "Recommended by"). */
   children?: ReactNode
 }
@@ -106,8 +179,10 @@ interface MediaDetailBodyProps {
  * modals. Callers add their own header, household rows and rating form.
  */
 export function MediaDetailBody(
-  { item, trailerUrl, loadingTrailer, children }: MediaDetailBodyProps,
+  { item, trailerUrl, loadingTrailer, credits, loadingCredits, children }: MediaDetailBodyProps,
 ) {
+  const showRuntime = typeof item.runtimeMinutes === 'number' && item.runtimeMinutes > 0
+
   return (
     <>
       <div className='mb-6 grid grid-cols-1 gap-6 md:grid-cols-2'>
@@ -132,11 +207,21 @@ export function MediaDetailBody(
             </DetailSection>
           )}
 
+          <CreditsSection type={item.type} credits={credits} loadingCredits={loadingCredits} />
+
           {item.genres.length > 0 && (
             <DetailSection title='Genres'>
               <div className='flex flex-wrap gap-1.5'>
                 {item.genres.map((genre, i) => <Badge key={i}>{genre}</Badge>)}
               </div>
+            </DetailSection>
+          )}
+
+          {showRuntime && (
+            <DetailSection title='Runtime'>
+              <p className='text-sm text-muted-foreground'>
+                {formatRuntime(item.runtimeMinutes as number, item.type)}
+              </p>
             </DetailSection>
           )}
 

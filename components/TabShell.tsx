@@ -19,8 +19,13 @@ export function TabShell({ children, fill = false }: TabShellProps) {
   return (
     <div
       className={cn(
-        'bg-canvas bottom-nav-spacing safe-x',
-        fill ? 'flex h-[100dvh] flex-col overflow-hidden' : 'min-h-screen',
+        'bg-canvas safe-x',
+        // The fill layout owns a fixed viewport slice and scrolls internally, so
+        // its content should run flush to the nav rather than leaving the extra
+        // breathing room a normal scrolling page wants at its very end.
+        fill
+          ? 'flex h-[100dvh] flex-col overflow-hidden bottom-nav-flush'
+          : 'min-h-screen bottom-nav-spacing',
       )}
     >
       {children}

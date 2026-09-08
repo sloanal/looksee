@@ -3,7 +3,13 @@
 const { execSync } = require('child_process');
 const process = require('process');
 
-const isProductionDeploy = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+// Vercel builds every environment with NODE_ENV=production, previews included,
+// so when it names the environment itself that is the only answer worth
+// reading: otherwise a preview whose database is missing or unreachable fails
+// the build as if it were shipping to production.
+const isProductionDeploy = process.env.VERCEL_ENV
+  ? process.env.VERCEL_ENV === 'production'
+  : process.env.NODE_ENV === 'production';
 const migrationsFailOpen = process.env.MIGRATIONS_FAIL_OPEN === 'true';
 
 if (!process.env.DATABASE_URL) {

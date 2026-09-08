@@ -8,6 +8,9 @@
  * callers dedupe by media item id.
  */
 
+/** How many titles the manual checklist can show; group counts stay exact past it. */
+export const LIBRARY_PICK_LIMIT = 500
+
 export const LIBRARY_GROUP_KEYS = [
   'want_to_watch',
   'excited',

@@ -7,15 +7,13 @@ import { notifyRoomAdditions } from '@/lib/push'
 import { buildSourceMeta } from '@/lib/media-attribution'
 import {
   LIBRARY_GROUP_KEYS,
+  LIBRARY_PICK_LIMIT,
   LibraryGroupKey,
   libraryItemGroups,
   parseLibraryGroups,
 } from '@/lib/library-groups'
 
 type Db = Prisma.TransactionClient | typeof prisma
-
-/** How many titles the manual checklist can show; counts stay exact past it. */
-export const LIBRARY_PICK_LIMIT = 500
 
 /** Everything in the caller's own library: what they rated, plus what they added. */
 function myLibraryWhere(userId: string) {

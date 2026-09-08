@@ -262,10 +262,12 @@ function AddYourTitlesBody({
               ? `Added ${formatTitleCount(phase.added)}${toRoom}.`
               : `Those were already in ${roomLabel}.`}
           </p>
-          <p>
-            Everyone in the room can see what you&apos;re into now, so recommendations will get
-            better right away.
-          </p>
+          {phase.added > 0 && (
+            <p>
+              Everyone in the room can see what you&apos;re into now, so recommendations will get
+              better right away.
+            </p>
+          )}
         </ModalBody>
         <ModalFooter>
           <Button

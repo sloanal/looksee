@@ -115,10 +115,14 @@ function JoinRoomForm({ onJoined }: Pick<JoinRoomModalProps, 'onJoined'>) {
   )
 }
 
+export interface CreatedRoomResult {
+  room: { id: string; name: string; inviteCode: string }
+}
+
 interface CreateRoomModalProps {
   open: boolean
   onClose: () => void
-  onCreated: () => Promise<void> | void
+  onCreated: (result: CreatedRoomResult) => Promise<void> | void
 }
 
 export function CreateRoomModal({ open, onClose, onCreated }: CreateRoomModalProps) {
@@ -155,7 +159,7 @@ function CreateRoomForm({ onCreated }: Pick<CreateRoomModalProps, 'onCreated'>) 
         setError(data.error || 'Failed to create room')
         return
       }
-      await onCreated()
+      await onCreated(data as CreatedRoomResult)
       handleClose()
     } catch (err) {
       console.error('Failed to create room:', err)

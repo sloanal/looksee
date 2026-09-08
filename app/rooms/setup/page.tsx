@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { KeyRound, Sofa } from 'lucide-react'
 import { RoomJoinModal } from '@/components/RoomJoinModal'
-import { JoinRoomWatchlistPromptModal } from '@/components/JoinRoomWatchlistPromptModal'
+import { AddYourTitlesModal } from '@/components/AddYourTitlesModal'
 import { ImportRoom, LetterboxdImportModal } from '@/components/LetterboxdImportModal'
 import { AuthShell } from '@/components/AuthShell'
 import { Button } from '@/components/ui/button'
@@ -22,16 +22,14 @@ export default function RoomSetupPage() {
   const [inviteCode, setInviteCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [showJoinModal, setShowJoinModal] = useState(false)
-  const [showWatchlistPrompt, setShowWatchlistPrompt] = useState(false)
-  const [joinedRoomId, setJoinedRoomId] = useState<string | null>(null)
-  const [joinedRoomName, setJoinedRoomName] = useState<string>('')
-  const [joinedMediaCount, setJoinedMediaCount] = useState(0)
-  // Letterboxd import step, and where to go once it is closed: a new room
-  // continues into the rating queue, a joined room resumes the join prompts.
-  const [letterboxd, setLetterboxd] = useState<
-    { room: ImportRoom; next: 'onboarding' | 'joinFlow' } | null
+  // The room this setup just landed on, and how it got there: a room they made
+  // continues into the rating queue, a joined room into the join prompts.
+  const [step, setStep] = useState<
+    { room: ImportRoom; flow: 'created' | 'joined'; mediaCount: number } | null
   >(null)
+  const [showTitlesPrompt, setShowTitlesPrompt] = useState(false)
+  const [showJoinModal, setShowJoinModal] = useState(false)
+  const [showLetterboxd, setShowLetterboxd] = useState(false)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -60,11 +58,13 @@ export default function RoomSetupPage() {
         return
       }
 
-      // Offer the Letterboxd import first; closing it continues to onboarding.
-      setLetterboxd({
+      // A brand new room is empty, so offer their library before rating.
+      setStep({
         room: { id: data.room.id, name: data.room.name || roomName.trim() },
-        next: 'onboarding',
+        flow: 'created',
+        mediaCount: 0,
       })
+      setShowTitlesPrompt(true)
     } catch (err) {
       setError('Something went wrong. Please try again.')
     } finally {
@@ -97,11 +97,13 @@ export default function RoomSetupPage() {
         return
       }
 
-      // First step: ask whether they want to add their watchlist now
-      setJoinedRoomId(data.room.id)
-      setJoinedRoomName(data.room.name || '')
-      setJoinedMediaCount(data.mediaItemCount)
-      setShowWatchlistPrompt(true)
+      // First step: offer to bring their own titles into the room.
+      setStep({
+        room: { id: data.room.id, name: data.room.name || '' },
+        flow: 'joined',
+        mediaCount: data.mediaItemCount,
+      })
+      setShowTitlesPrompt(true)
     } catch (err) {
       setError('Something went wrong. Please try again.')
     } finally {
@@ -109,40 +111,38 @@ export default function RoomSetupPage() {
     }
   }
 
-  const handleSkipWatchlistPrompt = () => {
-    setShowWatchlistPrompt(false)
-    // If there are existing items, continue to queue onboarding step.
-    if (joinedMediaCount > 0) {
-      setShowJoinModal(true)
-      return
-    }
-    if (joinedRoomId) {
-      router.push(`/browse?roomId=${joinedRoomId}`)
-    }
-  }
-
-  const handleImportLetterboxd = () => {
-    if (!joinedRoomId) return
-    setShowWatchlistPrompt(false)
-    setLetterboxd({ room: { id: joinedRoomId, name: joinedRoomName }, next: 'joinFlow' })
-  }
-
-  const handleCloseLetterboxd = () => {
-    const step = letterboxd
-    setLetterboxd(null)
+  const handleTitlesPromptDone = () => {
+    setShowTitlesPrompt(false)
     if (!step) return
-    if (step.next === 'onboarding') {
+    // A room they made goes on to rate whatever landed in it; a joined room
+    // with titles already in it goes on to the queue prompt.
+    if (step.flow === 'created') {
       router.push(`/onboarding?roomId=${step.room.id}`)
       return
     }
-    // Resume the step the watchlist prompt would have led to.
-    handleSkipWatchlistPrompt()
+    if (step.mediaCount > 0) {
+      setShowJoinModal(true)
+      return
+    }
+    router.push(`/browse?roomId=${step.room.id}`)
+  }
+
+  const handleImportLetterboxd = () => {
+    if (!step) return
+    setShowTitlesPrompt(false)
+    setShowLetterboxd(true)
+  }
+
+  const handleCloseLetterboxd = () => {
+    setShowLetterboxd(false)
+    // Resume the step the titles prompt would have led to.
+    handleTitlesPromptDone()
   }
 
   const handleSkipQueue = () => {
     setShowJoinModal(false)
-    if (joinedRoomId) {
-      router.push(`/browse?roomId=${joinedRoomId}`)
+    if (step) {
+      router.push(`/browse?roomId=${step.room.id}`)
     }
   }
 
@@ -158,15 +158,26 @@ export default function RoomSetupPage() {
     return null
   }
 
-  // Shared by both branches below so the import survives the mode switch.
-  const letterboxdModal = (
-    <LetterboxdImportModal
-      isOpen={letterboxd !== null}
-      onClose={handleCloseLetterboxd}
-      rooms={letterboxd ? [letterboxd.room] : []}
-      defaultRoomId={letterboxd?.room.id ?? null}
-      lockRoom
-    />
+  // Shared by both branches below: the same prompts follow a room whether it
+  // was made here or joined here.
+  const roomModals = (
+    <>
+      <AddYourTitlesModal
+        isOpen={showTitlesPrompt}
+        roomId={step?.room.id ?? null}
+        roomName={step?.room.name}
+        variant={step?.flow ?? 'joined'}
+        onDismiss={handleTitlesPromptDone}
+        onImportLetterboxd={handleImportLetterboxd}
+      />
+      <LetterboxdImportModal
+        isOpen={showLetterboxd}
+        onClose={handleCloseLetterboxd}
+        rooms={step ? [step.room] : []}
+        defaultRoomId={step?.room.id ?? null}
+        lockRoom
+      />
+    </>
   )
 
   if (mode === null) {
@@ -243,7 +254,7 @@ export default function RoomSetupPage() {
           </form>
         </AuthShell>
 
-        {letterboxdModal}
+        {roomModals}
       </>
     )
   }
@@ -285,20 +296,13 @@ export default function RoomSetupPage() {
 
       <RoomJoinModal
         isOpen={showJoinModal}
-        mediaCount={joinedMediaCount}
-        roomId={joinedRoomId || ''}
+        mediaCount={step?.mediaCount ?? 0}
+        roomId={step?.room.id ?? ''}
         onSkip={handleSkipQueue}
         onGoToQueue={handleGoToQueue}
       />
-      <JoinRoomWatchlistPromptModal
-        isOpen={showWatchlistPrompt}
-        roomId={joinedRoomId}
-        roomName={joinedRoomName}
-        onSkip={handleSkipWatchlistPrompt}
-        onImportLetterboxd={handleImportLetterboxd}
-      />
 
-      {letterboxdModal}
+      {roomModals}
     </>
   )
 }

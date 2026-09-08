@@ -9,6 +9,7 @@ A multiplayer, collaborative movie & show recommendation engine and catalog.
 - **Personal preferences**: Rate titles with status (want to see, seen, etc.) and excitement levels (1-5)
 - **Smart recommendations**: Get personalized watch recommendations based on your preferences or the whole room's interests
 - **Mobile-first design**: Optimized for mobile browsers with native-feeling interactions
+- **Bring your titles to a new room**: After creating or joining a room, Looksee offers to copy titles you already have into it — everything you want to watch, are excited about, favorited, have already seen, or added yourself, or a hand-picked selection from a searchable checklist. It only shares existing titles with the room; nothing is created or re-rated
 - **Letterboxd import**: Bring a watchlist in from a Letterboxd CSV export (their Settings → Data → Export your data), offered during onboarding and from Settings. Letterboxd has no public list API, so the export file is the only supported route; rows are matched against TMDB. You pick the status and excitement the films land on (excited about something you haven't seen, by default) and which rooms they go into — rows that carry star ratings keep those instead, coming in as already seen
 
 ## Tech Stack

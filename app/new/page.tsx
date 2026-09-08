@@ -170,7 +170,7 @@ export default function NewPage() {
         {error && <Notice variant='error'>{error}</Notice>}
       </PageHeaderBar>
 
-      <div className='min-h-0 flex-1'>
+      <div className='min-h-0 flex-1 pt-3'>
         {loading ? <QueueDeckSkeleton /> : !hasCards
           ? (
             <EmptyState

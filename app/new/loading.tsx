@@ -16,7 +16,7 @@ export default function Loading() {
         </div>
       </PageHeaderBar>
 
-      <div className='min-h-0 flex-1'>
+      <div className='min-h-0 flex-1 pt-3'>
         <QueueDeckSkeleton />
       </div>
     </div>

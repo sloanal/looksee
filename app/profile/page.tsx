@@ -5,7 +5,7 @@ import { signOut, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { LogOut } from 'lucide-react'
 import { RoomJoinModal } from '@/components/RoomJoinModal'
-import { JoinRoomWatchlistPromptModal } from '@/components/JoinRoomWatchlistPromptModal'
+import { AddYourTitlesModal } from '@/components/AddYourTitlesModal'
 import { RoomMembersModal } from '@/components/RoomMembersModal'
 import { ImportRoom, LetterboxdImportModal } from '@/components/LetterboxdImportModal'
 import { NotificationSettings } from '@/components/NotificationSettings'
@@ -27,6 +27,7 @@ import { SettingsCard, SettingsCardHeader } from '@/components/settings/Settings
 import { InviteRoomModal } from '@/components/settings/InviteRoomModal'
 import { ConfirmModal } from '@/components/settings/ConfirmModal'
 import {
+  CreatedRoomResult,
   CreateRoomModal,
   JoinedRoomResult,
   JoinRoomModal,
@@ -58,14 +59,15 @@ export default function ProfilePage() {
   const [showJoinModal, setShowJoinModal] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
-  // Post-join onboarding (watchlist import, then queue prompt).
-  const [showWatchlistPrompt, setShowWatchlistPrompt] = useState(false)
+  // Onboarding for a room just made or joined here: bring your titles over,
+  // then (for a joined room that already has titles) the queue prompt.
+  const [step, setStep] = useState<
+    { room: ImportRoom; flow: 'created' | 'joined'; mediaCount: number } | null
+  >(null)
+  const [showTitlesPrompt, setShowTitlesPrompt] = useState(false)
   const [showRoomJoinModal, setShowRoomJoinModal] = useState(false)
-  const [joinedRoomId, setJoinedRoomId] = useState<string | null>(null)
-  const [joinedRoomName, setJoinedRoomName] = useState('')
-  const [joinedMediaCount, setJoinedMediaCount] = useState(0)
-  // Letterboxd import offered as part of that post-join step; the Import card
-  // in the Profile tab owns its own copy for the everyday case.
+  // Letterboxd import offered as part of that step; the Import card in the
+  // Profile tab owns its own copy for the everyday case.
   const [letterboxdRoom, setLetterboxdRoom] = useState<ImportRoom | null>(null)
   const promptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -160,62 +162,77 @@ export default function ProfilePage() {
     notifyRoomsChanged()
   }
 
+  // Let the form modal finish its close animation before the next step opens.
+  const openTitlesPrompt = () => {
+    if (promptTimerRef.current) clearTimeout(promptTimerRef.current)
+    promptTimerRef.current = setTimeout(() => setShowTitlesPrompt(true), 220)
+  }
+
   const handleJoined = async (result: JoinedRoomResult) => {
     await refreshRooms()
     notifyRoomsChanged()
 
     if (result.alreadyMember) return
 
-    setJoinedRoomId(result.room.id)
-    setJoinedRoomName(result.room.name || '')
-    setJoinedMediaCount(result.mediaItemCount)
-    // Let the join modal finish its close animation before the next step opens.
-    if (promptTimerRef.current) clearTimeout(promptTimerRef.current)
-    promptTimerRef.current = setTimeout(() => setShowWatchlistPrompt(true), 220)
+    setStep({
+      room: { id: result.room.id, name: result.room.name || '' },
+      flow: 'joined',
+      mediaCount: result.mediaItemCount,
+    })
+    openTitlesPrompt()
   }
 
-  const handleCreated = async () => {
+  const handleCreated = async (result: CreatedRoomResult) => {
     await refreshRooms()
     notifyRoomsChanged()
+
+    setStep({
+      room: { id: result.room.id, name: result.room.name || '' },
+      flow: 'created',
+      mediaCount: 0,
+    })
+    openTitlesPrompt()
   }
 
-  const handleSkipWatchlistPrompt = () => {
-    setShowWatchlistPrompt(false)
-    if (joinedMediaCount > 0) {
+  const handleTitlesPromptDone = () => {
+    setShowTitlesPrompt(false)
+    if (!step) return
+    // A room made from Settings stays in Settings; a joined room that already
+    // has titles goes on to the queue prompt.
+    if (step.flow === 'created') return
+    if (step.mediaCount > 0) {
       setShowRoomJoinModal(true)
       return
     }
-    if (joinedRoomId) {
-      router.push(`/browse?roomId=${joinedRoomId}`)
-    }
+    router.push(`/browse?roomId=${step.room.id}`)
   }
 
-  const handleWatchlistImported = (added: number) => {
+  const handleTitlesAdded = (added: number) => {
     // Patch locally instead of refetching so the modal keeps showing its result.
     setRooms((prev) =>
       prev.map((r) =>
-        r.id === joinedRoomId ? { ...r, mediaItemCount: r.mediaItemCount + added } : r
+        r.id === step?.room.id ? { ...r, mediaItemCount: r.mediaItemCount + added } : r
       )
     )
   }
 
   const handleImportLetterboxd = () => {
-    if (!joinedRoomId) return
-    setShowWatchlistPrompt(false)
-    setLetterboxdRoom({ id: joinedRoomId, name: joinedRoomName })
+    if (!step) return
+    setShowTitlesPrompt(false)
+    setLetterboxdRoom(step.room)
   }
 
   const handleCloseLetterboxd = () => {
     setLetterboxdRoom(null)
     refreshRooms()
     // Resume the step the prompt would have led to.
-    handleSkipWatchlistPrompt()
+    handleTitlesPromptDone()
   }
 
   const handleSkipQueue = () => {
     setShowRoomJoinModal(false)
-    if (joinedRoomId) {
-      router.push(`/browse?roomId=${joinedRoomId}`)
+    if (step) {
+      router.push(`/browse?roomId=${step.room.id}`)
     }
   }
 
@@ -443,19 +460,20 @@ export default function ProfilePage() {
       {showRoomJoinModal && (
         <RoomJoinModal
           isOpen
-          mediaCount={joinedMediaCount}
-          roomId={joinedRoomId || ''}
+          mediaCount={step?.mediaCount ?? 0}
+          roomId={step?.room.id ?? ''}
           onSkip={handleSkipQueue}
           onGoToQueue={handleGoToQueue}
         />
       )}
 
-      <JoinRoomWatchlistPromptModal
-        isOpen={showWatchlistPrompt}
-        roomId={joinedRoomId}
-        roomName={joinedRoomName}
-        onSkip={handleSkipWatchlistPrompt}
-        onImported={handleWatchlistImported}
+      <AddYourTitlesModal
+        isOpen={showTitlesPrompt}
+        roomId={step?.room.id ?? null}
+        roomName={step?.room.name}
+        variant={step?.flow ?? 'joined'}
+        onDismiss={handleTitlesPromptDone}
+        onAdded={handleTitlesAdded}
         onImportLetterboxd={handleImportLetterboxd}
       />
 

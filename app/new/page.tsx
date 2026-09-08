@@ -9,16 +9,12 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Notice } from '@/components/ui/notice'
-import { ConfirmModal } from '@/components/settings/ConfirmModal'
+import { AcceptAllModal } from '@/components/queue/AcceptAllModal'
 import { QueueDeck } from '@/components/queue/QueueDeck'
 import { QueueDeckSkeleton } from '@/components/queue/QueueDeckSkeleton'
 import { SwipeKey } from '@/components/queue/SwipeKey'
 import { EXCITEMENT_BY_DIRECTION, QueueItem, SwipeDirection } from '@/components/queue/types'
 import { cn } from '@/lib/utils'
-
-/** What "accept all" writes to every title left in the queue. */
-const ACCEPT_ALL_STATUS = 'have_not_seen'
-const ACCEPT_ALL_EXCITEMENT = 3
 
 export default function NewPage() {
   const { data: session, status } = useSession()
@@ -118,11 +114,13 @@ export default function NewPage() {
     }
   }
 
-  const acceptAll = async (): Promise<string | void> => {
+  const acceptAll = async (
+    rating: { status: string; excitement: number },
+  ): Promise<string | void> => {
     const res = await fetch('/api/user/queue/accept-all', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: ACCEPT_ALL_STATUS, excitement: ACCEPT_ALL_EXCITEMENT }),
+      body: JSON.stringify(rating),
     })
 
     if (!res.ok) {
@@ -194,20 +192,9 @@ export default function NewPage() {
           )}
       </div>
 
-      <ConfirmModal
+      <AcceptAllModal
         open={confirmingAcceptAll}
-        title={`Accept all ${acceptAllCount} title${acceptAllCount === 1 ? '' : 's'}?`}
-        description={
-          <>
-            <p>
-              Every title left in your queue is rated <strong>Neutral</strong> and{' '}
-              <strong>Have not seen</strong>, and the queue is cleared.
-            </p>
-            <p>You can change any of them later from Browse.</p>
-          </>
-        }
-        confirmLabel='Accept all'
-        busyLabel='Clearing…'
+        count={acceptAllCount}
         onConfirm={acceptAll}
         onClose={() => setConfirmingAcceptAll(false)}
       />

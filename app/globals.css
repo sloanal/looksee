@@ -175,6 +175,14 @@ body {
   padding-bottom: calc(6.25rem + env(safe-area-inset-bottom, 0px));
 }
 
+/*
+ * Exact bottom nav clearance with no extra breathing room, for full-bleed
+ * scroll surfaces that should run right up to the nav (e.g. the New queue).
+ */
+.bottom-nav-flush {
+  padding-bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+}
+
 @media (min-width: 768px) {
   .bottom-nav-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -182,6 +190,10 @@ body {
 
   .bottom-nav-spacing {
     padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .bottom-nav-flush {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
   }
 }
 

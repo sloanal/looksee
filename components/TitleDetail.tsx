@@ -170,45 +170,36 @@ function useTitleMedia(
   const tmdb = isTmdbItem(item)
   const { id, tmdbId, sourceType, type } = item
 
+  // A reply is kept only while it is still the title being asked about, and
+  // the spinner is always cleared: a fetch abandoned on cleanup would leave
+  // the section spinning forever, since the ref won't let it be asked twice.
   useEffect(() => {
     if (!trailer || !tmdb || fetchedTrailer.current === id) return
     fetchedTrailer.current = id
-    let cancelled = false
 
+    setTrailerUrl(null)
     setLoadingTrailer(true)
     const kind = type.toLowerCase() === 'movie' ? 'movie' : 'tv'
     fetch(`/api/tmdb/videos?id=${tmdbId}&type=${kind}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (!cancelled && data?.trailer?.url) setTrailerUrl(data.trailer.url)
+        if (fetchedTrailer.current === id && data?.trailer?.url) setTrailerUrl(data.trailer.url)
       })
       .catch((err) => console.error('Failed to load trailer:', err))
-      .finally(() => {
-        if (!cancelled) setLoadingTrailer(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
+      .finally(() => setLoadingTrailer(false))
   }, [trailer, tmdb, id, tmdbId, type])
 
   useEffect(() => {
     if (!extras || !tmdb || fetchedCredits.current === id) return
     fetchedCredits.current = id
-    let cancelled = false
 
+    setCredits(null)
     setLoadingCredits(true)
     fetchMediaCredits({ tmdbId, sourceType, type })
       .then((result) => {
-        if (!cancelled) setCredits(result)
+        if (fetchedCredits.current === id) setCredits(result)
       })
-      .finally(() => {
-        if (!cancelled) setLoadingCredits(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
+      .finally(() => setLoadingCredits(false))
   }, [extras, tmdb, id, tmdbId, sourceType, type])
 
   return { trailerUrl, loadingTrailer, credits, loadingCredits }

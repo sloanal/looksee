@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { generateInviteCode } from '@/lib/utils'
 import { validateRoomName } from '@/lib/room-name'
-import { itemsInRoomsWhere, personalCatalogClauses } from '@/lib/visibility'
+import { itemsInRoomsWhere, noVisibleRoomWhere, personalCatalogClauses } from '@/lib/visibility'
 
 // GET /api/rooms - Get all rooms for current user
 export async function GET() {
@@ -34,7 +34,13 @@ export async function GET() {
 
   // Room membership of a title is the MediaItemRoom join table; the legacy
   // MediaItem.roomId column is only the "original room" and must not be counted.
-  const [joinCounts, unwatchedJoinCounts, allRoomsCount, watchedCount] = await Promise.all([
+  const [
+    joinCounts,
+    unwatchedJoinCounts,
+    allRoomsCount,
+    watchedCount,
+    noRoomsCount,
+  ] = await Promise.all([
     prisma.mediaItemRoom.groupBy({
       by: ['roomId'],
       where: { roomId: { in: roomIds } },
@@ -60,6 +66,15 @@ export async function GET() {
     // Mirrors GET /api/media?watched=true; (userId, mediaItemId) is unique so
     // counting preferences equals counting titles.
     prisma.userMediaPreference.count({ where: { userId, isWatched: true } }),
+    // Mirrors GET /api/media?noRooms=true (Browse "No rooms yet"): my titles
+    // that sit in none of my rooms, minus anything I've marked watched. Zero
+    // hides the option from RoomSelector, so keep it in lockstep with that route.
+    prisma.mediaItem.count({
+      where: {
+        ...noVisibleRoomWhere(userId, roomIds),
+        NOT: watchedByMe,
+      },
+    }),
   ])
 
   const countByRoom = (groups: { roomId: string; _count: { _all: number } }[]) =>
@@ -78,7 +93,7 @@ export async function GET() {
     createdAt: m.room.createdAt,
   }))
 
-  return NextResponse.json({ rooms, allRoomsCount, watchedCount })
+  return NextResponse.json({ rooms, allRoomsCount, watchedCount, noRoomsCount })
 }
 
 // POST /api/rooms - Create a new room

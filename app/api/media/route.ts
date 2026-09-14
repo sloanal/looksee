@@ -7,6 +7,7 @@ import {
   getVisibleMemberIds,
   itemsInRoomsWhere,
   loadMembersByRoomId,
+  noVisibleRoomWhere,
   personalCatalogClauses,
   unionMemberIds,
   visiblePreferenceInclude,
@@ -43,6 +44,7 @@ export async function GET(request: NextRequest) {
   // Build query filters
   // Check if allRooms mode is requested (show everything: all rooms plus Just My Stuff)
   const allRooms = searchParams.get('allRooms') === 'true'
+  const noRooms = searchParams.get('noRooms') === 'true'
   let where: any
 
   if (watched) {
@@ -55,6 +57,10 @@ export async function GET(request: NextRequest) {
         },
       },
     }
+  } else if (noRooms) {
+    // "No rooms yet" mode: my titles that are in none of my rooms.
+    // Keep in lockstep with noRoomsCount in GET /api/rooms.
+    where = noVisibleRoomWhere(session.user.id, roomIds)
   } else if (allRooms) {
     // "Everything" mode: titles in any of my rooms plus my personal catalog.
     // Keep in lockstep with allRoomsCount in GET /api/rooms.

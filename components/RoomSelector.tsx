@@ -2,13 +2,13 @@
 
 import { ReactNode, useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { ChevronDown, EyeOff, Globe, LucideIcon, Sofa } from 'lucide-react'
+import { ChevronDown, EyeOff, Globe, Inbox, LucideIcon, Sofa } from 'lucide-react'
 import { formatTitleCount } from '@/lib/rooms'
 import { cn } from '@/lib/utils'
 import { useRooms } from '@/components/useRooms'
 
 export function RoomSelector() {
-  const { rooms, allRoomsCount, watchedCount, loaded } = useRooms()
+  const { rooms, allRoomsCount, watchedCount, noRoomsCount, loaded } = useRooms()
   const loading = !loaded
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -52,10 +52,16 @@ export function RoomSelector() {
   const currentRoom = rooms.find((r) => r.id === currentRoomId)
   const isAllRooms = currentRoomId === 'all-rooms' || !currentRoomId
   const isWatchedRoom = currentRoomId === 'watched'
+  const isNoRoomsRoom = currentRoomId === 'no-rooms'
+  // Nothing to show under "No rooms yet" means the option would lead to an empty
+  // page, so it stays hidden — unless it is what the viewer is already looking at.
+  const showNoRooms = noRoomsCount > 0 || isNoRoomsRoom
   const displayName = isAllRooms
     ? 'All Rooms'
     : isWatchedRoom
     ? 'Watched'
+    : isNoRoomsRoom
+    ? 'No rooms yet'
     : currentRoom
     ? currentRoom.name
     : 'All Rooms'
@@ -117,6 +123,17 @@ export function RoomSelector() {
             )
           })}
           <div className='my-1 border-t border-border' />
+          {showNoRooms && (
+            <RoomOption
+              icon={Inbox}
+              label='No rooms yet'
+              hint='Titles in none of your rooms'
+              count={formatTitleCount(noRoomsCount)}
+              selected={isNoRoomsRoom}
+              muted
+              onSelect={() => handleSelect('no-rooms')}
+            />
+          )}
           <RoomOption
             icon={EyeOff}
             label='Watched'

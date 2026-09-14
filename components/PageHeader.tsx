@@ -3,6 +3,7 @@
 import { ReactNode } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { isVirtualRoomId } from '@/lib/rooms'
 import { useRooms } from '@/components/useRooms'
 
 /** Shared max width for the tab pages (header and content align to it). */
@@ -78,14 +79,14 @@ export function PageHeader({
 
 /**
  * Name of the room selected via `?roomId=` as stored, or null for All Rooms,
- * Watched, no room, or while rooms are still loading (so callers can fall back
- * to their non-room copy instead of flashing "undefined").
+ * Watched, No rooms yet, no room, or while rooms are still loading (so callers
+ * can fall back to their non-room copy instead of flashing "undefined").
  */
 export function useSelectedRoomName(): string | null {
   const searchParams = useSearchParams()
   const roomId = searchParams.get('roomId')
   const { rooms } = useRooms()
 
-  if (!roomId || roomId === 'all-rooms' || roomId === 'watched') return null
+  if (isVirtualRoomId(roomId)) return null
   return rooms.find((r) => r.id === roomId)?.name ?? null
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { AvatarStack } from '@/components/ui/avatar'
+import { isVirtualRoomId } from '@/lib/rooms'
 
 interface Member {
   id: string
@@ -21,9 +22,6 @@ interface RoomMembersAvatarsProps {
   className?: string
 }
 
-const isVirtualRoom = (roomId: string | null | undefined) =>
-  !roomId || roomId === 'all-rooms' || roomId === 'watched'
-
 export function RoomMembersAvatars({
   roomId: roomIdProp,
   refreshKey,
@@ -36,7 +34,7 @@ export function RoomMembersAvatars({
   const [members, setMembers] = useState<Member[]>([])
 
   useEffect(() => {
-    if (isVirtualRoom(roomId)) {
+    if (isVirtualRoomId(roomId)) {
       setMembers([])
       return
     }
@@ -59,7 +57,7 @@ export function RoomMembersAvatars({
     }
   }, [roomId, refreshKey])
 
-  if (isVirtualRoom(roomId) || members.length === 0) {
+  if (isVirtualRoomId(roomId) || members.length === 0) {
     return null
   }
 

@@ -5,6 +5,7 @@ import {
   getVisibleMemberIds,
   itemsInRoomsWhere,
   loadMembersByRoomId,
+  noVisibleRoomWhere,
   personalCatalogClauses,
   restrictPreferencesToVisibleUsers,
   unionMemberIds,
@@ -22,16 +23,20 @@ import { resolveSubmission, SubmissionInfo } from '@/lib/media-attribution'
 // happens before ranking and is unaffected.
 export const FAVORITE_BOOST = 2.5
 
+/** Excitement is stored as 1 (Not excited), 3 (Neutral) or 5 (Excited). */
+const NEUTRAL_EXCITEMENT = 3
+
 export type RecommendationMode = 'me' | 'room'
 
 export type RecommendationRequest = {
   viewerUserId: string
-  /** `null` = Just My Stuff, `'all-rooms'`, `'watched'`, or a room id. */
+  /** `null` = Just My Stuff, `'all-rooms'`, `'no-rooms'`, `'watched'`, or a room id. */
   roomId: string | null
   mode: RecommendationMode
   typePreference?: string | null
   genres?: Array<string | number> | null
-  showSeenAndNoExcitement?: boolean
+  /** Just Me only: drop titles another visible member is still excited to watch. */
+  avoidOthersExcitement?: boolean
 }
 
 export type RecommendationResult = {
@@ -129,6 +134,20 @@ function selectedGenreNamesFor(
   return names
 }
 
+/**
+ * Someone who rated a title above neutral and hasn't seen it yet is still
+ * waiting to watch it. Everyone else — already seen, neutral or lower, or no
+ * rating yet (including a placeholder row with `ratedAt` null) — is safe to
+ * watch without.
+ */
+function isWaitingToWatch(
+  preference: { status: string; excitement: number; ratedAt: Date | null },
+): boolean {
+  if (preference.status !== 'HAVE_NOT_SEEN') return false
+  if (preference.ratedAt === null) return false
+  return preference.excitement > NEUTRAL_EXCITEMENT
+}
+
 function parseGenres(raw: string | null): string[] {
   if (!raw) return []
   try {
@@ -143,7 +162,8 @@ function parseGenres(raw: string | null): string[] {
  * Ranked "what should we watch" candidates for one viewer.
  *
  * Catalog: a specific room's titles (rooms-only), the viewer's personal
- * catalog (Just My Stuff), or — for All Rooms — the union of the viewer's rooms
+ * catalog (Just My Stuff), the part of that catalog sitting in none of their
+ * rooms (No rooms yet), or — for All Rooms — the union of the viewer's rooms
  * and their personal catalog, exactly what Browse lists via
  * GET /api/media?allRooms=true and what allRoomsCount in GET /api/rooms counts.
  * A viewer with no rooms therefore gets their personal catalog for All Rooms.
@@ -177,6 +197,11 @@ export async function buildRecommendations(
         ...personalCatalogClauses(viewerUserId),
       ],
     }
+  } else if (roomId === 'no-rooms') {
+    // Keep in lockstep with GET /api/media?noRooms=true. These titles are in no
+    // room the viewer can see, so only their own rating ranks them and the
+    // Everyone mode below has no household signal to work with.
+    where = noVisibleRoomWhere(viewerUserId, viewerRoomIds)
   } else if (!roomId) {
     where = { OR: personalCatalogClauses(viewerUserId) }
   } else {
@@ -288,20 +313,14 @@ export async function buildRecommendations(
       return compareByRatingThenRecency(a, b)
     })
 
+    const safeForSolo = (item: (typeof myItems)[number]) =>
+      !item.preferences.some((p) => p.userId !== viewerUserId && isWaitingToWatch(p))
+
     const results = myItems
-      .map((item) => {
-        const seenCount = item.preferences.filter((p) => p.status === 'ALREADY_SEEN').length
-        return { result: serialize(item, interestedOf(item)), seenCount }
-      })
-      .filter(({ result, seenCount }) => {
-        // Optional narrowing: titles others have seen that nobody but the
-        // viewer is still excited about.
-        if (input.showSeenAndNoExcitement) {
-          return seenCount > 0 && result.interestedCount === 1
-        }
-        return true
-      })
-      .map(({ result }) => result)
+      // Optional narrowing ("don't get me in trouble"): keep only titles no
+      // other visible member is still waiting to watch.
+      .filter((item) => !input.avoidOthersExcitement || safeForSolo(item))
+      .map((item) => serialize(item, interestedOf(item)))
 
     return { ok: true, recommendations: results }
   }

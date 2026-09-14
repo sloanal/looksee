@@ -17,11 +17,19 @@ export interface RoomsSnapshot {
   rooms: RoomSummary[]
   allRoomsCount: number
   watchedCount: number
+  /** Titles of mine that are in none of my rooms; 0 hides "No rooms yet". */
+  noRoomsCount: number
   /** False until the first response (success or failure) has arrived. */
   loaded: boolean
 }
 
-const EMPTY: RoomsSnapshot = { rooms: [], allRoomsCount: 0, watchedCount: 0, loaded: false }
+const EMPTY: RoomsSnapshot = {
+  rooms: [],
+  allRoomsCount: 0,
+  watchedCount: 0,
+  noRoomsCount: 0,
+  loaded: false,
+}
 
 // One `/api/rooms` fetch per page load shared by every header widget, instead
 // of RoomSelector and useSelectedRoomName each requesting it.
@@ -49,6 +57,7 @@ function refetchRooms(): Promise<void> {
           rooms: data.rooms,
           allRoomsCount: data.allRoomsCount ?? 0,
           watchedCount: data.watchedCount ?? 0,
+          noRoomsCount: data.noRoomsCount ?? 0,
           loaded: true,
         })
       } else {

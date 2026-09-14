@@ -24,7 +24,7 @@ interface WhoWantsToWatchProps {
 const isRatedExcitement = (excitement: number) =>
   excitement === 1 || excitement === 3 || excitement === 5
 
-function excitementSentence(excitement: number, isViewer: boolean): string {
+function excitementClause(excitement: number, isViewer: boolean): string {
   if (excitement === 5) return isViewer ? "You're excited to watch it" : 'Excited to watch it'
   if (excitement === 3) {
     return isViewer ? "You're neutral about watching it" : 'Neutral about watching it'
@@ -35,9 +35,16 @@ function excitementSentence(excitement: number, isViewer: boolean): string {
   return isViewer ? "You haven't said how excited you are" : "Hasn't said how excited they are"
 }
 
-function seenSentence(seen: boolean, isViewer: boolean): string {
-  if (seen) return isViewer ? "You've already seen it" : 'Already seen it'
-  return isViewer ? "You haven't seen it yet" : "Hasn't seen it yet"
+function seenClause(seen: boolean, isViewer: boolean): string {
+  if (seen) return isViewer ? "you've already seen it" : 'has already seen it'
+  return isViewer ? "you haven't seen it yet" : "hasn't seen it yet"
+}
+
+/** e.g. "Excited to watch it, and hasn't seen it yet." */
+function ratingSentence(member: HouseholdPreference, isViewer: boolean): string {
+  return `${excitementClause(member.excitement, isViewer)}, and ${
+    seenClause(hasSeen(member), isViewer)
+  }.`
 }
 
 function PersonRow({ member, isViewer }: { member: HouseholdMember; isViewer: boolean }) {
@@ -71,17 +78,17 @@ function PersonRow({ member, isViewer }: { member: HouseholdMember; isViewer: bo
             </span>
           )}
         </div>
-        <div className='mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm text-muted-foreground'>
-          <DuotoneIcon
-            icon={rated ? excitementIcon(member.excitement) : Meh}
-            size={16}
-            active={rated}
-            strokeWidth={1.5}
-          />
-          <span>{excitementSentence(member.excitement, isViewer)}</span>
-          <span aria-hidden>·</span>
-          {seen && <Eye size={14} className='flex-shrink-0' aria-hidden />}
-          <span>{seenSentence(seen, isViewer)}</span>
+        <div className='mt-0.5 flex items-start gap-1.5 text-sm text-muted-foreground'>
+          <span className='flex flex-shrink-0 items-center gap-1'>
+            <DuotoneIcon
+              icon={rated ? excitementIcon(member.excitement) : Meh}
+              size={16}
+              active={rated}
+              strokeWidth={1.5}
+            />
+            {seen && <Eye size={14} aria-hidden />}
+          </span>
+          <span className='min-w-0 flex-1'>{ratingSentence(member, isViewer)}</span>
         </div>
       </div>
     </li>
@@ -114,7 +121,7 @@ export function WhoWantsToWatch({
       </h3>
       {isEmpty
         ? (
-          <p className='text-sm text-muted-foreground'>
+          <p className='px-2 text-sm text-muted-foreground'>
             Nobody has said how they feel about this one yet.
           </p>
         )
@@ -127,12 +134,12 @@ export function WhoWantsToWatch({
               ))}
             </ul>
             {others.length === 0 && (
-              <p className='mt-2 text-sm text-muted-foreground'>
+              <p className='mt-2 px-2 text-sm text-muted-foreground'>
                 Nobody else has weighed in on this one yet.
               </p>
             )}
             {!mine && (
-              <p className='mt-2 text-sm text-muted-foreground'>
+              <p className='mt-2 px-2 text-sm text-muted-foreground'>
                 You haven&apos;t rated this one yet.
               </p>
             )}

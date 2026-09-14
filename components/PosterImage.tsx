@@ -34,6 +34,9 @@ export function PosterImage({ src, alt, width, height, className }: PosterImageP
       height={height}
       className={className}
       onError={() => setError(true)}
+      // A native image drag would cancel the pointer mid-gesture, which the
+      // New deck reads as the swipe being abandoned.
+      draggable={false}
       unoptimized
     />
   )

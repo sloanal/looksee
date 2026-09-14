@@ -1,34 +1,15 @@
 'use client'
 
-import {
-  PointerEvent as ReactPointerEvent,
-  RefObject,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react'
+import { PointerEvent as ReactPointerEvent, RefObject, useCallback, useEffect, useRef } from 'react'
 import { Eye, EyeOff, Sofa } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { CardGenres, CardMeta } from '@/components/MediaCard'
-import {
-  CreditsSection,
-  DetailSection,
-  fetchMediaCredits,
-  formatReleaseDate,
-  MediaCredits,
-  MediaRating,
-  TrailerSection,
-} from '@/components/MediaDetail'
 import { DuotoneIcon } from '@/components/DuotoneIcon'
-import { FavoriteButton, FavoritedByBadge } from '@/components/FavoriteButton'
-import { HouseholdExcitementRow } from '@/components/HouseholdExcitementRow'
-import { PosterImage } from '@/components/PosterImage'
+import { FavoriteButton } from '@/components/FavoriteButton'
+import { HouseholdUser } from '@/components/HouseholdExcitementRow'
 import { choiceClassName, STATUS_OPTIONS } from '@/components/RatingFields'
-import { StreamingProviders } from '@/components/StreamingProviders'
-import { SubmissionMeta } from '@/components/SubmissionMeta'
+import { TitleDetail } from '@/components/TitleDetail'
 import { cn } from '@/lib/utils'
-import { favoritedByNames, getTypeIcon, QueueItem, SwipeDirection } from '@/components/queue/types'
+import { QueueItem, SwipeDirection } from '@/components/queue/types'
 
 /** Horizontal travel that commits a swipe, as a share of the card's width. */
 const COMMIT_RATIO = 0.28
@@ -45,6 +26,8 @@ const prefersReducedMotion = () =>
 
 interface QueueCardProps {
   item: QueueItem
+  /** The signed-in user, for their own row in "Who wants to watch". */
+  viewer?: HouseholdUser | null
   /** The viewer's seen/not-seen choice, saved alongside the swipe. */
   status: string
   onStatusChange: (status: string) => void
@@ -75,6 +58,7 @@ interface DragState {
 
 export function QueueCard({
   item,
+  viewer,
   status,
   onStatusChange,
   onRate,
@@ -92,55 +76,6 @@ export function QueueCard({
   const leavingRef = useRef(false)
   const disabledRef = useRef(disabled)
   disabledRef.current = disabled
-
-  const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
-  const [loadingTrailer, setLoadingTrailer] = useState(false)
-  const [credits, setCredits] = useState<MediaCredits | null>(null)
-  const [loadingCredits, setLoadingCredits] = useState(false)
-
-  const isTmdb = Boolean(item.tmdbId) && item.sourceType?.toLowerCase() === 'tmdb'
-  const others = item.otherPreferences ?? []
-
-  useEffect(() => {
-    if (!active || !isTmdb || trailerUrl) return
-    let cancelled = false
-    const type = item.type.toLowerCase() === 'movie' ? 'movie' : 'tv'
-
-    setLoadingTrailer(true)
-    fetch(`/api/tmdb/videos?id=${item.tmdbId}&type=${type}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!cancelled && data?.trailer?.url) setTrailerUrl(data.trailer.url)
-      })
-      .catch((err) => console.error('Failed to load trailer:', err))
-      .finally(() => {
-        if (!cancelled) setLoadingTrailer(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [active, isTmdb, item.tmdbId, item.type, trailerUrl])
-
-  // Fetched for the same window as StreamingProviders, so it's ready by the
-  // time a neighboring card becomes active instead of popping in late.
-  useEffect(() => {
-    if (!detailed || !isTmdb || credits) return
-    let cancelled = false
-
-    setLoadingCredits(true)
-    fetchMediaCredits({ tmdbId: item.tmdbId, sourceType: item.sourceType, type: item.type })
-      .then((result) => {
-        if (!cancelled) setCredits(result)
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingCredits(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [detailed, isTmdb, item.tmdbId, item.sourceType, item.type, credits])
 
   const commitDistance = useCallback(
     () => Math.max(MIN_COMMIT_PX, (motionRef.current?.offsetWidth ?? 320) * COMMIT_RATIO),
@@ -426,63 +361,12 @@ export function QueueCard({
           />
         </div>
 
-        <div data-card-scroll className='flex-1 space-y-4 overflow-y-auto px-4 py-4'>
-          <div className='flex gap-4'>
-            <PosterImage
-              src={item.posterUrl}
-              alt={item.title}
-              width={104}
-              height={156}
-              className='flex-shrink-0 rounded-lg object-cover shadow-sm'
-            />
-            <div className='min-w-0 flex-1'>
-              <h2 className='mb-1 text-xl font-semibold leading-tight text-foreground'>
-                {item.title}
-              </h2>
-              <CardMeta
-                icon={getTypeIcon(item.type)}
-                type={item.type}
-                releaseDate={item.releaseDate}
-                runtimeMinutes={item.runtimeMinutes}
-              />
-              <CardGenres genres={item.genres} maxDisplay={3} />
-              <FavoritedByBadge names={favoritedByNames(item)} />
-            </div>
-          </div>
+        <h2 className='flex-shrink-0 px-4 pt-3 text-xl font-bold leading-tight text-foreground'>
+          {item.title}
+        </h2>
 
-          {typeof item.rating === 'number' && item.rating > 0 && (
-            <DetailSection title='Rating'>
-              <MediaRating rating={item.rating} />
-            </DetailSection>
-          )}
-
-          {item.releaseDate && (
-            <DetailSection title='Release date'>
-              <p className='text-sm text-muted-foreground'>{formatReleaseDate(item.releaseDate)}</p>
-            </DetailSection>
-          )}
-
-          {others.length > 0 && (
-            <DetailSection title='Your rooms'>
-              <HouseholdExcitementRow otherPreferences={others} />
-            </DetailSection>
-          )}
-
-          {item.description && (
-            <DetailSection title='Description'>
-              <p className='text-sm leading-relaxed text-muted-foreground'>{item.description}</p>
-            </DetailSection>
-          )}
-
-          <CreditsSection type={item.type} credits={credits} loadingCredits={loadingCredits} />
-
-          {detailed && isTmdb && <StreamingProviders tmdbId={item.tmdbId!} type={item.type} />}
-
-          {active && (
-            <TrailerSection item={item} trailerUrl={trailerUrl} loadingTrailer={loadingTrailer} />
-          )}
-
-          <SubmissionMeta submission={item.submission} className='pt-1' />
+        <div data-card-scroll className='flex-1 overflow-y-auto px-4 py-4'>
+          <TitleDetail item={item} viewer={viewer} trailer={active} extras={detailed} />
         </div>
 
         <div className='flex-shrink-0 border-t border-border bg-muted px-3 py-3'>

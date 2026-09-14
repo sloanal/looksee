@@ -52,19 +52,12 @@ import {
 import { MediaCardSkeletonList } from '@/components/MediaCardSkeleton'
 import { EditRoomsModal } from '@/components/EditRoomsModal'
 import { FavoriteButton } from '@/components/FavoriteButton'
-import { SubmissionInfo, SubmissionMeta } from '@/components/SubmissionMeta'
-import {
-  DetailSection,
-  fetchMediaCredits,
-  isTmdbItem,
-  MediaCredits,
-  MediaDetailBody,
-} from '@/components/MediaDetail'
+import { SubmissionInfo } from '@/components/SubmissionMeta'
 import { RatingFields } from '@/components/RatingFields'
 import { RatingLine } from '@/components/RatingLine'
-import { HouseholdUser } from '@/components/HouseholdExcitementRow'
-import { WhoWantsToWatch } from '@/components/WhoWantsToWatch'
+import { TitleDetailModal } from '@/components/TitleDetailModal'
 import { matchesAnyToken } from '@/lib/search-normalize'
+import { useViewer } from '@/lib/useViewer'
 
 type SearchMatchField = 'title' | 'recommender' | 'notes' | 'year'
 
@@ -158,6 +151,8 @@ export default function BrowsePage() {
   const isNoRoomsView = roomId === 'no-rooms'
   const selectedRoomName = useSelectedRoomName()
 
+  const viewer = useViewer()
+
   const [items, setItems] = useState<MediaItem[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -167,14 +162,9 @@ export default function BrowsePage() {
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null)
   const [editingItem, setEditingItem] = useState<MediaItem | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const [myAvatar, setMyAvatar] = useState<string | null>(null)
   const [tooltipItemId, setTooltipItemId] = useState<string | null>(null)
   const [tooltipTimeout, setTooltipTimeout] = useState<NodeJS.Timeout | null>(null)
   const [detailModalItem, setDetailModalItem] = useState<MediaItem | null>(null)
-  const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
-  const [loadingTrailer, setLoadingTrailer] = useState(false)
-  const [credits, setCredits] = useState<MediaCredits | null>(null)
-  const [loadingCredits, setLoadingCredits] = useState(false)
   const [editingRoomsItem, setEditingRoomsItem] = useState<MediaItem | null>(null)
   const [markingWatchedItemId, setMarkingWatchedItemId] = useState<string | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -224,18 +214,6 @@ export default function BrowsePage() {
     }
   }, [roomId, debouncedSearch, typeFilter, myStatusFilter])
 
-  const loadMyAvatar = async () => {
-    try {
-      const res = await fetch('/api/user/profile')
-      if (res.ok) {
-        const data = await res.json()
-        setMyAvatar(data.user?.imageUrl || null)
-      }
-    } catch (err) {
-      console.error('Failed to load avatar:', err)
-    }
-  }
-
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -254,7 +232,6 @@ export default function BrowsePage() {
     }
 
     loadItems()
-    loadMyAvatar()
   }, [session, status, loadItems, router])
 
   // Restore scroll position after items load
@@ -380,39 +357,6 @@ export default function BrowsePage() {
     setTooltipItemId(null)
   }
 
-  async function loadTrailer(item: MediaItem) {
-    if (!item.tmdbId || !item.sourceType || item.sourceType.toLowerCase() !== 'tmdb') {
-      return
-    }
-
-    setLoadingTrailer(true)
-    try {
-      const type = item.type.toLowerCase() === 'movie' ? 'movie' : 'tv'
-      const res = await fetch(`/api/tmdb/videos?id=${item.tmdbId}&type=${type}`)
-      if (res.ok) {
-        const data = await res.json()
-        if (data.trailer?.url) {
-          setTrailerUrl(data.trailer.url)
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load trailer:', err)
-    } finally {
-      setLoadingTrailer(false)
-    }
-  }
-
-  async function loadCredits(item: MediaItem) {
-    if (!isTmdbItem(item)) return
-
-    setLoadingCredits(true)
-    try {
-      setCredits(await fetchMediaCredits(item))
-    } finally {
-      setLoadingCredits(false)
-    }
-  }
-
   const handleMarkAsWatched = async (itemId: string) => {
     setMarkingWatchedItemId(itemId)
     try {
@@ -471,10 +415,6 @@ export default function BrowsePage() {
       setMarkingWatchedItemId(null)
     }
   }
-
-  const viewer = session?.user
-    ? { id: session.user.id, name: session.user.name || 'You', imageUrl: myAvatar }
-    : { id: 'user', name: '?', imageUrl: null }
 
   return (
     <div className={pageContainerClassName}>
@@ -580,8 +520,6 @@ export default function BrowsePage() {
                 const openDetail = (e: React.MouseEvent) => {
                   e.stopPropagation()
                   setDetailModalItem(item)
-                  loadTrailer(item)
-                  loadCredits(item)
                 }
                 return (
                   <MediaCard key={item.id} variant='default' className='relative'>
@@ -700,7 +638,7 @@ export default function BrowsePage() {
                         <div className='min-w-0 pr-10'>
                           {item.myPreference && (
                             <RatingLine
-                              user={viewer}
+                              user={viewer ?? { name: '?' }}
                               excitement={item.myPreference.excitement}
                               status={item.myPreference.status}
                               isViewer
@@ -777,19 +715,11 @@ export default function BrowsePage() {
       )}
 
       {detailModalItem && (
-        <DetailModal
+        <TitleDetailModal
           item={detailModalItem}
           viewer={viewer}
-          trailerUrl={trailerUrl}
-          loadingTrailer={loadingTrailer}
-          credits={credits}
-          loadingCredits={loadingCredits}
           onFavoriteChange={(isFavorite) => applyFavorite(detailModalItem.id, isFavorite)}
-          onClose={() => {
-            setDetailModalItem(null)
-            setTrailerUrl(null)
-            setCredits(null)
-          }}
+          onClose={() => setDetailModalItem(null)}
         />
       )}
 
@@ -1086,71 +1016,5 @@ function EditItemBody({ item, onSave }: { item: MediaItem; onSave: () => void })
         </Button>
       </ModalFooter>
     </>
-  )
-}
-
-function DetailModal({
-  item,
-  viewer,
-  trailerUrl,
-  loadingTrailer,
-  credits,
-  loadingCredits,
-  onFavoriteChange,
-  onClose,
-}: {
-  item: MediaItem
-  viewer: HouseholdUser
-  trailerUrl: string | null
-  loadingTrailer: boolean
-  credits: MediaCredits | null
-  loadingCredits: boolean
-  onFavoriteChange: (isFavorite: boolean) => void
-  onClose: () => void
-}) {
-  return (
-    <Modal isOpen onClose={onClose} size='xl' tall aria-label={item.title}>
-      <ModalHeader
-        title={item.title}
-        action={
-          <FavoriteButton
-            mediaItemId={item.id}
-            isFavorite={item.myPreference?.isFavorite === true}
-            onChange={onFavoriteChange}
-            size={22}
-            className='-mt-1.5'
-          />
-        }
-        description={<SubmissionMeta submission={item.submission} />}
-      />
-      <ModalBody className='pb-6'>
-        <WhoWantsToWatch
-          myPreference={item.myPreference}
-          viewer={viewer}
-          otherPreferences={item.otherPreferences}
-          className='mb-6'
-        />
-        <MediaDetailBody
-          item={item}
-          trailerUrl={trailerUrl}
-          loadingTrailer={loadingTrailer}
-          credits={credits}
-          loadingCredits={loadingCredits}
-        >
-          {item.myPreference?.recommendedByName && (
-            <DetailSection title='Recommended by'>
-              <p className='text-sm text-muted-foreground'>
-                {item.myPreference.recommendedByName}
-                {item.myPreference.recommendationContext && (
-                  <span className='mt-1 block text-xs italic'>
-                    {item.myPreference.recommendationContext}
-                  </span>
-                )}
-              </p>
-            </DetailSection>
-          )}
-        </MediaDetailBody>
-      </ModalBody>
-    </Modal>
   )
 }

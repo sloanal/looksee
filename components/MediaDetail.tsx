@@ -1,13 +1,9 @@
 'use client'
 
 import { ReactNode } from 'react'
-import Image from 'next/image'
 import { Star } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
-import { formatRuntime } from '@/components/MediaCard'
-import { StreamingProviders } from '@/components/StreamingProviders'
 import { cn } from '@/lib/utils'
 
 export interface MediaDetailItem {
@@ -195,94 +191,6 @@ export function CreditsSection({
           <p className='text-sm text-muted-foreground'>{credits.cast.join(', ')}</p>
         </DetailSection>
       )}
-    </>
-  )
-}
-
-interface MediaDetailBodyProps {
-  item: MediaDetailItem
-  trailerUrl: string | null
-  loadingTrailer: boolean
-  /** Director/cast, fetched fresh on open; omit while unavailable (e.g. non-TMDB items). */
-  credits?: MediaCredits | null
-  loadingCredits?: boolean
-  /** Extra sections in the facts column (e.g. "Recommended by"). */
-  children?: ReactNode
-}
-
-/**
- * Poster + facts grid and trailer shared by the Browse, Watch and New detail
- * modals. Callers add their own header, household rows and rating form.
- */
-export function MediaDetailBody(
-  { item, trailerUrl, loadingTrailer, credits, loadingCredits, children }: MediaDetailBodyProps,
-) {
-  const showRuntime = typeof item.runtimeMinutes === 'number' && item.runtimeMinutes > 0
-
-  return (
-    <>
-      <div className='mb-6 grid grid-cols-1 gap-6 md:grid-cols-2'>
-        {item.posterUrl && (
-          <div className='mx-auto w-full max-w-[260px] flex-shrink-0 md:mx-0 md:max-w-none'>
-            <Image
-              src={item.posterUrl}
-              alt={item.title}
-              width={300}
-              height={450}
-              className='w-full rounded-xl object-cover shadow-card'
-            />
-          </div>
-        )}
-
-        <div className='space-y-5'>
-          {isTmdbItem(item) && <StreamingProviders tmdbId={item.tmdbId!} type={item.type} />}
-
-          {item.description && (
-            <DetailSection title='Description'>
-              <p className='text-sm leading-relaxed text-muted-foreground'>{item.description}</p>
-            </DetailSection>
-          )}
-
-          <CreditsSection type={item.type} credits={credits} loadingCredits={loadingCredits} />
-
-          {item.genres.length > 0 && (
-            <DetailSection title='Genres'>
-              <div className='flex flex-wrap gap-1.5'>
-                {item.genres.map((genre, i) => <Badge key={i}>{genre}</Badge>)}
-              </div>
-            </DetailSection>
-          )}
-
-          {showRuntime && (
-            <DetailSection title='Runtime'>
-              <p className='text-sm text-muted-foreground'>
-                {formatRuntime(item.runtimeMinutes as number, item.type)}
-              </p>
-            </DetailSection>
-          )}
-
-          {item.releaseDate && (
-            <DetailSection title='Release date'>
-              <p className='text-sm text-muted-foreground'>{formatReleaseDate(item.releaseDate)}</p>
-            </DetailSection>
-          )}
-
-          {item.rating && (
-            <DetailSection title='Rating'>
-              <MediaRating rating={item.rating} />
-            </DetailSection>
-          )}
-
-          {children}
-        </div>
-      </div>
-
-      <TrailerSection
-        item={item}
-        trailerUrl={trailerUrl}
-        loadingTrailer={loadingTrailer}
-        className='mb-6'
-      />
     </>
   )
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef } from 'react'
+import { HouseholdUser } from '@/components/HouseholdExcitementRow'
 import { QueueCard } from '@/components/queue/QueueCard'
 import { QueueItem, SwipeDirection } from '@/components/queue/types'
 
@@ -9,6 +10,8 @@ const DETAIL_WINDOW = 1
 
 interface QueueDeckProps {
   items: QueueItem[]
+  /** The signed-in user, for their own row in each card's household list. */
+  viewer?: HouseholdUser | null
   activeIndex: number
   onActiveIndexChange: (index: number) => void
   /** Seen/not-seen choice per title, keyed by media item id. */
@@ -32,6 +35,7 @@ interface QueueDeckProps {
  */
 export function QueueDeck({
   items,
+  viewer,
   activeIndex,
   onActiveIndexChange,
   statusById,
@@ -91,6 +95,7 @@ export function QueueDeck({
         <div key={item.id} className='h-full snap-start snap-always'>
           <QueueCard
             item={item}
+            viewer={viewer}
             status={statusById[item.id] ?? 'have_not_seen'}
             onStatusChange={(status) => onStatusChange(item.id, status)}
             onRate={(direction) => onRate(item, direction)}

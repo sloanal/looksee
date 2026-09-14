@@ -10,23 +10,15 @@ export function QueueDeckSkeleton() {
           <Skeleton className='h-5 w-24 rounded-full' />
         </div>
 
+        <Skeleton className='mx-4 mt-3 h-6 w-3/5 rounded' />
+
         <div className='min-h-0 flex-1 space-y-4 p-4'>
-          <div className='flex gap-4'>
-            <Skeleton className='h-[156px] w-[104px] flex-shrink-0 rounded-lg' />
-            <div className='min-w-0 flex-1 space-y-2'>
-              <Skeleton className='h-6 w-3/4 rounded' />
-              <SkeletonLine className='w-2/5' />
-              <div className='flex gap-1 pt-0.5'>
-                <Skeleton className='h-5 w-14 rounded-full' />
-                <Skeleton className='h-5 w-20 rounded-full' />
-              </div>
-            </div>
+          <SkeletonLine className='w-2/5' />
+          <div className='space-y-1.5'>
+            <Skeleton className='h-12 w-full rounded-xl' />
+            <Skeleton className='h-12 w-full rounded-xl' />
           </div>
-          <div className='space-y-2'>
-            <SkeletonLine className='w-full' />
-            <SkeletonLine className='w-full' />
-            <SkeletonLine className='w-4/5' />
-          </div>
+          <Skeleton className='mx-auto aspect-[2/3] w-full max-w-[180px] rounded-xl' />
         </div>
 
         <div className='flex gap-2 border-t border-border bg-muted/60 px-3 py-3'>

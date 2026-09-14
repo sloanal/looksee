@@ -15,10 +15,12 @@ import { QueueDeckSkeleton } from '@/components/queue/QueueDeckSkeleton'
 import { SwipeKey } from '@/components/queue/SwipeKey'
 import { EXCITEMENT_BY_DIRECTION, QueueItem, SwipeDirection } from '@/components/queue/types'
 import { cn } from '@/lib/utils'
+import { useViewer } from '@/lib/useViewer'
 
 export default function NewPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const viewer = useViewer()
 
   const [queue, setQueue] = useState<QueueItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -180,6 +182,7 @@ export default function NewPage() {
           : (
             <QueueDeck
               items={queue}
+              viewer={viewer}
               activeIndex={activeIndex}
               onActiveIndexChange={setActiveIndex}
               statusById={statusById}

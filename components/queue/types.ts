@@ -51,8 +51,3 @@ export function getTypeIcon(type: string): LucideIcon {
   if (normalized === 'link' || normalized === 'links') return LinkIcon
   return Film
 }
-
-export const favoritedByNames = (item: QueueItem): string[] =>
-  (item.otherPreferences ?? []).filter((preference) => preference.isFavorite).map((preference) =>
-    preference.user.name
-  )

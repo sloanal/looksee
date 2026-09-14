@@ -13,3 +13,12 @@ export function notifyRoomsChanged() {
 export function formatTitleCount(count: number): string {
   return `${count} ${count === 1 ? 'title' : 'titles'}`
 }
+
+/**
+ * True for the `?roomId=` values that stand for a view rather than a room the
+ * viewer belongs to: All Rooms, No rooms yet, Watched, and a missing id (Just My
+ * Stuff). None of them can be named, have members fetched, or be added to.
+ */
+export function isVirtualRoomId(roomId: string | null | undefined): boolean {
+  return !roomId || roomId === 'all-rooms' || roomId === 'no-rooms' || roomId === 'watched'
+}

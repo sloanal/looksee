@@ -37,7 +37,7 @@ import { MenuItem, MenuPanel, MenuTrigger } from '@/components/ui/menu'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { DuotoneIcon } from '@/components/DuotoneIcon'
-import { notifyRoomsChanged } from '@/lib/rooms'
+import { isVirtualRoomId, notifyRoomsChanged } from '@/lib/rooms'
 import { clientSubmissionContext } from '@/lib/submission-context'
 import {
   CardContent,
@@ -117,6 +117,9 @@ export default function AddPage() {
   const searchParams = useSearchParams()
   const roomId = searchParams.get('roomId')
   const selectedRoomName = useSelectedRoomName()
+  // Watched and No rooms yet are views, not places to put a title, so adding
+  // from either lands in the personal catalog like Just My Stuff does.
+  const addsToNoRoom = !roomId || roomId === 'watched' || roomId === 'no-rooms'
   const addSubtitle = selectedRoomName
     ? `Search and save something to ${selectedRoomName}.`
     : roomId === 'all-rooms'
@@ -311,7 +314,7 @@ export default function AddPage() {
           }
           alert(errorMessage)
         }
-      } else if (!roomId || roomId === 'watched') {
+      } else if (addsToNoRoom) {
         // "Just My Stuff" - create item without adding it to any room
         const res = await fetch('/api/media', {
           method: 'POST',
@@ -321,7 +324,8 @@ export default function AddPage() {
 
         if (res.ok) {
           notifyRoomsChanged()
-          router.push(`/browse`)
+          // A roomless title lands in the No rooms yet view, so stay there.
+          router.push(roomId === 'no-rooms' ? '/browse?roomId=no-rooms' : '/browse')
         } else {
           let errorMessage = 'Failed to add item'
           try {
@@ -383,7 +387,7 @@ export default function AddPage() {
     ? 'Adding...'
     : roomId === 'all-rooms'
     ? 'Add to All Rooms'
-    : !roomId || roomId === 'watched'
+    : addsToNoRoom
     ? 'Add to My Stuff'
     : 'Add to Room'
 
@@ -646,7 +650,7 @@ export default function AddPage() {
         <PageHeader
           title='Add to'
           subtitle={addSubtitle}
-          right={roomId !== 'all-rooms' && roomId !== 'watched' && <RoomMembersAvatars />}
+          right={!isVirtualRoomId(roomId) && <RoomMembersAvatars />}
           className='mb-3'
         >
           <RoomSelector />

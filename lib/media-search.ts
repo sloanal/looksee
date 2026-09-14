@@ -45,9 +45,18 @@ export function matchMediaSearch(
   )
 }
 
+/** Excitement filters, keyed by the value Browse sends. Excitement is 1, 3 or 5. */
+const EXCITEMENT_BY_FILTER: Record<string, number> = {
+  not_excited: 1,
+  neutral: 3,
+  excited: 5,
+}
+
 /**
  * Prisma clause for the viewer's own rating state. `unrated` = no preference row or a
  * placeholder row with ratedAt null (favorite-only); `rated` is its complement.
+ * The excitement filters require ratedAt, so a favorite-only placeholder (which
+ * carries a neutral excitement it was never given) is not treated as neutral.
  * Unknown values yield null so callers can ignore them.
  */
 export function myStatusWhere(userId: string, myStatus: string | null) {
@@ -59,6 +68,16 @@ export function myStatusWhere(userId: string, myStatus: string | null) {
     case 'have_not_seen':
     case 'already_seen':
       return { preferences: { some: { userId, status: myStatus.toUpperCase() } } }
+    case 'favorites':
+      return { preferences: { some: { userId, isFavorite: true } } }
+    case 'not_excited':
+    case 'neutral':
+    case 'excited':
+      return {
+        preferences: {
+          some: { userId, ratedAt: { not: null }, excitement: EXCITEMENT_BY_FILTER[myStatus] },
+        },
+      }
     default:
       return null
   }

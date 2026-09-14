@@ -106,6 +106,21 @@ export function personalCatalogClauses(userId: string) {
 }
 
 /**
+ * Titles from the viewer's personal catalog that sit in none of the viewer's own
+ * rooms — the ones whose Browse card shows the "No rooms yet" band. Rooms the
+ * viewer does not belong to are invisible to them, so a title parked only in
+ * another household's room counts as roomless here too.
+ */
+export function noVisibleRoomWhere(userId: string, viewerRoomIds: readonly string[]) {
+  return {
+    AND: [
+      { OR: personalCatalogClauses(userId) },
+      { mediaItemRooms: { none: { roomId: { in: Array.from(viewerRoomIds) } } } },
+    ],
+  }
+}
+
+/**
  * A user may act on a title iff they created it, they have their own
  * UserMediaPreference on it (personal catalog), or they are currently a member
  * of at least one room the title belongs to (via MediaItemRoom). The legacy

@@ -5,6 +5,7 @@ import {
   getVisibleMemberIds,
   itemsInRoomsWhere,
   loadMembersByRoomId,
+  noVisibleRoomWhere,
   personalCatalogClauses,
   restrictPreferencesToVisibleUsers,
   unionMemberIds,
@@ -26,7 +27,7 @@ export type RecommendationMode = 'me' | 'room'
 
 export type RecommendationRequest = {
   viewerUserId: string
-  /** `null` = Just My Stuff, `'all-rooms'`, `'watched'`, or a room id. */
+  /** `null` = Just My Stuff, `'all-rooms'`, `'no-rooms'`, `'watched'`, or a room id. */
   roomId: string | null
   mode: RecommendationMode
   typePreference?: string | null
@@ -143,7 +144,8 @@ function parseGenres(raw: string | null): string[] {
  * Ranked "what should we watch" candidates for one viewer.
  *
  * Catalog: a specific room's titles (rooms-only), the viewer's personal
- * catalog (Just My Stuff), or — for All Rooms — the union of the viewer's rooms
+ * catalog (Just My Stuff), the part of that catalog sitting in none of their
+ * rooms (No rooms yet), or — for All Rooms — the union of the viewer's rooms
  * and their personal catalog, exactly what Browse lists via
  * GET /api/media?allRooms=true and what allRoomsCount in GET /api/rooms counts.
  * A viewer with no rooms therefore gets their personal catalog for All Rooms.
@@ -177,6 +179,11 @@ export async function buildRecommendations(
         ...personalCatalogClauses(viewerUserId),
       ],
     }
+  } else if (roomId === 'no-rooms') {
+    // Keep in lockstep with GET /api/media?noRooms=true. These titles are in no
+    // room the viewer can see, so only their own rating ranks them and the
+    // Everyone mode below has no household signal to work with.
+    where = noVisibleRoomWhere(viewerUserId, viewerRoomIds)
   } else if (!roomId) {
     where = { OR: personalCatalogClauses(viewerUserId) }
   } else {

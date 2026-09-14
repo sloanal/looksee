@@ -152,6 +152,7 @@ export default function BrowsePage() {
   const searchParams = useSearchParams()
   const roomId = searchParams.get('roomId')
   const isWatchedView = roomId === 'watched'
+  const isNoRoomsView = roomId === 'no-rooms'
   const selectedRoomName = useSelectedRoomName()
 
   const [items, setItems] = useState<MediaItem[]>([])
@@ -186,6 +187,9 @@ export default function BrowsePage() {
       let url: string
       if (roomId === 'watched') {
         params.set('watched', 'true')
+        url = `/api/media?${params}`
+      } else if (roomId === 'no-rooms') {
+        params.set('noRooms', 'true')
         url = `/api/media?${params}`
       } else if (roomId === 'all-rooms') {
         params.set('allRooms', 'true')
@@ -476,6 +480,8 @@ export default function BrowsePage() {
           title='Browse'
           subtitle={isWatchedView
             ? "Titles you've already seen."
+            : isNoRoomsView
+            ? "Titles of yours that aren't in a room yet."
             : selectedRoomName
             ? `Rate and explore titles already in ${selectedRoomName}.`
             : 'Rate and explore titles already across your rooms.'}
@@ -525,6 +531,10 @@ export default function BrowsePage() {
               <option value='unrated'>Unrated</option>
               <option value='have_not_seen'>Have not seen</option>
               <option value='already_seen'>Already seen</option>
+              <option value='favorites'>Favorites</option>
+              <option value='excited'>Excited</option>
+              <option value='neutral'>Neutral</option>
+              <option value='not_excited'>Not excited</option>
             </Select>
           </div>
         </div>

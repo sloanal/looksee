@@ -23,6 +23,9 @@ import { resolveSubmission, SubmissionInfo } from '@/lib/media-attribution'
 // happens before ranking and is unaffected.
 export const FAVORITE_BOOST = 2.5
 
+/** Excitement is stored as 1 (Not excited), 3 (Neutral) or 5 (Excited). */
+const NEUTRAL_EXCITEMENT = 3
+
 export type RecommendationMode = 'me' | 'room'
 
 export type RecommendationRequest = {
@@ -32,7 +35,8 @@ export type RecommendationRequest = {
   mode: RecommendationMode
   typePreference?: string | null
   genres?: Array<string | number> | null
-  showSeenAndNoExcitement?: boolean
+  /** Just Me only: drop titles another visible member is still excited to watch. */
+  avoidOthersExcitement?: boolean
 }
 
 export type RecommendationResult = {
@@ -128,6 +132,20 @@ function selectedGenreNamesFor(
     })
   }
   return names
+}
+
+/**
+ * Someone who rated a title above neutral and hasn't seen it yet is still
+ * waiting to watch it. Everyone else — already seen, neutral or lower, or no
+ * rating yet (including a placeholder row with `ratedAt` null) — is safe to
+ * watch without.
+ */
+function isWaitingToWatch(
+  preference: { status: string; excitement: number; ratedAt: Date | null },
+): boolean {
+  if (preference.status !== 'HAVE_NOT_SEEN') return false
+  if (preference.ratedAt === null) return false
+  return preference.excitement > NEUTRAL_EXCITEMENT
 }
 
 function parseGenres(raw: string | null): string[] {
@@ -295,20 +313,14 @@ export async function buildRecommendations(
       return compareByRatingThenRecency(a, b)
     })
 
+    const safeForSolo = (item: (typeof myItems)[number]) =>
+      !item.preferences.some((p) => p.userId !== viewerUserId && isWaitingToWatch(p))
+
     const results = myItems
-      .map((item) => {
-        const seenCount = item.preferences.filter((p) => p.status === 'ALREADY_SEEN').length
-        return { result: serialize(item, interestedOf(item)), seenCount }
-      })
-      .filter(({ result, seenCount }) => {
-        // Optional narrowing: titles others have seen that nobody but the
-        // viewer is still excited about.
-        if (input.showSeenAndNoExcitement) {
-          return seenCount > 0 && result.interestedCount === 1
-        }
-        return true
-      })
-      .map(({ result }) => result)
+      // Optional narrowing ("don't get me in trouble"): keep only titles no
+      // other visible member is still waiting to watch.
+      .filter((item) => !input.avoidOthersExcitement || safeForSolo(item))
+      .map((item) => serialize(item, interestedOf(item)))
 
     return { ok: true, recommendations: results }
   }

@@ -16,7 +16,7 @@ export async function POST(
   }
 
   const body = await request.json()
-  const { mode, typePreference, genres, showSeenAndNoExcitement } = body
+  const { mode, typePreference, genres, avoidOthersExcitement } = body
 
   const outcome = await buildRecommendations({
     viewerUserId: session.user.id,
@@ -24,7 +24,7 @@ export async function POST(
     mode: mode === 'me' ? 'me' : 'room',
     typePreference,
     genres,
-    showSeenAndNoExcitement: showSeenAndNoExcitement === true,
+    avoidOthersExcitement: avoidOthersExcitement === true,
   })
 
   if (!outcome.ok) {

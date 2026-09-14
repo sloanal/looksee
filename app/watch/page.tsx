@@ -51,6 +51,7 @@ import {
   HouseholdPreference,
   HouseholdUser,
 } from '@/components/HouseholdExcitementRow'
+import { WhoWantsToWatch } from '@/components/WhoWantsToWatch'
 import {
   CardActions,
   CardBadge,
@@ -109,7 +110,7 @@ interface RecommendationParams {
   mode: 'me' | 'room'
   typePreference: string
   genres: string[]
-  showSeenAndNoExcitement: boolean
+  avoidOthersExcitement: boolean
 }
 
 type FetchOutcome = 'ok' | 'error' | 'stale'
@@ -130,9 +131,9 @@ export default function WatchPage() {
   const [mode, setMode] = useState<'me' | 'room'>('me')
   const [typePreference, setTypePreference] = useState('any')
   const [selectedGenres, setSelectedGenres] = useState<string[]>([])
-  // Off by default: Just Me ranks everything the viewer hasn't watched. On,
-  // it narrows to titles others have already seen (see the option's label).
-  const [showSeenAndNoExcitement, setShowSeenAndNoExcitement] = useState(false)
+  // Off by default: Just Me ranks everything the viewer hasn't watched. On, it
+  // drops anything another member is still waiting to watch (see the label).
+  const [avoidOthersExcitement, setAvoidOthersExcitement] = useState(false)
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [loading, setLoading] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
@@ -244,9 +245,7 @@ export default function WatchPage() {
             mode: params.mode,
             typePreference: params.typePreference,
             genres: params.genres,
-            showSeenAndNoExcitement: params.mode === 'me'
-              ? params.showSeenAndNoExcitement
-              : undefined,
+            avoidOthersExcitement: params.mode === 'me' ? params.avoidOthersExcitement : undefined,
           }),
           signal: controller.signal,
         })
@@ -279,7 +278,7 @@ export default function WatchPage() {
     mode,
     typePreference,
     genres: selectedGenres,
-    showSeenAndNoExcitement,
+    avoidOthersExcitement,
   }
 
   const handleGetRecommendations = async () => {
@@ -318,7 +317,7 @@ export default function WatchPage() {
       mode,
       typePreference,
       genres: selectedGenres,
-      showSeenAndNoExcitement,
+      avoidOthersExcitement,
     })
   }, [
     step,
@@ -326,7 +325,7 @@ export default function WatchPage() {
     mode,
     typePreference,
     selectedGenres,
-    showSeenAndNoExcitement,
+    avoidOthersExcitement,
     fetchRecommendations,
     cancelInFlightRequest,
   ])
@@ -452,17 +451,18 @@ export default function WatchPage() {
               <label className='flex cursor-pointer items-start gap-3'>
                 <input
                   type='checkbox'
-                  checked={showSeenAndNoExcitement}
-                  onChange={(e) => setShowSeenAndNoExcitement(e.target.checked)}
+                  checked={avoidOthersExcitement}
+                  onChange={(e) => setAvoidOthersExcitement(e.target.checked)}
                   className='mt-0.5 h-5 w-5 flex-shrink-0 rounded border-input text-primary focus:ring-primary'
                 />
                 <span className='min-w-0'>
                   <span className='block text-sm font-medium text-foreground'>
-                    Only titles others have already seen
+                    Don&apos;t get me in trouble
                   </span>
                   <span className='mt-0.5 block text-xs text-muted-foreground'>
-                    Narrows your picks to titles at least one other member has seen and nobody else
-                    still wants to watch — good for solo nights that won&apos;t leave anyone out.
+                    Only shows titles everyone else has already seen, is neutral or lower on, or
+                    hasn&apos;t rated yet — so you won&apos;t watch ahead of someone who&apos;s
+                    excited for it.
                   </span>
                 </span>
               </label>
@@ -784,18 +784,12 @@ function DetailModal({
         description={<SubmissionMeta submission={item.submission} />}
       />
       <ModalBody className='pb-6'>
-        {item.otherPreferences.length > 0 && (
-          <div className='mb-6'>
-            <h3 className='mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground'>
-              Who wants to watch
-            </h3>
-            <HouseholdExcitementRow
-              myPreference={item.myPreference}
-              viewer={viewer}
-              otherPreferences={item.otherPreferences}
-            />
-          </div>
-        )}
+        <WhoWantsToWatch
+          myPreference={item.myPreference}
+          viewer={viewer}
+          otherPreferences={item.otherPreferences}
+          className='mb-6'
+        />
         <MediaDetailBody
           item={item}
           trailerUrl={trailerUrl}

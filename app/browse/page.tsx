@@ -62,6 +62,8 @@ import {
 } from '@/components/MediaDetail'
 import { RatingFields } from '@/components/RatingFields'
 import { RatingLine } from '@/components/RatingLine'
+import { HouseholdUser } from '@/components/HouseholdExcitementRow'
+import { WhoWantsToWatch } from '@/components/WhoWantsToWatch'
 import { matchesAnyToken } from '@/lib/search-normalize'
 
 type SearchMatchField = 'title' | 'recommender' | 'notes' | 'year'
@@ -105,6 +107,7 @@ interface MediaItem {
   otherPreferences?: Array<{
     status: string
     excitement: number
+    isWatched?: boolean
     isFavorite?: boolean
     user: {
       id: string
@@ -776,6 +779,7 @@ export default function BrowsePage() {
       {detailModalItem && (
         <DetailModal
           item={detailModalItem}
+          viewer={viewer}
           trailerUrl={trailerUrl}
           loadingTrailer={loadingTrailer}
           credits={credits}
@@ -1087,6 +1091,7 @@ function EditItemBody({ item, onSave }: { item: MediaItem; onSave: () => void })
 
 function DetailModal({
   item,
+  viewer,
   trailerUrl,
   loadingTrailer,
   credits,
@@ -1095,6 +1100,7 @@ function DetailModal({
   onClose,
 }: {
   item: MediaItem
+  viewer: HouseholdUser
   trailerUrl: string | null
   loadingTrailer: boolean
   credits: MediaCredits | null
@@ -1118,6 +1124,12 @@ function DetailModal({
         description={<SubmissionMeta submission={item.submission} />}
       />
       <ModalBody className='pb-6'>
+        <WhoWantsToWatch
+          myPreference={item.myPreference}
+          viewer={viewer}
+          otherPreferences={item.otherPreferences}
+          className='mb-6'
+        />
         <MediaDetailBody
           item={item}
           trailerUrl={trailerUrl}

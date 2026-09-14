@@ -51,6 +51,7 @@ import {
   HouseholdPreference,
   HouseholdUser,
 } from '@/components/HouseholdExcitementRow'
+import { WhoWantsToWatch } from '@/components/WhoWantsToWatch'
 import {
   CardActions,
   CardBadge,
@@ -783,18 +784,12 @@ function DetailModal({
         description={<SubmissionMeta submission={item.submission} />}
       />
       <ModalBody className='pb-6'>
-        {item.otherPreferences.length > 0 && (
-          <div className='mb-6'>
-            <h3 className='mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground'>
-              Who wants to watch
-            </h3>
-            <HouseholdExcitementRow
-              myPreference={item.myPreference}
-              viewer={viewer}
-              otherPreferences={item.otherPreferences}
-            />
-          </div>
-        )}
+        <WhoWantsToWatch
+          myPreference={item.myPreference}
+          viewer={viewer}
+          otherPreferences={item.otherPreferences}
+          className='mb-6'
+        />
         <MediaDetailBody
           item={item}
           trailerUrl={trailerUrl}

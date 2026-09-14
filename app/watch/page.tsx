@@ -30,28 +30,22 @@ import { Card } from '@/components/ui/card'
 import { ChoiceCard } from '@/components/ui/choice-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Field } from '@/components/ui/field'
-import { Modal, ModalBody, ModalHeader } from '@/components/ui/modal'
 import { Notice } from '@/components/ui/notice'
 import { Select } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { notifyRoomsChanged } from '@/lib/rooms'
 import { movieGenres, tvGenres } from '@/lib/tmdb-genres'
+import { useViewer } from '@/lib/useViewer'
 import { FavoriteButton, FavoritedByBadge, favoritedByLabel } from '@/components/FavoriteButton'
 import { StreamingProviders } from '@/components/StreamingProviders'
-import { SubmissionInfo, SubmissionMeta } from '@/components/SubmissionMeta'
-import {
-  fetchMediaCredits,
-  isTmdbItem,
-  MediaCredits,
-  MediaDetailBody,
-} from '@/components/MediaDetail'
+import { SubmissionInfo } from '@/components/SubmissionMeta'
+import { isTmdbItem } from '@/components/MediaDetail'
 import {
   HouseholdExcitementRow,
   HouseholdMember,
   HouseholdPreference,
-  HouseholdUser,
 } from '@/components/HouseholdExcitementRow'
-import { WhoWantsToWatch } from '@/components/WhoWantsToWatch'
+import { TitleDetailModal } from '@/components/TitleDetailModal'
 import {
   CardActions,
   CardBadge,
@@ -127,6 +121,8 @@ export default function WatchPage() {
     ? `Pick something for ${selectedRoomName} tonight.`
     : 'Pick something to put on tonight.'
 
+  const viewer = useViewer()
+
   const [step, setStep] = useState<'who' | 'preferences' | 'results'>('who')
   const [mode, setMode] = useState<'me' | 'room'>('me')
   const [typePreference, setTypePreference] = useState('any')
@@ -138,12 +134,7 @@ export default function WatchPage() {
   const [loading, setLoading] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [detailModalItem, setDetailModalItem] = useState<Recommendation | null>(null)
-  const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
-  const [loadingTrailer, setLoadingTrailer] = useState(false)
-  const [credits, setCredits] = useState<MediaCredits | null>(null)
-  const [loadingCredits, setLoadingCredits] = useState(false)
   const [markingWatchedId, setMarkingWatchedId] = useState<string | null>(null)
-  const [myAvatar, setMyAvatar] = useState<string | null>(null)
   const prevTypePreferenceRef = useRef<string>(typePreference)
   // Generation counter + AbortController so an older in-flight response can
   // never overwrite results from a newer request (rapid room switching).
@@ -163,27 +154,6 @@ export default function WatchPage() {
 
     // Users without rooms still get Just Me picks from their personal catalog.
   }, [session, status, router])
-
-  // The session only carries id/name; the avatar lives on the profile.
-  useEffect(() => {
-    if (!session?.user?.id) return
-    let cancelled = false
-    fetch('/api/user/profile')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!cancelled) setMyAvatar(data?.user?.imageUrl || null)
-      })
-      .catch(() => {
-        if (!cancelled) setMyAvatar(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [session?.user?.id])
-
-  const viewer: HouseholdUser | null = session?.user?.id
-    ? { id: session.user.id, name: session.user.name || 'You', imageUrl: myAvatar }
-    : null
 
   // Filter selected genres when type preference changes to only include valid ones
   useEffect(() => {
@@ -356,44 +326,20 @@ export default function WatchPage() {
   }
 
   // Ranking is server-side; the list keeps its order until the next fetch.
+  // The heart is read from `myPreference` in the detail overlay, so both the
+  // flag the list ranks on and the viewer's own row move together.
   const applyFavorite = (itemId: string, isFavorite: boolean) => {
     const patch = (rec: Recommendation): Recommendation =>
-      rec.id !== itemId ? rec : { ...rec, isFavorite }
+      rec.id !== itemId ? rec : {
+        ...rec,
+        isFavorite,
+        myPreference: {
+          ...(rec.myPreference ?? { status: 'have_not_seen', excitement: 3 }),
+          isFavorite,
+        },
+      }
     setRecommendations((prev) => prev.map(patch))
     setDetailModalItem((prev) => (prev ? patch(prev) : prev))
-  }
-
-  async function loadTrailer(item: Recommendation) {
-    if (!item.tmdbId || !item.sourceType || item.sourceType.toLowerCase() !== 'tmdb') {
-      return
-    }
-
-    setLoadingTrailer(true)
-    try {
-      const type = item.type.toLowerCase() === 'movie' ? 'movie' : 'tv'
-      const res = await fetch(`/api/tmdb/videos?id=${item.tmdbId}&type=${type}`)
-      if (res.ok) {
-        const data = await res.json()
-        if (data.trailer?.url) {
-          setTrailerUrl(data.trailer.url)
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load trailer:', err)
-    } finally {
-      setLoadingTrailer(false)
-    }
-  }
-
-  async function loadCredits(item: Recommendation) {
-    if (!isTmdbItem(item)) return
-
-    setLoadingCredits(true)
-    try {
-      setCredits(await fetchMediaCredits(item))
-    } finally {
-      setLoadingCredits(false)
-    }
   }
 
   // Show loading while checking rooms if needed
@@ -658,8 +604,6 @@ export default function WatchPage() {
                     onClick={(e) => {
                       e.stopPropagation()
                       setDetailModalItem(rec)
-                      loadTrailer(rec)
-                      loadCredits(rec)
                     }}
                     className='cursor-pointer'
                   >
@@ -731,74 +675,13 @@ export default function WatchPage() {
       </PageContent>
 
       {detailModalItem && (
-        <DetailModal
+        <TitleDetailModal
           item={detailModalItem}
           viewer={viewer}
-          trailerUrl={trailerUrl}
-          loadingTrailer={loadingTrailer}
-          credits={credits}
-          loadingCredits={loadingCredits}
           onFavoriteChange={(isFavorite) => applyFavorite(detailModalItem.id, isFavorite)}
-          onClose={() => {
-            setDetailModalItem(null)
-            setTrailerUrl(null)
-            setCredits(null)
-          }}
+          onClose={() => setDetailModalItem(null)}
         />
       )}
     </div>
-  )
-}
-
-function DetailModal({
-  item,
-  viewer,
-  trailerUrl,
-  loadingTrailer,
-  credits,
-  loadingCredits,
-  onFavoriteChange,
-  onClose,
-}: {
-  item: Recommendation
-  viewer: HouseholdUser | null
-  trailerUrl: string | null
-  loadingTrailer: boolean
-  credits: MediaCredits | null
-  loadingCredits: boolean
-  onFavoriteChange: (isFavorite: boolean) => void
-  onClose: () => void
-}) {
-  return (
-    <Modal isOpen onClose={onClose} size='xl' tall aria-label={item.title}>
-      <ModalHeader
-        title={item.title}
-        action={
-          <FavoriteButton
-            mediaItemId={item.id}
-            isFavorite={item.isFavorite === true}
-            onChange={onFavoriteChange}
-            size={22}
-            className='-mt-1.5'
-          />
-        }
-        description={<SubmissionMeta submission={item.submission} />}
-      />
-      <ModalBody className='pb-6'>
-        <WhoWantsToWatch
-          myPreference={item.myPreference}
-          viewer={viewer}
-          otherPreferences={item.otherPreferences}
-          className='mb-6'
-        />
-        <MediaDetailBody
-          item={item}
-          trailerUrl={trailerUrl}
-          loadingTrailer={loadingTrailer}
-          credits={credits}
-          loadingCredits={loadingCredits}
-        />
-      </ModalBody>
-    </Modal>
   )
 }

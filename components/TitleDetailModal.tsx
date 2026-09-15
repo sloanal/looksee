@@ -29,7 +29,7 @@ export function TitleDetailModal({
             isFavorite={item.myPreference?.isFavorite === true}
             onChange={onFavoriteChange}
             size={22}
-            className='-mt-1.5'
+            className='-my-2'
           />
         }
       />

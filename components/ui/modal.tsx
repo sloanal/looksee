@@ -129,7 +129,7 @@ interface ModalCloseButtonProps {
   className?: string
 }
 
-/** 44px close target pinned to the top-right of the dialog. */
+/** 44px close target, sized to sit on the header row beside the title. */
 export function ModalCloseButton({ onClick, disabled, className }: ModalCloseButtonProps) {
   const context = useContext(ModalContext)
   const handleClick = onClick ?? context?.handleClose
@@ -140,7 +140,7 @@ export function ModalCloseButton({ onClick, disabled, className }: ModalCloseBut
       disabled={disabled}
       aria-label='Close'
       className={cn(
-        'absolute right-2 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50',
+        'z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50',
         className,
       )}
     >
@@ -160,6 +160,12 @@ interface ModalHeaderProps {
   children?: ReactNode
 }
 
+/**
+ * Title row for a dialog. The title, the action and the close button share one
+ * centered row, so they line up with each other whatever the title's size; the
+ * buttons' 44px touch targets are pulled back into the header's own padding so
+ * the row stays as tall as the title itself.
+ */
 export function ModalHeader({
   title,
   description,
@@ -171,12 +177,17 @@ export function ModalHeader({
 }: ModalHeaderProps) {
   return (
     <div className={cn('flex-shrink-0 px-5 pt-5 sm:px-6 sm:pt-6', className)}>
-      {showClose && <ModalCloseButton disabled={closeDisabled} />}
-      <div className={cn('flex items-start gap-2', showClose && 'pr-10')}>
+      <div className='flex items-center gap-1'>
         <h2 className='min-w-0 flex-1 text-xl font-bold leading-tight text-foreground sm:text-2xl'>
           {title}
         </h2>
         {action}
+        {showClose && (
+          <ModalCloseButton
+            disabled={closeDisabled}
+            className='-my-2 -mr-3 sm:-mr-4'
+          />
+        )}
       </div>
       {description && <div className='mt-1 text-sm text-muted-foreground'>{description}</div>}
       {children}

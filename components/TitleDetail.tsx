@@ -1,13 +1,15 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { ReactNode, useEffect, useRef, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { formatRuntime } from '@/components/MediaCard'
 import {
-  CreditsSection,
+  CastSection,
   DetailSection,
+  DirectorSection,
   fetchMediaCredits,
   formatReleaseDate,
+  hasCredit,
   isTmdbItem,
   MediaCredits,
   MediaDetailItem,
@@ -21,7 +23,7 @@ import {
 } from '@/components/HouseholdExcitementRow'
 import { PosterImage } from '@/components/PosterImage'
 import { StreamingProviders } from '@/components/StreamingProviders'
-import { SubmissionInfo, SubmissionMeta } from '@/components/SubmissionMeta'
+import { AddedBySection, RecommendedBySection, SubmissionInfo } from '@/components/SubmissionMeta'
 import { WhoWantsToWatch } from '@/components/WhoWantsToWatch'
 import { cn } from '@/lib/utils'
 
@@ -50,9 +52,10 @@ interface TitleDetailProps {
 
 /**
  * Everything the app has to say about a title, in one order everywhere it is
- * shown: who added it, who wants to watch it, the poster and the facts, then
- * the trailer. The Browse and Watch overlays put this inside a dialog and the
- * New deck scrolls it inside a swipe card, so all three read the same.
+ * shown: the poster and the facts, the trailer, then who wants to watch it,
+ * where it came from and where to watch it. The Browse and Watch overlays put
+ * this inside a dialog and the New deck scrolls it inside a swipe card, so all
+ * three read the same.
  */
 export function TitleDetail({
   item,
@@ -67,18 +70,11 @@ export function TitleDetail({
   })
   const tmdb = isTmdbItem(item)
   const showRuntime = typeof item.runtimeMinutes === 'number' && item.runtimeMinutes > 0
+  const showDirector = hasCredit(credits?.director, loadingCredits)
+  const showRating = typeof item.rating === 'number' && item.rating > 0
 
   return (
     <div className={cn('space-y-6', className)} data-testid='title-detail'>
-      <div className='space-y-3'>
-        <SubmissionMeta submission={item.submission} />
-        <WhoWantsToWatch
-          myPreference={item.myPreference}
-          viewer={viewer}
-          otherPreferences={item.otherPreferences}
-        />
-      </div>
-
       <div className='grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))]'>
         <div className='mx-auto aspect-[2/3] w-full max-w-[260px] overflow-hidden rounded-xl shadow-card'>
           <PosterImage
@@ -91,15 +87,26 @@ export function TitleDetail({
         </div>
 
         <div className='space-y-5'>
-          {tmdb && extras && <StreamingProviders tmdbId={item.tmdbId!} type={item.type} />}
-
           {item.description && (
             <DetailSection title='Description'>
               <p className='text-sm leading-relaxed text-muted-foreground'>{item.description}</p>
             </DetailSection>
           )}
 
-          <CreditsSection type={item.type} credits={credits} loadingCredits={loadingCredits} />
+          {(showDirector || item.releaseDate) && (
+            <DetailPair>
+              <DirectorSection type={item.type} credits={credits} loadingCredits={loadingCredits} />
+              {item.releaseDate && (
+                <DetailSection title='Release date'>
+                  <p className='text-sm text-muted-foreground'>
+                    {formatReleaseDate(item.releaseDate)}
+                  </p>
+                </DetailSection>
+              )}
+            </DetailPair>
+          )}
+
+          <CastSection credits={credits} loadingCredits={loadingCredits} />
 
           {item.genres.length > 0 && (
             <DetailSection title='Genres'>
@@ -109,37 +116,21 @@ export function TitleDetail({
             </DetailSection>
           )}
 
-          {showRuntime && (
-            <DetailSection title='Runtime'>
-              <p className='text-sm text-muted-foreground'>
-                {formatRuntime(item.runtimeMinutes as number, item.type)}
-              </p>
-            </DetailSection>
-          )}
-
-          {item.releaseDate && (
-            <DetailSection title='Release date'>
-              <p className='text-sm text-muted-foreground'>{formatReleaseDate(item.releaseDate)}</p>
-            </DetailSection>
-          )}
-
-          {item.rating && (
-            <DetailSection title='Rating'>
-              <MediaRating rating={item.rating} />
-            </DetailSection>
-          )}
-
-          {item.myPreference?.recommendedByName && (
-            <DetailSection title='Recommended by'>
-              <p className='text-sm text-muted-foreground'>
-                {item.myPreference.recommendedByName}
-                {item.myPreference.recommendationContext && (
-                  <span className='mt-1 block text-xs italic'>
-                    {item.myPreference.recommendationContext}
-                  </span>
-                )}
-              </p>
-            </DetailSection>
+          {(showRating || showRuntime) && (
+            <DetailPair>
+              {showRating && (
+                <DetailSection title='Rating'>
+                  <MediaRating rating={item.rating as number} />
+                </DetailSection>
+              )}
+              {showRuntime && (
+                <DetailSection title='Runtime'>
+                  <p className='text-sm text-muted-foreground'>
+                    {formatRuntime(item.runtimeMinutes as number, item.type)}
+                  </p>
+                </DetailSection>
+              )}
+            </DetailPair>
           )}
         </div>
       </div>
@@ -147,8 +138,29 @@ export function TitleDetail({
       {trailer && (
         <TrailerSection item={item} trailerUrl={trailerUrl} loadingTrailer={loadingTrailer} />
       )}
+
+      <WhoWantsToWatch
+        myPreference={item.myPreference}
+        viewer={viewer}
+        otherPreferences={item.otherPreferences}
+      />
+
+      <AddedBySection submission={item.submission} />
+
+      <RecommendedBySection mine={item.myPreference} submission={item.submission} />
+
+      {tmdb && extras && <StreamingProviders tmdbId={item.tmdbId!} type={item.type} />}
     </div>
   )
+}
+
+/**
+ * Two short facts side by side, so a pair like release date and director reads
+ * as one line of the card rather than two stacked sections. Stays two columns
+ * at every width: both sides hold a handful of words at most.
+ */
+function DetailPair({ children }: { children: ReactNode }) {
+  return <div className='grid grid-cols-2 gap-x-4 gap-y-5'>{children}</div>
 }
 
 /**

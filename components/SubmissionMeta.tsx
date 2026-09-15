@@ -1,6 +1,6 @@
 'use client'
 
-import { cn } from '@/lib/utils'
+import { DetailSection } from '@/components/MediaDetail'
 
 export interface SubmissionInfo {
   addedBy: { id: string; name: string; imageUrl: string | null } | null
@@ -11,9 +11,10 @@ export interface SubmissionInfo {
   recommendationContext: string | null
 }
 
-interface SubmissionMetaProps {
-  submission?: SubmissionInfo | null
-  className?: string
+/** Either end of a recommendation: the viewer's own note, or the adder's. */
+export interface RecommendationSource {
+  recommendedByName?: string | null
+  recommendationContext?: string | null
 }
 
 function formatAddedDate(iso: string): { short: string; full: string } | null {
@@ -25,44 +26,67 @@ function formatAddedDate(iso: string): { short: string; full: string } | null {
   }
 }
 
+function nonEmpty(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
 /**
- * Compact "who added this, where, when, and on whose recommendation" block.
- * Every field is optional; renders nothing when there is nothing to say.
+ * Who added this title, to which room, and when. Every field is optional, so
+ * this renders nothing when there is nothing to credit.
  */
-export function SubmissionMeta({ submission, className }: SubmissionMetaProps) {
+export function AddedBySection({ submission }: { submission?: SubmissionInfo | null }) {
   if (!submission) return null
 
   const added = submission.addedAt ? formatAddedDate(submission.addedAt) : null
-  const hasAddedLine = Boolean(submission.addedBy || submission.roomName || added)
-  if (!hasAddedLine && !submission.recommendedByName && !submission.recommendationContext) {
-    return null
-  }
-
-  const whoWhere = [
-    submission.addedBy ? `Added by ${submission.addedBy.name}` : null,
+  const line = [
+    submission.addedBy?.name,
     submission.roomName ? `to ${submission.roomName}` : null,
+    added ? `on ${added.short}` : null,
   ].filter(Boolean).join(' ')
+  if (!line) return null
 
   const tooltip = added
     ? submission.timezone ? `${added.full} · Submitted from ${submission.timezone}` : added.full
     : undefined
 
   return (
-    <div
-      className={cn('text-xs text-muted-foreground space-y-0.5', className)}
-      data-testid='submission-meta'
-    >
-      {hasAddedLine && (
-        <p title={tooltip}>
-          {whoWhere}
-          {whoWhere && added ? ' · ' : ''}
-          {added ? `Added ${added.short}` : ''}
-        </p>
-      )}
-      {submission.recommendedByName && <p>Recommended by {submission.recommendedByName}</p>}
-      {submission.recommendationContext && (
-        <p className='italic'>“{submission.recommendationContext}”</p>
-      )}
+    <div data-testid='submission-meta'>
+      <DetailSection title='Added by'>
+        <p className='text-sm text-muted-foreground' title={tooltip}>{line}</p>
+      </DetailSection>
     </div>
   )
+}
+
+/**
+ * Who put someone onto this title. The viewer's own note comes first, since it
+ * is theirs and private to them; failing that we show the note left by whoever
+ * added the title, which is what the submission carries.
+ */
+export function RecommendedBySection({
+  mine,
+  submission,
+}: {
+  mine?: RecommendationSource | null
+  submission?: SubmissionInfo | null
+}) {
+  const source = recommendation(mine) ?? recommendation(submission)
+  if (!source) return null
+
+  return (
+    <DetailSection title='Recommended by'>
+      <p className='text-sm text-muted-foreground'>
+        {source.name}
+        {source.context && <span className='mt-1 block text-xs italic'>{source.context}</span>}
+      </p>
+    </DetailSection>
+  )
+}
+
+function recommendation(source?: RecommendationSource | null) {
+  const name = nonEmpty(source?.recommendedByName)
+  const context = nonEmpty(source?.recommendationContext)
+  return name || context ? { name, context } : null
 }

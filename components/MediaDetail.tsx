@@ -152,8 +152,26 @@ export function MediaRating({ rating, className }: { rating: number; className?:
   )
 }
 
-/** Director/creator and top-billed cast, or a quiet loading state while they're fetched. */
-export function CreditsSection({
+/**
+ * Whether a credits section has anything to occupy: either names to list, or a
+ * fetch still in flight that will fill it in. Callers laying credits out beside
+ * another section ask this before making room for them.
+ */
+export const hasCredit = (names?: string[], loadingCredits?: boolean) =>
+  Boolean(loadingCredits) || (names?.length ?? 0) > 0
+
+function CreditsSkeleton({ label }: { label: string }) {
+  return (
+    <div className='space-y-1.5' role='status' aria-live='polite'>
+      <Skeleton className='h-3.5 w-24' />
+      <Skeleton className='h-4 w-2/3' />
+      <span className='sr-only'>{label}</span>
+    </div>
+  )
+}
+
+/** Director(s) for a movie, creator(s) for a show, named for how many there are. */
+export function DirectorSection({
   type,
   credits,
   loadingCredits,
@@ -162,35 +180,35 @@ export function CreditsSection({
   credits?: MediaCredits | null
   loadingCredits?: boolean
 }) {
-  if (loadingCredits) {
-    return (
-      <div className='space-y-1.5' role='status' aria-live='polite'>
-        <Skeleton className='h-3.5 w-24' />
-        <Skeleton className='h-4 w-2/3' />
-        <span className='sr-only'>Loading cast and crew</span>
-      </div>
-    )
-  }
-
-  if (!credits || (credits.director.length === 0 && credits.cast.length === 0)) return null
+  if (loadingCredits) return <CreditsSkeleton label='Loading director' />
+  if (!credits || credits.director.length === 0) return null
 
   const isShow = type.toLowerCase() === 'show'
-  const directorTitle = isShow
+  const title = isShow
     ? (credits.director.length > 1 ? 'Creators' : 'Creator')
     : (credits.director.length > 1 ? 'Directors' : 'Director')
 
   return (
-    <>
-      {credits.director.length > 0 && (
-        <DetailSection title={directorTitle}>
-          <p className='text-sm text-muted-foreground'>{credits.director.join(', ')}</p>
-        </DetailSection>
-      )}
-      {credits.cast.length > 0 && (
-        <DetailSection title='Cast'>
-          <p className='text-sm text-muted-foreground'>{credits.cast.join(', ')}</p>
-        </DetailSection>
-      )}
-    </>
+    <DetailSection title={title}>
+      <p className='text-sm text-muted-foreground'>{credits.director.join(', ')}</p>
+    </DetailSection>
+  )
+}
+
+/** Top-billed cast, or a quiet loading state while TMDB is asked for it. */
+export function CastSection({
+  credits,
+  loadingCredits,
+}: {
+  credits?: MediaCredits | null
+  loadingCredits?: boolean
+}) {
+  if (loadingCredits) return <CreditsSkeleton label='Loading cast' />
+  if (!credits || credits.cast.length === 0) return null
+
+  return (
+    <DetailSection title='Cast'>
+      <p className='text-sm text-muted-foreground'>{credits.cast.join(', ')}</p>
+    </DetailSection>
   )
 }

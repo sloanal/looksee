@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
+import { DetailSection } from '@/components/MediaDetail'
 
 interface Provider {
   id: number
@@ -169,27 +170,28 @@ export function StreamingProviders(
 
   return (
     <div className={className}>
-      <h3 className='text-lg font-semibold mb-2 text-foreground'>Where to watch</h3>
-      <div className='space-y-2'>
-        {data.flatrate.length > 0 && <ProviderRow label='Stream on' providers={data.flatrate} />}
-        {rentBuy.length > 0 && <ProviderRow label='Rent / Buy' providers={rentBuy} />}
-        {data.link
-          ? (
-            <a
-              href={data.link}
-              target='_blank'
-              rel='noopener noreferrer'
-              className='inline-block text-[11px] text-muted-foreground hover:text-foreground hover:underline'
-            >
-              Powered by JustWatch
-            </a>
-          )
-          : (
-            <span className='inline-block text-[11px] text-muted-foreground'>
-              Powered by JustWatch
-            </span>
-          )}
-      </div>
+      <DetailSection title='Where to watch'>
+        <div className='space-y-2'>
+          {data.flatrate.length > 0 && <ProviderRow label='Stream on' providers={data.flatrate} />}
+          {rentBuy.length > 0 && <ProviderRow label='Rent / Buy' providers={rentBuy} />}
+          {data.link
+            ? (
+              <a
+                href={data.link}
+                target='_blank'
+                rel='noopener noreferrer'
+                className='inline-block text-[11px] text-muted-foreground hover:text-foreground hover:underline'
+              >
+                Powered by JustWatch
+              </a>
+            )
+            : (
+              <span className='inline-block text-[11px] text-muted-foreground'>
+                Powered by JustWatch
+              </span>
+            )}
+        </div>
+      </DetailSection>
     </div>
   )
 }

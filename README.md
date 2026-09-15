@@ -221,6 +221,7 @@ Once connected, every push to your main branch will automatically trigger a new 
 ### Environment Variables Reference
 
 - `DATABASE_URL` - Automatically set by Vercel Postgres
+- `MIGRATE_DATABASE_URL` / `DATABASE_URL_UNPOOLED` / `POSTGRES_URL_NON_POOLING` / `DIRECT_URL` - Optional: the first one set is used for `prisma migrate deploy` in place of `DATABASE_URL`. Poolers (Neon's `-pooler` endpoint, PgBouncer) hand out connections that cannot reliably hold the advisory lock Prisma Migrate takes, which surfaces as a `P1002` timeout partway through a deploy, so point one of these at the same database's direct, non-pooled endpoint. The Neon and Vercel Postgres integrations set `DATABASE_URL_UNPOOLED` / `POSTGRES_URL_NON_POOLING` for you. A failed migration is retried twice before the production build is failed either way
 - `BLOB_READ_WRITE_TOKEN` - Automatically set by Vercel Blob Storage
 - `NEXTAUTH_SECRET` - Required: Generate a secure random string
 - `NEXTAUTH_URL` - Automatically set by Vercel (your app URL)

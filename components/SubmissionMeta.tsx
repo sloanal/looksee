@@ -52,11 +52,9 @@ export function AddedBySection({ submission }: { submission?: SubmissionInfo | n
     : undefined
 
   return (
-    <div data-testid='submission-meta'>
-      <DetailSection title='Added by'>
-        <p className='text-sm text-muted-foreground' title={tooltip}>{line}</p>
-      </DetailSection>
-    </div>
+    <DetailSection title='Added by' testId='submission-meta'>
+      <p className='text-sm text-muted-foreground' title={tooltip}>{line}</p>
+    </DetailSection>
   )
 }
 

@@ -54,9 +54,11 @@ export async function fetchMediaCredits(
   }
 }
 
-export function DetailSection({ title, children }: { title: string; children: ReactNode }) {
+export function DetailSection(
+  { title, children, testId }: { title: string; children: ReactNode; testId?: string },
+) {
   return (
-    <div>
+    <div data-testid={testId}>
       <h3 className='mb-1.5 text-sm font-semibold uppercase tracking-wide text-muted-foreground'>
         {title}
       </h3>

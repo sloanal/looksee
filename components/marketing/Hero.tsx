@@ -65,12 +65,8 @@ export function Hero() {
         <div className='relative z-10 text-center lg:text-left'>
           <motion.p
             {...fadeUp(0)}
-            className='inline-flex items-center gap-2 rounded-full border border-foreground/15 bg-background/60 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-foreground backdrop-blur'
+            className='text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground'
           >
-            <span className='relative flex h-2 w-2'>
-              <span className='ping-dot absolute inset-0 rounded-full bg-tomato' />
-              <span className='relative h-2 w-2 rounded-full bg-tomato' />
-            </span>
             Movie night, minus the scrolling
           </motion.p>
 

@@ -57,6 +57,9 @@ interface LoadingScreenProps {
 /**
  * Full-height branded loader for the moments before we know where the user
  * belongs: the root session/room check and route transitions.
+ *
+ * It holds back for a beat before easing in, so when the wait is short you go
+ * straight from a blank canvas to the page instead of glimpsing the loader.
  */
 export function LoadingScreen({ label = 'Getting things ready', className }: LoadingScreenProps) {
   return (
@@ -64,16 +67,16 @@ export function LoadingScreen({ label = 'Getting things ready', className }: Loa
       role='status'
       aria-live='polite'
       className={cn(
-        'flex min-h-[100dvh] flex-col items-center justify-center gap-5 bg-canvas px-6',
+        'flex min-h-[100dvh] flex-col items-center justify-center gap-5 bg-canvas px-6 [--motion-delay:120ms]',
         className,
       )}
     >
-      <BrandLensMark />
-      <div className='text-center'>
+      <BrandLensMark className='motion-pop' />
+      <div className='motion-fade text-center [--i:1]'>
         <p className='font-heading text-2xl font-bold tracking-tight text-foreground'>Looksee</p>
         <p className='mt-1 text-sm text-muted-foreground'>{label}</p>
       </div>
-      <div className='h-1 w-32 overflow-hidden rounded-full bg-border'>
+      <div className='motion-fade h-1 w-32 overflow-hidden rounded-full bg-border [--i:2]'>
         <div className='loader-sweep h-full w-1/3 rounded-full bg-foreground/70' />
       </div>
     </div>

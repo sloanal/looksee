@@ -3,7 +3,7 @@ import { Skeleton, SkeletonLine } from '@/components/ui/skeleton'
 /** One frame-height card's worth of placeholder, sitting where the deck will land. */
 export function QueueDeckSkeleton() {
   return (
-    <div className='mx-auto h-full w-full max-w-md px-4'>
+    <div className='motion-placeholder mx-auto h-full w-full max-w-md px-4'>
       <div className='flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-pop'>
         <div className='flex items-center gap-2 border-b border-border bg-muted/60 px-4 py-3'>
           <Skeleton className='h-3.5 w-3.5 rounded' />

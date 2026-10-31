@@ -66,7 +66,7 @@ export function MediaCardSkeletonList({
   className,
 }: MediaCardSkeletonListProps) {
   return (
-    <div className={cn('space-y-4', className)}>
+    <div className={cn('motion-placeholder space-y-4', className)}>
       {Array.from({ length: count }).map((_, i) => (
         <MediaCardSkeleton key={i} rooms={rooms} ratings={ratings} />
       ))}

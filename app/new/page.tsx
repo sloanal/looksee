@@ -174,24 +174,28 @@ export default function NewPage() {
         {loading ? <QueueDeckSkeleton /> : !hasCards
           ? (
             <EmptyState
+              className='motion-rise'
               icon={PartyPopper}
               title='Nothing left to rate'
               description='New titles your rooms add will show up here.'
             />
           )
           : (
-            <QueueDeck
-              items={queue}
-              viewer={viewer}
-              activeIndex={activeIndex}
-              onActiveIndexChange={setActiveIndex}
-              statusById={statusById}
-              onStatusChange={(itemId, value) =>
-                setStatusById((prev) => ({ ...prev, [itemId]: value }))}
-              onRate={rate}
-              onFavoriteChange={applyFavorite}
-              exit={exit}
-            />
+            // The deck lifts into the frame the skeleton was holding for it.
+            <div className='motion-rise h-full'>
+              <QueueDeck
+                items={queue}
+                viewer={viewer}
+                activeIndex={activeIndex}
+                onActiveIndexChange={setActiveIndex}
+                statusById={statusById}
+                onStatusChange={(itemId, value) =>
+                  setStatusById((prev) => ({ ...prev, [itemId]: value }))}
+                onRate={rate}
+                onFavoriteChange={applyFavorite}
+                exit={exit}
+              />
+            </div>
           )}
       </div>
 

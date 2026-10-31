@@ -16,13 +16,16 @@ interface PageHeaderBarProps {
 
 /**
  * Sticky white header band. Paints edge to edge behind the page container so
- * the page itself can sit on the cream canvas.
+ * the page itself can sit on the cream canvas. The band is there from the
+ * first frame; only what's on it fades in, so the page's frame never moves.
  */
 export function PageHeaderBar({ children, className }: PageHeaderBarProps) {
   return (
     <div className='sticky top-0 z-10 safe-top'>
       <div className='pointer-events-none absolute inset-y-0 left-1/2 w-screen -translate-x-1/2 border-b border-border bg-background/95 backdrop-blur-sm' />
-      <div className={cn('relative px-4 pb-3 pt-4', pageContainerClassName, className)}>
+      <div
+        className={cn('motion-frame relative px-4 pb-3 pt-4', pageContainerClassName, className)}
+      >
         {children}
       </div>
     </div>

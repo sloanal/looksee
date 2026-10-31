@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 import { BottomNav } from '@/components/BottomNav'
+import { RouteMotion } from '@/components/motion/MotionScope'
 import { cn } from '@/lib/utils'
 
 interface TabShellProps {
@@ -14,6 +15,9 @@ interface TabShellProps {
 /**
  * Shared frame for the five tab pages: cream canvas, room for the fixed
  * bottom nav (plus the iPhone home indicator), and the nav itself.
+ *
+ * The page builds itself in the first time you open a tab this session and
+ * just fades in on later visits; the nav stays put and is never animated in.
  */
 export function TabShell({ children, fill = false }: TabShellProps) {
   return (
@@ -28,7 +32,7 @@ export function TabShell({ children, fill = false }: TabShellProps) {
           : 'min-h-screen bottom-nav-spacing',
       )}
     >
-      {children}
+      <RouteMotion>{children}</RouteMotion>
       <BottomNav />
     </div>
   )

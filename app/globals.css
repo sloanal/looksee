@@ -44,6 +44,17 @@
 
   /* Kept for anything still referencing the old name. */
   --content-background: hsl(var(--canvas));
+
+  /*
+   * Motion. One easing for everything that arrives: quick off the mark, then a
+   * long, soft settle, so content is legible almost at once but still lands.
+   */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --motion-build: 520ms;
+  --motion-settle: 200ms;
+  --motion-step: 45ms;
+  --motion-rise: 8px;
 }
 
 @layer base {
@@ -233,7 +244,7 @@ body {
 @keyframes modal-content-in {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.97);
+    transform: translateY(16px) scale(0.97);
   }
   to {
     opacity: 1;
@@ -253,7 +264,7 @@ body {
 }
 
 .modal-overlay {
-  animation: modal-overlay-in 0.2s ease-out;
+  animation: modal-overlay-in 0.24s ease-out;
 }
 
 .modal-overlay.closing {
@@ -261,7 +272,7 @@ body {
 }
 
 .modal-content {
-  animation: modal-content-in 0.2s ease-out;
+  animation: modal-content-in 0.36s var(--ease-out);
 }
 
 .modal-content.closing {
@@ -515,5 +526,224 @@ body {
   }
   .spinner-spin {
     animation-duration: 2s;
+  }
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * Page and component motion
+ * ---------------------------------------------------------------------------
+ *
+ * Pure CSS so it costs no JavaScript and starts on the first frame an element
+ * is painted. Only `opacity` and `transform` move, which the compositor runs
+ * off the main thread.
+ *
+ * Every entrance uses `animation-fill-mode: backwards` and leaves out the `to`
+ * keyframe, so once it finishes the element has no transform or opacity left
+ * on it. That matters: a lingering `transform` would trap dropdown menus under
+ * the next card and re-anchor anything `position: fixed` inside it.
+ *
+ *   .motion-rise     fades in from a few px below
+ *   .motion-fade     fades in
+ *   .motion-pop      fades in from slightly small (brand marks, heroes)
+ *   .motion-frame    a short fade for page chrome (header contents)
+ *   .motion-stagger  its children rise one after another
+ *   .motion-hero     roomier, slower timings for a first-impression screen
+ *
+ * Delays come from `--i` (step count) and `--motion-delay` (base offset), e.g.
+ * `className='motion-rise [--i:2]'`. Stagger sets `--i` from the child's
+ * position and only animates the first 12 children: anything further down is
+ * below the fold, and skipping it keeps long lists from promoting hundreds of
+ * layers at once.
+ *
+ * A `data-motion` attribute on any ancestor picks how much of this plays:
+ *   build   (default) the full staggered entrance, for a first visit
+ *   settle  one quick fade with no delay, for a revisit or a reload
+ *   still   nothing, when a view transition is already moving things
+ */
+@keyframes m-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, var(--motion-rise), 0);
+  }
+}
+
+@keyframes m-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes m-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+.motion-hero {
+  --motion-build: 760ms;
+  --motion-step: 80ms;
+  --motion-rise: 14px;
+}
+
+.motion-stagger > * {
+  --i: 0;
+}
+.motion-stagger > :nth-child(2) {
+  --i: 1;
+}
+.motion-stagger > :nth-child(3) {
+  --i: 2;
+}
+.motion-stagger > :nth-child(4) {
+  --i: 3;
+}
+.motion-stagger > :nth-child(5) {
+  --i: 4;
+}
+.motion-stagger > :nth-child(6) {
+  --i: 5;
+}
+.motion-stagger > :nth-child(7) {
+  --i: 6;
+}
+.motion-stagger > :nth-child(n + 8) {
+  --i: 7;
+}
+
+.motion-rise,
+.motion-fade,
+.motion-pop,
+.motion-stagger > :nth-child(-n + 12) {
+  animation-duration: var(--motion-build);
+  animation-timing-function: var(--ease-out);
+  animation-fill-mode: backwards;
+  animation-delay: calc(var(--motion-delay, 0ms) + var(--i, 0) * var(--motion-step));
+}
+
+.motion-rise,
+.motion-stagger > :nth-child(-n + 12) {
+  animation-name: m-rise;
+}
+
+.motion-fade {
+  animation-name: m-fade;
+}
+
+.motion-pop {
+  animation-name: m-pop;
+}
+
+.motion-frame {
+  animation: m-fade 320ms ease-out backwards;
+}
+
+[data-motion='settle'] :is(.motion-rise, .motion-fade, .motion-pop, .motion-frame),
+[data-motion='settle'] .motion-stagger > :nth-child(-n + 12) {
+  animation-name: m-fade;
+  animation-duration: var(--motion-settle);
+  animation-timing-function: ease-out;
+  animation-delay: 0ms;
+}
+
+[data-motion='still'] :is(.motion-rise, .motion-fade, .motion-pop, .motion-frame),
+[data-motion='still'] .motion-stagger > :nth-child(-n + 12) {
+  animation: none;
+}
+
+/*
+ * Placeholders hold back for a beat before showing, so a route or fetch that
+ * resolves quickly goes straight to content instead of flashing a skeleton.
+ */
+.motion-placeholder,
+.skeleton {
+  animation: m-fade 280ms ease-out 140ms backwards;
+}
+
+/* A small, springy arrival for counters and badges. */
+@keyframes m-badge {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+
+.motion-badge {
+  animation: m-badge 420ms var(--ease-spring) backwards;
+}
+
+/*
+ * Bottom nav. The active-tab bar glides from the tab you left to the one you
+ * picked (each tab mounts its own nav, so `--from` carries the old position
+ * across), and the newly active icon gives a small press-and-release.
+ */
+@keyframes nav-indicator-slide {
+  from {
+    transform: translate3d(calc(var(--from) * 100%), 0, 0);
+  }
+}
+
+.nav-indicator {
+  transform: translate3d(calc(var(--to) * 100%), 0, 0);
+  transition: transform 460ms var(--ease-out);
+}
+
+.nav-indicator[data-slide] {
+  animation: nav-indicator-slide 460ms var(--ease-out) backwards;
+}
+
+@keyframes nav-icon-pop {
+  0% {
+    transform: scale(0.8);
+  }
+  55% {
+    transform: scale(1.1);
+  }
+}
+
+.nav-icon-pop {
+  animation: nav-icon-pop 440ms var(--ease-out);
+}
+
+/*
+ * View transitions (where supported) for in-page moves that a plain entrance
+ * can't express, like Add's search box docking into the header. Everything
+ * else crossfades quickly underneath.
+ */
+::view-transition-group(*) {
+  animation-duration: 440ms;
+  animation-timing-function: var(--ease-out);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 240ms;
+}
+
+.vt-add-search {
+  view-transition-name: add-search;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Keep a gentle fade so content doesn't snap in, but nothing travels. */
+  .motion-rise,
+  .motion-fade,
+  .motion-pop,
+  .motion-frame,
+  .motion-stagger > :nth-child(-n + 12) {
+    animation-name: m-fade;
+    animation-duration: var(--motion-settle);
+    animation-delay: 0ms;
+  }
+  .motion-placeholder,
+  .skeleton,
+  .motion-badge,
+  .nav-icon-pop,
+  .nav-indicator[data-slide] {
+    animation: none;
+  }
+  .nav-indicator {
+    transition: none;
   }
 }

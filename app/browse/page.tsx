@@ -35,6 +35,7 @@ import { Notice } from '@/components/ui/notice'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
+import { useReloadMotion } from '@/lib/motion'
 import { notifyRoomsChanged } from '@/lib/rooms'
 import {
   CardBand,
@@ -168,6 +169,9 @@ export default function BrowsePage() {
   const [editingRoomsItem, setEditingRoomsItem] = useState<MediaItem | null>(null)
   const [markingWatchedItemId, setMarkingWatchedItemId] = useState<string | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  // Cards cascade in the first time the list lands, then just fade in when a
+  // filter or an edit reloads it.
+  const listMotion = useReloadMotion(loading)
 
   const loadItems = useCallback(async () => {
     setLoading(true)
@@ -484,7 +488,11 @@ export default function BrowsePage() {
       </PageHeaderBar>
 
       <PageContent className='space-y-4'>
-        <div ref={scrollContainerRef} className='space-y-4'>
+        <div
+          ref={scrollContainerRef}
+          data-motion={listMotion}
+          className={cn('space-y-4', !loading && 'motion-stagger')}
+        >
           {loading
             ? <MediaCardSkeletonList count={3} ratings={2} />
             : items.length === 0

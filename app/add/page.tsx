@@ -18,6 +18,7 @@ import {
   Video,
 } from 'lucide-react'
 import { BrandVideo } from '@/components/BrandVideo'
+import { MotionScope } from '@/components/motion/MotionScope'
 import { InlineLoading } from '@/components/LoadingScreen'
 import { MediaCardSkeletonList } from '@/components/MediaCardSkeleton'
 import { RoomSelector } from '@/components/RoomSelector'
@@ -41,6 +42,12 @@ import { Notice } from '@/components/ui/notice'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { DuotoneIcon } from '@/components/DuotoneIcon'
+import {
+  canViewTransition,
+  MotionMode,
+  useReloadMotion,
+  withViewTransition,
+} from '@/lib/motion'
 import { isVirtualRoomId, notifyRoomsChanged } from '@/lib/rooms'
 import { clientSubmissionContext } from '@/lib/submission-context'
 import {
@@ -139,6 +146,14 @@ export default function AddPage() {
   const [addedResultKeys, setAddedResultKeys] = useState<Set<string>>(() => new Set())
   const [lastAddedTitle, setLastAddedTitle] = useState<string | null>(null)
   const searchScrollYRef = useRef(0)
+  // Hero ⇄ docked search is a view transition where the browser has them: the
+  // search box morphs into place and the rest crossfades, so the views it
+  // swaps between skip their own entrances ('still') rather than double up.
+  const [heroMotion, setHeroMotion] = useState<MotionMode | undefined>(undefined)
+  const [dockMotion, setDockMotion] = useState<MotionMode | undefined>(undefined)
+  // Results cascade in for the first search; later searches, and coming back
+  // from a title, just fade them in.
+  const resultsMotion = useReloadMotion(mode !== 'search' || searchResults.length === 0)
 
   // Sync search param to search query
   useEffect(() => {
@@ -536,7 +551,7 @@ export default function AddPage() {
 
   if (mode === 'confirm') {
     return (
-      <div className={pageContainerClassName}>
+      <MotionScope id='add:confirm' className={pageContainerClassName}>
         <PageHeaderBar>
           <PageHeader
             title='Confirm'
@@ -556,7 +571,7 @@ export default function AddPage() {
         </PageHeaderBar>
 
         <PageContent>
-          <form onSubmit={handleSubmit} className='space-y-4'>
+          <form onSubmit={handleSubmit} className='motion-stagger space-y-4'>
             <MediaCard className='relative'>
               <div ref={confirmMenuRef}>
                 <CardMenu>
@@ -644,13 +659,13 @@ export default function AddPage() {
             </Button>
           </form>
         </PageContent>
-      </div>
+      </MotionScope>
     )
   }
 
   if (mode === 'manual') {
     return (
-      <div className={pageContainerClassName}>
+      <MotionScope id='add:manual' className={pageContainerClassName}>
         <PageHeaderBar>
           <PageHeader
             title='Add manually'
@@ -661,7 +676,7 @@ export default function AddPage() {
         </PageHeaderBar>
 
         <PageContent>
-          <form onSubmit={handleSubmit} className='space-y-4'>
+          <form onSubmit={handleSubmit} className='motion-stagger space-y-4'>
             <Card className='space-y-4'>
               {titleAndTypeFields}
               {externalUrlField}
@@ -677,7 +692,7 @@ export default function AddPage() {
             </Button>
           </form>
         </PageContent>
-      </div>
+      </MotionScope>
     )
   }
 
@@ -700,12 +715,23 @@ export default function AddPage() {
   const showNoResults = !loading && Boolean(lastSearchedQuery) && searchResults.length === 0
 
   const resetSearch = () => {
-    setSearchQuery('')
-    setSearchResults([])
-    setLastSearchedQuery('')
-    setLastAddedTitle(null)
-    searchScrollYRef.current = 0
-    requestAnimationFrame(() => searchInputRef.current?.focus())
+    const morph = canViewTransition()
+    withViewTransition(() => {
+      if (morph) setHeroMotion('still')
+      setSearchQuery('')
+      setSearchResults([])
+      setLastSearchedQuery('')
+      setLastAddedTitle(null)
+      searchScrollYRef.current = 0
+    }, () => searchInputRef.current?.focus())
+  }
+
+  const searchFromHero = () => {
+    const morph = canViewTransition()
+    withViewTransition(() => {
+      if (morph) setDockMotion('still')
+      handleSearch()
+    })
   }
 
   const renderSearchField = (size: 'hero' | 'compact') => (
@@ -713,9 +739,10 @@ export default function AddPage() {
       role='search'
       onSubmit={(e) => {
         e.preventDefault()
-        handleSearch()
+        if (size === 'hero') searchFromHero()
+        else handleSearch()
       }}
-      className='relative w-full'
+      className='vt-add-search relative w-full'
     >
       <Search
         className={cn(
@@ -774,46 +801,51 @@ export default function AddPage() {
     </button>
   )
 
+  // The first thing most people see: the mark eases up out of the canvas, then
+  // the heading, the room line, the search box and the fallback link follow it
+  // in, each a beat behind the last.
   if (!hasSearched) {
     return (
-      <div className={pageContainerClassName}>
+      <MotionScope id='add:hero' mode={heroMotion} className={pageContainerClassName}>
         <div className='safe-top tab-viewport-height flex flex-col items-center justify-center px-4 pb-[6vh]'>
-          <div className='w-full max-w-lg text-center'>
-            <BrandVideo className='mx-auto aspect-[16/10] w-44 sm:w-52' />
-            <h1 className='mt-1 text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl'>
+          <div className='motion-hero w-full max-w-lg text-center'>
+            <BrandVideo className='motion-pop mx-auto aspect-[16/10] w-44 sm:w-52' />
+            <h1 className='motion-rise mt-1 text-2xl font-bold leading-tight tracking-tight text-foreground [--i:1] sm:text-3xl'>
               Add something to watch
             </h1>
-            <div className='mt-3 flex items-center justify-center gap-2 text-sm text-muted-foreground'>
+            <div className='motion-rise mt-3 flex items-center justify-center gap-2 text-sm text-muted-foreground [--i:2]'>
               <span>Adding to</span>
               <RoomSelector menuAlign='center' />
               {!isVirtualRoomId(roomId) && <RoomMembersAvatars size='sm' />}
             </div>
 
-            {addedNotice && <div className='mt-6'>{addedNotice}</div>}
+            {addedNotice && <div className='motion-rise mt-6 [--i:3]'>{addedNotice}</div>}
 
-            <div className='mt-6'>{renderSearchField('hero')}</div>
-            <div className='mt-2'>{addManuallyButton}</div>
+            <div className='motion-rise mt-6 [--i:3]'>{renderSearchField('hero')}</div>
+            <div className='motion-fade mt-2 [--i:5]'>{addManuallyButton}</div>
           </div>
         </div>
-      </div>
+      </MotionScope>
     )
   }
 
   return (
     <div className={pageContainerClassName}>
-      <PageHeaderBar>
-        <div className='flex items-center gap-1'>
-          <BackButton onClick={resetSearch} label='New search' />
-          <div className='min-w-0 flex-1'>{renderSearchField('compact')}</div>
-        </div>
-        <div className='mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1'>
-          <div className='flex min-w-0 items-center gap-2 text-sm text-muted-foreground'>
-            <span className='whitespace-nowrap'>Adding to</span>
-            <RoomSelector />
+      <MotionScope id='add:dock' mode={dockMotion}>
+        <PageHeaderBar>
+          <div className='flex items-center gap-1'>
+            <BackButton onClick={resetSearch} label='New search' />
+            <div className='min-w-0 flex-1'>{renderSearchField('compact')}</div>
           </div>
-          {addManuallyButton}
-        </div>
-      </PageHeaderBar>
+          <div className='mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1'>
+            <div className='flex min-w-0 items-center gap-2 text-sm text-muted-foreground'>
+              <span className='whitespace-nowrap'>Adding to</span>
+              <RoomSelector />
+            </div>
+            {addManuallyButton}
+          </div>
+        </PageHeaderBar>
+      </MotionScope>
 
       <PageContent className='space-y-4'>
         {addedNotice}
@@ -838,78 +870,80 @@ export default function AddPage() {
         )}
 
         {searchResults.length > 0 && (
-          searchResults.map((result, index) => {
-            const previous = index > 0 ? searchResults[index - 1] : null
-            const via = result.source === 'person' ? result.via : undefined
-            const startsPersonGroup = Boolean(
-              via && previous &&
-                (previous.source !== 'person' || previous.via?.personId !== via.personId),
-            )
-            return (
-              <Fragment key={`${result.type}-${result.id}`}>
-                {startsPersonGroup && via && (
-                  <div
-                    className='flex items-center gap-3 pt-2 text-xs text-muted-foreground'
-                    role='separator'
-                    aria-label={`More from ${via.name}`}
+          <div data-motion={resultsMotion} className='motion-stagger space-y-4'>
+            {searchResults.map((result, index) => {
+              const previous = index > 0 ? searchResults[index - 1] : null
+              const via = result.source === 'person' ? result.via : undefined
+              const startsPersonGroup = Boolean(
+                via && previous &&
+                  (previous.source !== 'person' || previous.via?.personId !== via.personId),
+              )
+              return (
+                <Fragment key={`${result.type}-${result.id}`}>
+                  {startsPersonGroup && via && (
+                    <div
+                      className='flex items-center gap-3 pt-2 text-xs text-muted-foreground'
+                      role='separator'
+                      aria-label={`More from ${via.name}`}
+                    >
+                      <span className='h-px flex-1 bg-border' />
+                      <span className='inline-flex items-center gap-1 whitespace-nowrap'>
+                        <DuotoneIcon icon={User} size={12} />
+                        More from {via.name}
+                      </span>
+                      <span className='h-px flex-1 bg-border' />
+                    </div>
+                  )}
+                  <MediaCard
+                    onClick={() => handleSelectResult(result)}
+                    variant='clickable'
                   >
-                    <span className='h-px flex-1 bg-border' />
-                    <span className='inline-flex items-center gap-1 whitespace-nowrap'>
-                      <DuotoneIcon icon={User} size={12} />
-                      More from {via.name}
-                    </span>
-                    <span className='h-px flex-1 bg-border' />
-                  </div>
-                )}
-                <MediaCard
-                  onClick={() => handleSelectResult(result)}
-                  variant='clickable'
-                >
-                  <CardLayout>
-                    {result.posterPath && (
-                      <CardPoster
-                        src={`https://image.tmdb.org/t/p/w92${result.posterPath}`}
-                        alt={result.title}
-                        width={80}
-                        height={120}
-                      />
-                    )}
-                    <CardContent>
-                      <CardTitle className='text-lg'>{result.title}</CardTitle>
-                      <CardMeta
-                        icon={getTypeIcon(result.type)}
-                        type={result.type}
-                        releaseDate={result.releaseDate}
-                      />
-                      {addedResultKeys.has(`${result.type}-${result.id}`) && (
-                        <Badge variant='primary' className='mb-1.5 mr-1.5' data-testid='added'>
-                          <Check className='h-3 w-3' strokeWidth={3} aria-hidden />
-                          Added
-                        </Badge>
-                      )}
-                      {via && (
-                        <Badge variant='muted' className='mb-1.5' data-testid='person-source'>
-                          <DuotoneIcon icon={User} size={12} />
-                          {getViaLabel(via)}
-                        </Badge>
-                      )}
-                      {result.genreIds && result.genreIds.length > 0 && (
-                        <CardGenres
-                          genres={getGenreNames(result.genreIds, result.type)}
-                          maxDisplay={3}
+                    <CardLayout>
+                      {result.posterPath && (
+                        <CardPoster
+                          src={`https://image.tmdb.org/t/p/w92${result.posterPath}`}
+                          alt={result.title}
+                          width={80}
+                          height={120}
                         />
                       )}
-                      {result.overview && (
-                        <CardDescription lineClamp={2} className='mt-2'>
-                          {result.overview}
-                        </CardDescription>
-                      )}
-                    </CardContent>
-                  </CardLayout>
-                </MediaCard>
-              </Fragment>
-            )
-          })
+                      <CardContent>
+                        <CardTitle className='text-lg'>{result.title}</CardTitle>
+                        <CardMeta
+                          icon={getTypeIcon(result.type)}
+                          type={result.type}
+                          releaseDate={result.releaseDate}
+                        />
+                        {addedResultKeys.has(`${result.type}-${result.id}`) && (
+                          <Badge variant='primary' className='mb-1.5 mr-1.5' data-testid='added'>
+                            <Check className='h-3 w-3' strokeWidth={3} aria-hidden />
+                            Added
+                          </Badge>
+                        )}
+                        {via && (
+                          <Badge variant='muted' className='mb-1.5' data-testid='person-source'>
+                            <DuotoneIcon icon={User} size={12} />
+                            {getViaLabel(via)}
+                          </Badge>
+                        )}
+                        {result.genreIds && result.genreIds.length > 0 && (
+                          <CardGenres
+                            genres={getGenreNames(result.genreIds, result.type)}
+                            maxDisplay={3}
+                          />
+                        )}
+                        {result.overview && (
+                          <CardDescription lineClamp={2} className='mt-2'>
+                            {result.overview}
+                          </CardDescription>
+                        )}
+                      </CardContent>
+                    </CardLayout>
+                  </MediaCard>
+                </Fragment>
+              )
+            })}
+          </div>
         )}
       </PageContent>
     </div>

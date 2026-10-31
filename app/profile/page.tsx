@@ -51,6 +51,9 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [activeTab, setActiveTab] = useState<Tab>('profile')
+  // The cards cascade in on arrival; flipping between tabs afterwards is a
+  // quick fade, since you've already watched this page build.
+  const [hasSwitchedTab, setHasSwitchedTab] = useState(false)
 
   const [inviteRoom, setInviteRoom] = useState<SettingsRoom | null>(null)
   const [membersRoom, setMembersRoom] = useState<SettingsRoom | null>(null)
@@ -340,7 +343,10 @@ export default function ProfilePage() {
                 id={`settings-tab-${tab.id}`}
                 aria-selected={selected}
                 aria-controls={`settings-panel-${tab.id}`}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id)
+                  setHasSwitchedTab(true)
+                }}
                 className={cn(
                   'min-h-[44px] border-b-2 px-4 text-sm font-medium transition-colors',
                   selected
@@ -357,13 +363,13 @@ export default function ProfilePage() {
 
       <PageContent className='bottom-nav-spacing min-h-[calc(100vh-200px)]'>
         {loading ? <SettingsCardSkeletonList /> : (
-          <>
+          <div data-motion={hasSwitchedTab ? 'settle' : undefined} className='contents'>
             <div
               role='tabpanel'
               id='settings-panel-profile'
               aria-labelledby='settings-tab-profile'
               hidden={activeTab !== 'profile'}
-              className='space-y-4'
+              className='motion-stagger space-y-4'
             >
               {loadError && <Notice variant='error'>{loadError}</Notice>}
               {user && <ProfileSection user={user} onUserUpdated={handleUserUpdated} />}
@@ -398,6 +404,7 @@ export default function ProfilePage() {
               id='settings-panel-rooms'
               aria-labelledby='settings-tab-rooms'
               hidden={activeTab !== 'rooms'}
+              className='motion-fade'
             >
               <RoomsSection
                 rooms={rooms}
@@ -411,7 +418,7 @@ export default function ProfilePage() {
                 onDelete={(room) => setPendingConfirm({ kind: 'delete', room })}
               />
             </div>
-          </>
+          </div>
         )}
       </PageContent>
 

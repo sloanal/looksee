@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { RatingFields } from '@/components/RatingFields'
 import { LoadingScreen } from '@/components/LoadingScreen'
+import { cn } from '@/lib/utils'
 
 interface UnratedItem {
   id: string
@@ -144,8 +145,12 @@ export default function OnboardingPage() {
       </div>
 
       <div className='flex flex-1 items-center justify-center p-4'>
-        <Card className='w-full max-w-md p-6 shadow-pop'>
-          <div className='mb-6 text-center'>
+        <Card className='motion-rise w-full max-w-md p-6 shadow-pop'>
+          {/* Each new title eases up into the card the last one left. */}
+          <div
+            key={currentItem.id}
+            className={cn('mb-6 text-center', currentIndex > 0 && 'motion-rise')}
+          >
             {currentItem.posterUrl && (
               <div className='mb-4 flex justify-center'>
                 <Image

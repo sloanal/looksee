@@ -6,7 +6,7 @@ export default function Loading() {
   return (
     <div className={pageContainerClassName}>
       <div className='safe-top tab-viewport-height flex flex-col items-center justify-center px-4 pb-[6vh]'>
-        <div className='flex w-full max-w-lg flex-col items-center'>
+        <div className='motion-placeholder flex w-full max-w-lg flex-col items-center'>
           <div className='aspect-[16/10] w-44 sm:w-52' />
           <Skeleton className='mt-1 h-8 w-64 rounded' />
           <div className='mt-3 flex items-center gap-2'>

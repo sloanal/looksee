@@ -183,18 +183,21 @@ export default function RoomSetupPage() {
   if (mode === null) {
     return (
       <div className='flex min-h-[100dvh] flex-col items-center justify-center bg-canvas px-4 py-8 safe-bottom'>
-        <div className='w-full max-w-md'>
+        <div className='motion-hero w-full max-w-md'>
           <div className='mb-6 text-center'>
-            <h1 className='text-3xl font-bold tracking-tight text-foreground'>
+            <h1 className='motion-rise text-3xl font-bold tracking-tight text-foreground'>
               Welcome to Looksee
             </h1>
-            <p className='mt-2 text-sm text-muted-foreground' style={{ textWrap: 'balance' }}>
+            <p
+              className='motion-rise mt-2 text-sm text-muted-foreground [--i:1]'
+              style={{ textWrap: 'balance' }}
+            >
               Add movies and shows you like to rooms you share with others. Looksee will help you
               find things you all want to watch.
             </p>
           </div>
 
-          <div className='space-y-3'>
+          <div className='motion-stagger space-y-3 [--motion-delay:160ms]'>
             <ChoiceCard
               icon={Sofa}
               title='Create a room'

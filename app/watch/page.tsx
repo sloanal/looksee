@@ -33,6 +33,8 @@ import { Field } from '@/components/ui/field'
 import { Notice } from '@/components/ui/notice'
 import { Select } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { useReloadMotion } from '@/lib/motion'
+import { MotionScope } from '@/components/motion/MotionScope'
 import { notifyRoomsChanged } from '@/lib/rooms'
 import { movieGenres, tvGenres } from '@/lib/tmdb-genres'
 import { useViewer } from '@/lib/useViewer'
@@ -343,6 +345,11 @@ export default function WatchPage() {
   // Show loading while checking rooms if needed
   // Allow null roomId (Just My Stuff) and "all-rooms" to proceed
 
+  // Picks cascade in the first time they land; a re-run just fades them in.
+  const recommendationsMotion = useReloadMotion(
+    step !== 'results' || recommendations.length === 0,
+  )
+
   const header = (leading?: React.ReactNode, right?: React.ReactNode) => (
     <PageHeaderBar>
       <PageHeader title='Watch from' subtitle={watchSubtitle} leading={leading} right={right}>
@@ -355,31 +362,35 @@ export default function WatchPage() {
     return (
       <div className={pageContainerClassName}>
         {header()}
-        <PageContent>
-          <h2 className='mb-4 text-xl font-bold text-foreground'>Who&apos;s watching?</h2>
+        <MotionScope key='who' id='watch:who'>
+          <PageContent>
+            <h2 className='motion-rise mb-4 text-xl font-bold text-foreground'>
+              Who&apos;s watching?
+            </h2>
 
-          <div className='grid gap-3 sm:grid-cols-2'>
-            <ChoiceCard
-              icon={Users}
-              title='Everyone in the room'
-              description="Balances what the whole household is excited about and hasn't seen."
-              primary
-              onClick={() => {
-                setMode('room')
-                setStep('preferences')
-              }}
-            />
-            <ChoiceCard
-              icon={User}
-              title='Just me'
-              description="Ranks by your own excitement, from everything you haven't watched."
-              onClick={() => {
-                setMode('me')
-                setStep('preferences')
-              }}
-            />
-          </div>
-        </PageContent>
+            <div className='motion-stagger grid gap-3 [--motion-delay:60ms] sm:grid-cols-2'>
+              <ChoiceCard
+                icon={Users}
+                title='Everyone in the room'
+                description="Balances what the whole household is excited about and hasn't seen."
+                primary
+                onClick={() => {
+                  setMode('room')
+                  setStep('preferences')
+                }}
+              />
+              <ChoiceCard
+                icon={User}
+                title='Just me'
+                description="Ranks by your own excitement, from everything you haven't watched."
+                onClick={() => {
+                  setMode('me')
+                  setStep('preferences')
+                }}
+              />
+            </div>
+          </PageContent>
+        </MotionScope>
       </div>
     )
   }
@@ -388,120 +399,122 @@ export default function WatchPage() {
     return (
       <div className={pageContainerClassName}>
         {header(<BackButton onClick={() => setStep('who')} />)}
-        <PageContent>
-          <h2 className='mb-1 text-xl font-bold text-foreground'>Preferences</h2>
-          <p className='mb-5 text-sm text-muted-foreground'>All optional.</p>
+        <MotionScope key='preferences' id='watch:preferences'>
+          <PageContent className='motion-stagger'>
+            <h2 className='mb-1 text-xl font-bold text-foreground'>Preferences</h2>
+            <p className='mb-5 text-sm text-muted-foreground'>All optional.</p>
 
-          <Card className='mb-5 space-y-5'>
-            {mode === 'me' && (
-              <label className='flex cursor-pointer items-start gap-3'>
-                <input
-                  type='checkbox'
-                  checked={avoidOthersExcitement}
-                  onChange={(e) => setAvoidOthersExcitement(e.target.checked)}
-                  className='mt-0.5 h-5 w-5 flex-shrink-0 rounded border-input text-primary focus:ring-primary'
-                />
-                <span className='min-w-0'>
-                  <span className='block text-sm font-medium text-foreground'>
-                    Don&apos;t get me in trouble
+            <Card className='mb-5 space-y-5'>
+              {mode === 'me' && (
+                <label className='flex cursor-pointer items-start gap-3'>
+                  <input
+                    type='checkbox'
+                    checked={avoidOthersExcitement}
+                    onChange={(e) => setAvoidOthersExcitement(e.target.checked)}
+                    className='mt-0.5 h-5 w-5 flex-shrink-0 rounded border-input text-primary focus:ring-primary'
+                  />
+                  <span className='min-w-0'>
+                    <span className='block text-sm font-medium text-foreground'>
+                      Don&apos;t get me in trouble
+                    </span>
+                    <span className='mt-0.5 block text-xs text-muted-foreground'>
+                      Only shows titles everyone else has already seen, is neutral or lower on, or
+                      hasn&apos;t rated yet — so you won&apos;t watch ahead of someone who&apos;s
+                      excited for it.
+                    </span>
                   </span>
-                  <span className='mt-0.5 block text-xs text-muted-foreground'>
-                    Only shows titles everyone else has already seen, is neutral or lower on, or
-                    hasn&apos;t rated yet — so you won&apos;t watch ahead of someone who&apos;s
-                    excited for it.
-                  </span>
-                </span>
-              </label>
+                </label>
+              )}
+
+              <Field label='Content type' htmlFor='watch-type'>
+                <Select
+                  id='watch-type'
+                  value={typePreference}
+                  onChange={(e) => setTypePreference(e.target.value)}
+                >
+                  <option value='any'>No preference</option>
+                  <option value='movie'>Movie</option>
+                  <option value='show'>Show</option>
+                </Select>
+              </Field>
+
+              <div>
+                <div className='mb-2 flex items-center justify-between'>
+                  <span className='text-sm font-medium text-foreground'>Genres</span>
+                  {selectedGenres.length > 0 && (
+                    <button
+                      type='button'
+                      onClick={() => setSelectedGenres([])}
+                      className='text-sm font-medium text-foreground underline-offset-4 hover:underline'
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+                <div className='flex max-h-48 flex-wrap gap-2 overflow-y-auto'>
+                  {(() => {
+                    // Get genres based on content type preference
+                    // When showing all types, merge and deduplicate by ID (Map uses first entry for duplicate keys)
+                    const uniqueGenres = typePreference === 'movie'
+                      ? Object.entries(movieGenres)
+                      : typePreference === 'show'
+                      ? Object.entries(tvGenres)
+                      : Array.from(
+                        new Map([
+                          ...Object.entries(movieGenres),
+                          ...Object.entries(tvGenres),
+                        ]).entries(),
+                      )
+
+                    return uniqueGenres.map(([id, name]) => {
+                      const genreId = id
+                      const isSelected = selectedGenres.includes(genreId)
+                      return (
+                        <label
+                          key={genreId}
+                          className={cn(
+                            'flex min-h-[36px] cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors',
+                            isSelected
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-input bg-background text-foreground hover:bg-accent',
+                          )}
+                        >
+                          <input
+                            type='checkbox'
+                            checked={isSelected}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedGenres([...selectedGenres, genreId])
+                              } else {
+                                setSelectedGenres(selectedGenres.filter((g) => g !== genreId))
+                              }
+                            }}
+                            className='sr-only'
+                          />
+                          {name}
+                        </label>
+                      )
+                    })
+                  })()}
+                </div>
+              </div>
+            </Card>
+
+            <Button
+              onClick={handleGetRecommendations}
+              disabled={loading}
+              size='lg'
+              className='w-full'
+            >
+              {loading ? 'Finding recommendations...' : 'Show me something'}
+            </Button>
+            {fetchError && (
+              <p role='alert' className='mt-3 text-center text-sm text-destructive'>
+                {fetchError}
+              </p>
             )}
-
-            <Field label='Content type' htmlFor='watch-type'>
-              <Select
-                id='watch-type'
-                value={typePreference}
-                onChange={(e) => setTypePreference(e.target.value)}
-              >
-                <option value='any'>No preference</option>
-                <option value='movie'>Movie</option>
-                <option value='show'>Show</option>
-              </Select>
-            </Field>
-
-            <div>
-              <div className='mb-2 flex items-center justify-between'>
-                <span className='text-sm font-medium text-foreground'>Genres</span>
-                {selectedGenres.length > 0 && (
-                  <button
-                    type='button'
-                    onClick={() => setSelectedGenres([])}
-                    className='text-sm font-medium text-foreground underline-offset-4 hover:underline'
-                  >
-                    Clear all
-                  </button>
-                )}
-              </div>
-              <div className='flex max-h-48 flex-wrap gap-2 overflow-y-auto'>
-                {(() => {
-                  // Get genres based on content type preference
-                  // When showing all types, merge and deduplicate by ID (Map uses first entry for duplicate keys)
-                  const uniqueGenres = typePreference === 'movie'
-                    ? Object.entries(movieGenres)
-                    : typePreference === 'show'
-                    ? Object.entries(tvGenres)
-                    : Array.from(
-                      new Map([
-                        ...Object.entries(movieGenres),
-                        ...Object.entries(tvGenres),
-                      ]).entries(),
-                    )
-
-                  return uniqueGenres.map(([id, name]) => {
-                    const genreId = id
-                    const isSelected = selectedGenres.includes(genreId)
-                    return (
-                      <label
-                        key={genreId}
-                        className={cn(
-                          'flex min-h-[36px] cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors',
-                          isSelected
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-input bg-background text-foreground hover:bg-accent',
-                        )}
-                      >
-                        <input
-                          type='checkbox'
-                          checked={isSelected}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedGenres([...selectedGenres, genreId])
-                            } else {
-                              setSelectedGenres(selectedGenres.filter((g) => g !== genreId))
-                            }
-                          }}
-                          className='sr-only'
-                        />
-                        {name}
-                      </label>
-                    )
-                  })
-                })()}
-              </div>
-            </div>
-          </Card>
-
-          <Button
-            onClick={handleGetRecommendations}
-            disabled={loading}
-            size='lg'
-            className='w-full'
-          >
-            {loading ? 'Finding recommendations...' : 'Show me something'}
-          </Button>
-          {fetchError && (
-            <p role='alert' className='mt-3 text-center text-sm text-destructive'>
-              {fetchError}
-            </p>
-          )}
-        </PageContent>
+          </PageContent>
+        </MotionScope>
       </div>
     )
   }
@@ -510,168 +523,173 @@ export default function WatchPage() {
     <div className={pageContainerClassName}>
       {header(<BackButton onClick={() => setStep('preferences')} />, <RoomMembersAvatars />)}
 
-      <PageContent>
-        <h2 className='mb-1 text-xl font-bold text-foreground'>Recommendations</h2>
-        {!isWatchedRoom && recommendations.length > 0 && (
-          <p className='mb-4 text-sm text-muted-foreground'>
-            Based on the excitement levels and who&apos;s seen what, these are our recommendations
-            for what you should watch.
-          </p>
-        )}
-        {!isWatchedRoom && loading && recommendations.length > 0 && (
-          <p className='mb-4 text-sm text-muted-foreground' aria-live='polite'>
-            Finding recommendations...
-          </p>
-        )}
-        {!isWatchedRoom && fetchError && (
-          <Notice variant='error' className='mb-4'>
-            <span role='alert'>
-              {fetchError}{' '}
-              <button
-                onClick={() => fetchRecommendations(currentParams)}
-                className='font-medium underline underline-offset-4'
-              >
-                Try again
-              </button>
-            </span>
-          </Notice>
-        )}
-
-        {isWatchedRoom
-          ? (
-            <EmptyState
-              icon={Eye}
-              title='Nothing to suggest from Watched'
-              description="Watch picks from titles you haven't seen yet."
-              action={
-                <Button
-                  variant='outline'
-                  onClick={() => router.push(`${pathname}?roomId=all-rooms`)}
-                >
-                  Switch to All Rooms
-                </Button>
-              }
-            />
-          )
-          : loading && recommendations.length === 0
-          ? (
-            <div className='space-y-4'>
-              <InlineLoading label='Finding recommendations' className='py-2' />
-              <MediaCardSkeletonList count={2} rooms={false} />
-            </div>
-          )
-          : recommendations.length === 0
-          ? fetchError ? null : (
-            <EmptyState
-              icon={Popcorn}
-              title='No recommendations found'
-              description='Try adjusting your preferences.'
-              action={
-                <Button
-                  variant='outline'
-                  onClick={() => setStep('preferences')}
-                >
-                  Go back
-                </Button>
-              }
-            />
-          )
-          : (
-            <div
-              className={cn(
-                'space-y-4 transition-opacity',
-                loading && 'pointer-events-none opacity-50',
-              )}
-              aria-busy={loading}
-            >
-              {recommendations.map((rec, index) => (
-                <MediaCard
-                  key={rec.id}
-                  variant={index === 0 ? 'highlighted' : 'default'}
-                  className='relative'
-                >
-                  {index === 0 && (
-                    <CardHeader>
-                      <CardBadge>
-                        <Sparkles className='h-3 w-3' />
-                        Top pick
-                      </CardBadge>
-                    </CardHeader>
-                  )}
-
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setDetailModalItem(rec)
-                    }}
-                    className='cursor-pointer'
-                  >
-                    <CardLayout>
-                      <CardPoster src={rec.posterUrl} alt={rec.title} width={80} height={120} />
-                      <CardContent>
-                        <CardTitle>{rec.title}</CardTitle>
-                        <CardMeta
-                          icon={getTypeIcon(rec.type)}
-                          type={rec.type}
-                          releaseDate={rec.releaseDate}
-                          runtimeMinutes={rec.runtimeMinutes}
-                        />
-                        <CardGenres genres={rec.genres} maxDisplay={3} />
-                        {rec.description && <CardDescription>{rec.description}</CardDescription>}
-                        {isTmdbItem(rec) && (
-                          <StreamingProviders
-                            tmdbId={rec.tmdbId!}
-                            type={rec.type}
-                            compact
-                            className='mb-1'
-                          />
-                        )}
-                      </CardContent>
-                    </CardLayout>
-                  </div>
-
-                  {(rec.otherPreferences.length > 0 ||
-                    (rec.favoritedBy && rec.favoritedBy.length > 0)) && (
-                    <div className='mt-3 space-y-2 border-t border-border pt-3 text-sm text-muted-foreground'>
-                      <HouseholdExcitementRow
-                        myPreference={rec.myPreference}
-                        viewer={viewer}
-                        otherPreferences={rec.otherPreferences}
-                      />
-                      {rec.favoritedBy && rec.favoritedBy.length > 0 && (
-                        <div className='flex items-center gap-2'>
-                          <FavoritedByBadge names={rec.favoritedBy} />
-                          <p>{favoritedByLabel(rec.favoritedBy)}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <CardActions className='flex items-center justify-between gap-2'>
-                    <div className='flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2'>
-                      <Button
-                        variant='ghost'
-                        size='sm'
-                        onClick={() => handleMarkAsWatched(rec.id)}
-                        disabled={markingWatchedId === rec.id}
-                        className='-ml-2 text-muted-foreground hover:text-foreground'
-                      >
-                        <CheckCircle2 className='h-4 w-4' />
-                        {markingWatchedId === rec.id ? 'Marking as watched...' : 'Mark as watched'}
-                      </Button>
-                    </div>
-                    <FavoriteButton
-                      mediaItemId={rec.id}
-                      isFavorite={rec.isFavorite === true}
-                      onChange={(isFavorite) => applyFavorite(rec.id, isFavorite)}
-                      className='-mr-2'
-                    />
-                  </CardActions>
-                </MediaCard>
-              ))}
-            </div>
+      <MotionScope key='results' id='watch:results'>
+        <PageContent>
+          <h2 className='motion-rise mb-1 text-xl font-bold text-foreground'>Recommendations</h2>
+          {!isWatchedRoom && recommendations.length > 0 && (
+            <p className='motion-rise mb-4 text-sm text-muted-foreground [--i:1]'>
+              Based on the excitement levels and who&apos;s seen what, these are our recommendations
+              for what you should watch.
+            </p>
           )}
-      </PageContent>
+          {!isWatchedRoom && loading && recommendations.length > 0 && (
+            <p className='mb-4 text-sm text-muted-foreground' aria-live='polite'>
+              Finding recommendations...
+            </p>
+          )}
+          {!isWatchedRoom && fetchError && (
+            <Notice variant='error' className='mb-4'>
+              <span role='alert'>
+                {fetchError}{' '}
+                <button
+                  onClick={() => fetchRecommendations(currentParams)}
+                  className='font-medium underline underline-offset-4'
+                >
+                  Try again
+                </button>
+              </span>
+            </Notice>
+          )}
+
+          {isWatchedRoom
+            ? (
+              <EmptyState
+                className='motion-rise'
+                icon={Eye}
+                title='Nothing to suggest from Watched'
+                description="Watch picks from titles you haven't seen yet."
+                action={
+                  <Button
+                    variant='outline'
+                    onClick={() => router.push(`${pathname}?roomId=all-rooms`)}
+                  >
+                    Switch to All Rooms
+                  </Button>
+                }
+              />
+            )
+            : loading && recommendations.length === 0
+            ? (
+              <div className='space-y-4'>
+                <InlineLoading label='Finding recommendations' className='py-2' />
+                <MediaCardSkeletonList count={2} rooms={false} />
+              </div>
+            )
+            : recommendations.length === 0
+            ? fetchError ? null : (
+              <EmptyState
+                className='motion-rise'
+                icon={Popcorn}
+                title='No recommendations found'
+                description='Try adjusting your preferences.'
+                action={
+                  <Button
+                    variant='outline'
+                    onClick={() => setStep('preferences')}
+                  >
+                    Go back
+                  </Button>
+                }
+              />
+            )
+            : (
+              <div
+                data-motion={recommendationsMotion}
+                className={cn(
+                  'motion-stagger space-y-4 transition-opacity [--motion-delay:90ms]',
+                  loading && 'pointer-events-none opacity-50',
+                )}
+                aria-busy={loading}
+              >
+                {recommendations.map((rec, index) => (
+                  <MediaCard
+                    key={rec.id}
+                    variant={index === 0 ? 'highlighted' : 'default'}
+                    className='relative'
+                  >
+                    {index === 0 && (
+                      <CardHeader>
+                        <CardBadge>
+                          <Sparkles className='h-3 w-3' />
+                          Top pick
+                        </CardBadge>
+                      </CardHeader>
+                    )}
+
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setDetailModalItem(rec)
+                      }}
+                      className='cursor-pointer'
+                    >
+                      <CardLayout>
+                        <CardPoster src={rec.posterUrl} alt={rec.title} width={80} height={120} />
+                        <CardContent>
+                          <CardTitle>{rec.title}</CardTitle>
+                          <CardMeta
+                            icon={getTypeIcon(rec.type)}
+                            type={rec.type}
+                            releaseDate={rec.releaseDate}
+                            runtimeMinutes={rec.runtimeMinutes}
+                          />
+                          <CardGenres genres={rec.genres} maxDisplay={3} />
+                          {rec.description && <CardDescription>{rec.description}</CardDescription>}
+                          {isTmdbItem(rec) && (
+                            <StreamingProviders
+                              tmdbId={rec.tmdbId!}
+                              type={rec.type}
+                              compact
+                              className='mb-1'
+                            />
+                          )}
+                        </CardContent>
+                      </CardLayout>
+                    </div>
+
+                    {(rec.otherPreferences.length > 0 ||
+                      (rec.favoritedBy && rec.favoritedBy.length > 0)) && (
+                      <div className='mt-3 space-y-2 border-t border-border pt-3 text-sm text-muted-foreground'>
+                        <HouseholdExcitementRow
+                          myPreference={rec.myPreference}
+                          viewer={viewer}
+                          otherPreferences={rec.otherPreferences}
+                        />
+                        {rec.favoritedBy && rec.favoritedBy.length > 0 && (
+                          <div className='flex items-center gap-2'>
+                            <FavoritedByBadge names={rec.favoritedBy} />
+                            <p>{favoritedByLabel(rec.favoritedBy)}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <CardActions className='flex items-center justify-between gap-2'>
+                      <div className='flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2'>
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          onClick={() => handleMarkAsWatched(rec.id)}
+                          disabled={markingWatchedId === rec.id}
+                          className='-ml-2 text-muted-foreground hover:text-foreground'
+                        >
+                          <CheckCircle2 className='h-4 w-4' />
+                          {markingWatchedId === rec.id ? 'Marking as watched...' : 'Mark as watched'}
+                        </Button>
+                      </div>
+                      <FavoriteButton
+                        mediaItemId={rec.id}
+                        isFavorite={rec.isFavorite === true}
+                        onChange={(isFavorite) => applyFavorite(rec.id, isFavorite)}
+                        className='-mr-2'
+                      />
+                    </CardActions>
+                  </MediaCard>
+                ))}
+              </div>
+            )}
+        </PageContent>
+      </MotionScope>
 
       {detailModalItem && (
         <TitleDetailModal

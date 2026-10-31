@@ -64,7 +64,7 @@ export function RoomsSection({
         {actions}
       </div>
 
-      <ul className='space-y-4'>
+      <ul className='motion-stagger space-y-4 [--motion-delay:60ms]'>
         {rooms.map((room) => (
           <li key={room.id}>
             <RoomCard

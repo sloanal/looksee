@@ -21,7 +21,7 @@ export function SettingsCardSkeleton({ avatar = false }: { avatar?: boolean }) {
 /** The stack of cards a Settings tab opens with. */
 export function SettingsCardSkeletonList({ className }: { className?: string }) {
   return (
-    <div className={cn('space-y-4', className)}>
+    <div className={cn('motion-placeholder space-y-4', className)}>
       <SettingsCardSkeleton avatar />
       <SettingsCardSkeleton />
       <SettingsCardSkeleton />

@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
-import { AuthLink, AuthShell } from '@/components/AuthShell'
+import { AuthLink } from '@/components/AuthShell'
+import { PasswordInput } from '@/components/marketing/PasswordInput'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -56,27 +57,20 @@ export default function SignUpPage() {
   }
 
   return (
-    <AuthShell
-      hero
-      title='Create your account'
-      footer={
-        <>
-          <p>
-            Already have an account? <AuthLink href='/auth/signin'>Sign in</AuthLink>
-          </p>
-          <p>
-            Forgot your password? <AuthLink href='/auth/forgot-password'>Reset it</AuthLink>
-          </p>
-        </>
-      }
-    >
-      <form onSubmit={handleSubmit} className='space-y-4'>
+    <>
+      <h1 className='font-display text-4xl leading-[0.95]'>
+        Make movie night <span className='font-accent text-[1.1em]'>easy.</span>
+      </h1>
+      <p className='mt-3 text-muted-foreground'>Create your free account. It takes about a minute.</p>
+
+      <form onSubmit={handleSubmit} className='mt-8 space-y-4'>
         {error && <Notice variant='error'>{error}</Notice>}
 
         <Field label='Name' htmlFor='name'>
           <Input
             id='name'
             type='text'
+            autoComplete='name'
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -88,6 +82,7 @@ export default function SignUpPage() {
           <Input
             id='email'
             type='email'
+            autoComplete='email'
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -96,9 +91,9 @@ export default function SignUpPage() {
         </Field>
 
         <Field label='Password' htmlFor='password' help='At least 6 characters'>
-          <Input
+          <PasswordInput
             id='password'
-            type='password'
+            autoComplete='new-password'
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -107,10 +102,14 @@ export default function SignUpPage() {
           />
         </Field>
 
-        <Button type='submit' disabled={loading} size='lg' className='w-full'>
-          {loading ? 'Creating account...' : 'Sign Up'}
+        <Button type='submit' disabled={loading} size='lg' className='w-full rounded-full'>
+          {loading ? 'Creating account...' : 'Create account'}
         </Button>
       </form>
-    </AuthShell>
+
+      <p className='mt-8 text-center text-sm text-muted-foreground'>
+        Already have an account? <AuthLink href='/auth/signin'>Log in</AuthLink>
+      </p>
+    </>
   )
 }

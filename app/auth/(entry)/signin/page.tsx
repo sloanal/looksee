@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { AuthLink, AuthShell } from '@/components/AuthShell'
+import { AuthLink } from '@/components/AuthShell'
+import { PasswordInput } from '@/components/marketing/PasswordInput'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -57,22 +58,18 @@ export default function SignInPage() {
   }
 
   return (
-    <AuthShell
-      hero
-      title='Sign in to your account'
-      footer={
-        <p>
-          Don&apos;t have an account? <AuthLink href='/auth/signup'>Sign up</AuthLink>
-        </p>
-      }
-    >
-      <form onSubmit={handleSubmit} className='space-y-4'>
+    <>
+      <h1 className='font-display text-4xl leading-[0.95]'>Welcome back.</h1>
+      <p className='mt-3 text-muted-foreground'>Log in and see what&apos;s on tonight.</p>
+
+      <form onSubmit={handleSubmit} className='mt-8 space-y-4'>
         {error && <Notice variant='error'>{error}</Notice>}
 
         <Field label='Email' htmlFor='email'>
           <Input
             id='email'
             type='email'
+            autoComplete='email'
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -81,23 +78,27 @@ export default function SignInPage() {
         </Field>
 
         <Field label='Password' htmlFor='password'>
-          <Input
+          <PasswordInput
             id='password'
-            type='password'
+            autoComplete='current-password'
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             placeholder='••••••••'
           />
-          <div className='mt-2 text-right'>
+          <div className='mt-2 text-right text-sm'>
             <AuthLink href='/auth/forgot-password'>Forgot password?</AuthLink>
           </div>
         </Field>
 
-        <Button type='submit' disabled={loading} size='lg' className='w-full'>
-          {loading ? 'Signing in...' : 'Sign In'}
+        <Button type='submit' disabled={loading} size='lg' className='w-full rounded-full'>
+          {loading ? 'Logging in...' : 'Log in'}
         </Button>
       </form>
-    </AuthShell>
+
+      <p className='mt-8 text-center text-sm text-muted-foreground'>
+        New to Looksee? <AuthLink href='/auth/signup'>Create an account</AuthLink>
+      </p>
+    </>
   )
 }

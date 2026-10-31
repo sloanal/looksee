@@ -48,6 +48,11 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        // Marketing accents: three risograph inks that overprint to near-black.
+        tomato: 'hsl(var(--riso-tomato))',
+        marigold: 'hsl(var(--riso-marigold))',
+        cobalt: 'hsl(var(--riso-cobalt))',
+        ink: 'hsl(var(--ink))',
       },
       borderRadius: {
         '2xl': 'calc(var(--radius) + 8px)',
@@ -64,6 +69,12 @@ const config: Config = {
       },
       fontFamily: {
         heading: ['var(--font-archivo)', 'sans-serif'],
+        serif: ['var(--font-instrument-serif)', 'Georgia', 'serif'],
+      },
+      transitionTimingFunction: {
+        // Same curves as --ease-out / --ease-spring in globals.css.
+        'out-expo': 'cubic-bezier(0.16, 1, 0.3, 1)',
+        spring: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
       keyframes: {
         'accordion-down': {

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Archivo, Inter } from 'next/font/google'
+import { Archivo, Instrument_Serif, Inter } from 'next/font/google'
 import './globals.css'
 import { SessionProvider } from '@/components/SessionProvider'
 
@@ -10,9 +10,20 @@ const siteUrl = process.env.NEXT_PUBLIC_APP_URL ??
 const appDescription =
   'Looksee finds the overlap in your friends\' watchlists, making "what should we watch?" simple.'
 
+// The width axis lets the marketing pages set Archivo expanded for display
+// type; everything else keeps the default width.
 const archivo = Archivo({
   subsets: ['latin'],
   variable: '--font-archivo',
+  axes: ['wdth'],
+})
+
+// Accent face for a word or two in marketing headlines.
+const instrumentSerif = Instrument_Serif({
+  subsets: ['latin'],
+  weight: '400',
+  style: ['normal', 'italic'],
+  variable: '--font-instrument-serif',
 })
 
 const inter = Inter({
@@ -74,7 +85,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang='en' className={`${archivo.variable} ${inter.variable}`}>
+    <html lang='en' className={`${archivo.variable} ${inter.variable} ${instrumentSerif.variable}`}>
       <body className='antialiased overscroll-none'>
         <SessionProvider>{children}</SessionProvider>
       </body>

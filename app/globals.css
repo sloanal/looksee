@@ -37,6 +37,17 @@
   --ring: 24 10% 12%;
   --radius: 0.75rem;
 
+  /*
+   * Marketing accents. Three risograph-style inks used on the landing and auth
+   * pages only. Laid over each other with mix-blend-mode: multiply they mix
+   * like overprinted ink, and all three together land on near-black: the same
+   * ink as the mark.
+   */
+  --ink: 30 12% 11%;
+  --riso-tomato: 8 84% 58%;
+  --riso-marigold: 40 96% 57%;
+  --riso-cobalt: 219 70% 55%;
+
   --shadow-sm: 0 1px 2px hsl(30 20% 10% / 0.06);
   --shadow-card: 0 1px 2px hsl(30 20% 10% / 0.05), 0 6px 16px -8px hsl(30 20% 10% / 0.14);
   --shadow-pop: 0 1px 3px hsl(30 20% 10% / 0.06), 0 8px 24px -8px hsl(30 20% 10% / 0.18);
@@ -745,5 +756,172 @@ body {
   }
   .nav-indicator {
     transition: none;
+  }
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * Marketing pages (landing + sign in / sign up)
+ * ---------------------------------------------------------------------------
+ *
+ * The app's print look pushed further: paper grain, halftone dots, expanded
+ * display type and three riso inks (see the tokens at the top).
+ */
+
+/*
+ * The app pins html/body to the viewport (see "Mobile-first" above), which
+ * makes <body> the scroller. Marketing pages are long documents, so let the
+ * document scroll instead: scroll-linked motion, #anchors and the iOS toolbar
+ * collapse all expect it. `clip` still hides sideways overflow without making
+ * a scroll container.
+ */
+html:has(.site-scroll),
+html:has(.site-scroll) body {
+  height: auto;
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+html:has(.site-scroll) {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:has(.site-scroll) {
+    scroll-behavior: auto;
+  }
+}
+
+/* Expanded, heavy Archivo for headlines. Needs the wdth axis (app/layout.tsx). */
+.font-display {
+  font-family: var(--font-archivo), sans-serif;
+  font-stretch: 118%;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  font-variation-settings: 'wdth' 118;
+}
+
+.font-accent {
+  font-family: var(--font-instrument-serif), Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  font-stretch: 100%;
+  font-variation-settings: normal;
+}
+
+/* Headings on an ink background (the iOS colour fix above forces ink otherwise). */
+.on-ink :is(h1, h2, h3, h4, h5, h6) {
+  color: hsl(var(--canvas)) !important;
+  -webkit-text-fill-color: hsl(var(--canvas)) !important;
+}
+
+/* Paper grain over the whole page: fixed, so it doesn't scroll like a wallpaper. */
+.paper-grain {
+  position: relative;
+  isolation: isolate;
+}
+
+.paper-grain::before {
+  content: '';
+  position: fixed;
+  inset: -50%;
+  z-index: 60;
+  pointer-events: none;
+  /* Plain alpha, not a blend mode: a blended fixed layer re-blends every scroll frame. */
+  opacity: 0.11;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.2 0 0 0 0 0.15 0 0 0 0 0.1 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Halftone dot fill in the current text colour. */
+.halftone {
+  background-image: radial-gradient(currentColor 28%, transparent 30%);
+  background-size: 7px 7px;
+}
+
+.halftone-fine {
+  background-image: radial-gradient(currentColor 26%, transparent 28%);
+  background-size: 5px 5px;
+}
+
+/* Halftone that fades out toward the bottom-right, like a print gradient. */
+.halftone-fade {
+  -webkit-mask-image: linear-gradient(135deg, #000 10%, transparent 85%);
+  mask-image: linear-gradient(135deg, #000 10%, transparent 85%);
+}
+
+.riso-multiply {
+  mix-blend-mode: multiply;
+}
+
+/* Lets a span inside a heading take its own colour past the iOS text-fill fix. */
+.fill-text-current {
+  -webkit-text-fill-color: currentColor !important;
+}
+
+/* Endless marquee: the track holds two copies, so -50% is a seamless loop. */
+@keyframes marquee {
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.marquee-track {
+  animation: marquee var(--marquee-duration, 38s) linear infinite;
+}
+
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+/* A slow bob for floating illustration pieces. */
+@keyframes float-bob {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(var(--tilt, 0deg));
+  }
+  50% {
+    transform: translate3d(0, var(--bob, -10px), 0) rotate(var(--tilt, 0deg));
+  }
+}
+
+.float-bob {
+  animation: float-bob var(--bob-duration, 6s) ease-in-out infinite;
+  animation-delay: var(--bob-delay, 0s);
+}
+
+@keyframes slow-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.slow-spin {
+  animation: slow-spin 40s linear infinite;
+}
+
+@keyframes ping-dot {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  80%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+.ping-dot {
+  animation: ping-dot 1.8s var(--ease-out) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track,
+  .float-bob,
+  .slow-spin,
+  .ping-dot {
+    animation: none;
   }
 }

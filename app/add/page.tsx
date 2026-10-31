@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
+  ArrowRight,
   Check,
   Film,
   Link as LinkIcon,
@@ -54,6 +55,7 @@ import {
   MediaCard,
 } from '@/components/MediaCard'
 import { getGenreNames } from '@/lib/tmdb-genres'
+import { cn } from '@/lib/utils'
 
 function getTypeIcon(type: string) {
   const normalizedType = type.toLowerCase()
@@ -123,11 +125,6 @@ export default function AddPage() {
   // Watched and No rooms yet are views, not places to put a title, so adding
   // from either lands in the personal catalog like Just My Stuff does.
   const addsToNoRoom = !roomId || roomId === 'watched' || roomId === 'no-rooms'
-  const addSubtitle = selectedRoomName
-    ? `Search and save something to ${selectedRoomName}.`
-    : roomId === 'all-rooms'
-    ? 'Search and save something across your rooms.'
-    : 'Search and save something to your list.'
 
   const [mode, setMode] = useState<'search' | 'manual' | 'confirm'>('search')
   const searchParam = searchParams.get('search')
@@ -696,79 +693,130 @@ export default function AddPage() {
     ? 'your stuff'
     : selectedRoomName
 
-  const showWelcome = !loading && searchResults.length === 0 &&
-    !(lastSearchedQuery && searchQuery.trim() === lastSearchedQuery)
-  const showNoResults = !loading && lastSearchedQuery && searchQuery.trim() === lastSearchedQuery &&
-    searchResults.length === 0
+  // Until the first search, the tab is one centered search box so it can't be
+  // mistaken for Browse. Once there's a search, the box docks into the header
+  // above the results and stays there until "New search".
+  const hasSearched = loading || Boolean(lastSearchedQuery) || searchResults.length > 0
+  const showNoResults = !loading && Boolean(lastSearchedQuery) && searchResults.length === 0
+
+  const resetSearch = () => {
+    setSearchQuery('')
+    setSearchResults([])
+    setLastSearchedQuery('')
+    setLastAddedTitle(null)
+    searchScrollYRef.current = 0
+    requestAnimationFrame(() => searchInputRef.current?.focus())
+  }
+
+  const renderSearchField = (size: 'hero' | 'compact') => (
+    <form
+      role='search'
+      onSubmit={(e) => {
+        e.preventDefault()
+        handleSearch()
+      }}
+      className='relative w-full'
+    >
+      <Search
+        className={cn(
+          'pointer-events-none absolute top-1/2 -translate-y-1/2 text-muted-foreground',
+          size === 'hero' ? 'left-4 h-5 w-5' : 'left-3.5 h-4 w-4',
+        )}
+        aria-hidden
+      />
+      <Input
+        ref={searchInputRef}
+        type='text'
+        enterKeyHint='search'
+        placeholder='Search movies and shows...'
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className={size === 'hero'
+          ? 'h-14 rounded-2xl pl-12 pr-16 shadow-card sm:text-base'
+          : 'pl-10 pr-12'}
+        aria-label='Search for a title'
+      />
+      <Button
+        type='submit'
+        size='icon'
+        disabled={loading || !searchQuery.trim()}
+        aria-label='Search'
+        className={cn(
+          'absolute top-1/2 -translate-y-1/2',
+          size === 'hero' ? 'right-2 h-10 w-10 rounded-xl' : 'right-1.5 h-8 w-8 rounded-md',
+        )}
+      >
+        <ArrowRight className={size === 'hero' ? 'h-5 w-5' : 'h-4 w-4'} aria-hidden />
+      </Button>
+    </form>
+  )
+
+  const addedNotice = lastAddedTitle && (
+    <Notice variant='success' className='text-left'>
+      Added <span className='font-semibold'>{lastAddedTitle}</span>
+      {addedDestination ? ` to ${addedDestination}` : ''}.{' '}
+      <Link
+        href={browseHref}
+        className='font-medium text-primary underline-offset-4 hover:underline'
+      >
+        View in Browse
+      </Link>
+    </Notice>
+  )
+
+  const addManuallyButton = (
+    <button
+      type='button'
+      onClick={openManual}
+      className='min-h-[36px] text-sm font-medium text-primary underline-offset-4 hover:underline'
+    >
+      Or add manually
+    </button>
+  )
+
+  if (!hasSearched) {
+    return (
+      <div className={pageContainerClassName}>
+        <div className='safe-top tab-viewport-height flex flex-col items-center justify-center px-4 pb-[6vh]'>
+          <div className='w-full max-w-lg text-center'>
+            <BrandVideo className='mx-auto aspect-[16/10] w-44 sm:w-52' />
+            <h1 className='mt-1 text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl'>
+              Add something to watch
+            </h1>
+            <div className='mt-3 flex items-center justify-center gap-2 text-sm text-muted-foreground'>
+              <span>Adding to</span>
+              <RoomSelector menuAlign='center' />
+              {!isVirtualRoomId(roomId) && <RoomMembersAvatars size='sm' />}
+            </div>
+
+            {addedNotice && <div className='mt-6'>{addedNotice}</div>}
+
+            <div className='mt-6'>{renderSearchField('hero')}</div>
+            <div className='mt-2'>{addManuallyButton}</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={pageContainerClassName}>
       <PageHeaderBar>
-        <PageHeader
-          title='Add to'
-          subtitle={addSubtitle}
-          right={!isVirtualRoomId(roomId) && <RoomMembersAvatars />}
-          className='mb-3'
-        >
-          <RoomSelector />
-        </PageHeader>
-        <div className='flex gap-2'>
-          <div className='relative flex-1'>
-            <Search
-              className='pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground'
-              aria-hidden
-            />
-            <Input
-              ref={searchInputRef}
-              type='text'
-              placeholder='Search for a new title...'
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className='pl-10'
-              aria-label='Search for a title'
-            />
-          </div>
-          <Button type='button' onClick={handleSearch} disabled={loading} className='px-5'>
-            Search
-          </Button>
+        <div className='flex items-center gap-1'>
+          <BackButton onClick={resetSearch} label='New search' />
+          <div className='min-w-0 flex-1'>{renderSearchField('compact')}</div>
         </div>
-        <button
-          type='button'
-          onClick={openManual}
-          className='mt-2 min-h-[36px] text-sm font-medium text-primary underline-offset-4 hover:underline'
-        >
-          Or add manually
-        </button>
+        <div className='mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1'>
+          <div className='flex min-w-0 items-center gap-2 text-sm text-muted-foreground'>
+            <span className='whitespace-nowrap'>Adding to</span>
+            <RoomSelector />
+          </div>
+          {addManuallyButton}
+        </div>
       </PageHeaderBar>
 
       <PageContent className='space-y-4'>
-        {lastAddedTitle && (
-          <Notice variant='success'>
-            Added <span className='font-semibold'>{lastAddedTitle}</span>
-            {addedDestination ? ` to ${addedDestination}` : ''}.{' '}
-            <Link
-              href={browseHref}
-              className='font-medium text-primary underline-offset-4 hover:underline'
-            >
-              View in Browse
-            </Link>
-          </Notice>
-        )}
-        {showWelcome && (
-          <div className='flex min-h-[calc(100vh-300px)] items-center justify-center'>
-            <div className='w-full max-w-md text-center'>
-              <BrandVideo className='aspect-[16/10]' />
-              <button
-                type='button'
-                onClick={() => searchInputRef.current?.focus()}
-                className='mt-4 min-h-[44px] text-sm text-muted-foreground transition-colors hover:text-foreground'
-              >
-                Add something you want to watch
-              </button>
-            </div>
-          </div>
-        )}
+        {addedNotice}
         {loading && searchQuery && (
           <div className='space-y-4'>
             <InlineLoading label='Searching' className='py-2' />

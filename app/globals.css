@@ -176,6 +176,15 @@ body {
 }
 
 /*
+ * The visible height above the bottom nav (the viewport less .bottom-nav-spacing),
+ * for a tab whose content centers in the screen rather than scrolling (Add).
+ */
+.tab-viewport-height {
+  min-height: calc(100vh - 6.25rem - env(safe-area-inset-bottom, 0px));
+  min-height: calc(100dvh - 6.25rem - env(safe-area-inset-bottom, 0px));
+}
+
+/*
  * Exact bottom nav clearance with no extra breathing room, for full-bleed
  * scroll surfaces that should run right up to the nav (e.g. the New queue).
  */
@@ -194,6 +203,11 @@ body {
 
   .bottom-nav-flush {
     padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .tab-viewport-height {
+    min-height: calc(100vh - 5rem - env(safe-area-inset-bottom, 0px));
+    min-height: calc(100dvh - 5rem - env(safe-area-inset-bottom, 0px));
   }
 }
 

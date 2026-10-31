@@ -1,0 +1,109 @@
+<!doctype html>
+<!--
+  Source for app/opengraph-image.png (the link preview in iMessage, Slack,
+  social…). Rendered at 1200×630 by scripts/generate-og-image.js. Colours are
+  the tokens from app/globals.css.
+-->
+<html>
+<head>
+<meta charset="utf-8" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Instrument+Serif:ital@1&display=block" rel="stylesheet" />
+<style>
+  :root {
+    --canvas: hsl(38.2 78.6% 94.5%);
+    --ink: hsl(30 12% 11%);
+    --tomato: hsl(8 84% 58%);
+    --marigold: hsl(40 96% 57%);
+    --cobalt: hsl(219 70% 55%);
+  }
+  * { margin: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; }
+  body {
+    position: relative;
+    overflow: hidden;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: sans-serif;
+  }
+  /* Paper grain, as on the site. */
+  body::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.12;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.2 0 0 0 0 0.15 0 0 0 0 0.1 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .display {
+    font-family: 'Archivo', sans-serif;
+    font-weight: 800;
+    font-stretch: 118%;
+    font-variation-settings: 'wdth' 118;
+    letter-spacing: -0.035em;
+  }
+  .copy { position: absolute; left: 80px; top: 50%; transform: translateY(-52%); width: 660px; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand svg { height: 34px; width: auto; }
+  .brand span { font-size: 32px; line-height: 1; }
+  h1 { margin-top: 56px; font-size: 78px; line-height: 0.95; }
+  h1 .line { display: block; white-space: nowrap; }
+  .accent {
+    position: relative;
+    display: inline-block;
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-stretch: 100%;
+    font-variation-settings: normal;
+    letter-spacing: -0.01em;
+    font-size: 1.12em;
+    line-height: 0.8;
+  }
+  .accent svg { position: absolute; left: -3%; bottom: -0.1em; width: 106%; height: 0.28em; overflow: visible; }
+  .venn { position: absolute; right: 28px; top: 50%; transform: translateY(-50%); width: 420px; height: 470px; }
+</style>
+</head>
+<body>
+  <div class="copy">
+    <div class="brand">
+      <svg viewBox="12 14 372 236" aria-hidden="true">
+        <path d="M20 128C66 74 142 46 258 56V202C142 212 66 182 20 128Z" fill="currentColor" />
+        <circle cx="181" cy="129" r="68" fill="hsl(38.2 78.6% 94.5%)" />
+        <circle cx="181" cy="129" r="39" fill="currentColor" />
+        <path d="M171 111V147L199 129Z" fill="hsl(38.2 78.6% 94.5%)" />
+        <path d="M272 70L372 128L362 137L272 221Z" fill="currentColor" />
+        <path d="M374 150V246H270Z" fill="currentColor" />
+        <circle cx="338" cy="40" r="20" fill="currentColor" />
+      </svg>
+      <span class="display">Looksee</span>
+    </div>
+
+    <h1 class="display">
+      <span class="line">Spend less</span>
+      <span class="line">time <span class="accent">deciding<svg viewBox="0 0 300 30" preserveAspectRatio="none"><path d="M4 18C60 8 120 6 180 10C220 13 262 19 296 12" fill="none" stroke="hsl(8 84% 58%)" stroke-width="7" stroke-linecap="round"/><path d="M30 25C100 18 190 18 270 22" fill="none" stroke="hsl(8 84% 58%)" stroke-width="4" stroke-linecap="round"/></svg></span></span>
+      <span class="line">what to watch.</span>
+    </h1>
+  </div>
+
+  <!-- Everyone's list, overprinted: the pick lives where they all overlap. -->
+  <svg class="venn" viewBox="0 0 470 530" aria-hidden="true">
+    <defs>
+      <pattern id="dots" width="6" height="6" patternUnits="userSpaceOnUse">
+        <circle cx="3" cy="3" r="1.1" fill="hsl(30 12% 11%)" opacity="0.18" />
+      </pattern>
+    </defs>
+    <g style="mix-blend-mode: multiply">
+      <circle cx="166" cy="200" r="150" fill="hsl(8 84% 58%)" style="mix-blend-mode: multiply" />
+      <circle cx="304" cy="200" r="150" fill="hsl(219 70% 55%)" style="mix-blend-mode: multiply" />
+      <circle cx="235" cy="320" r="150" fill="hsl(40 96% 57%)" style="mix-blend-mode: multiply" />
+    </g>
+    <circle cx="166" cy="200" r="150" fill="url(#dots)" />
+    <circle cx="304" cy="200" r="150" fill="url(#dots)" />
+    <circle cx="235" cy="320" r="150" fill="url(#dots)" />
+    <g transform="translate(235 240)">
+      <circle r="40" fill="none" stroke="hsl(38.2 78.6% 94.5%)" stroke-width="2" opacity="0.5" transform="scale(1.3)" />
+      <circle r="40" fill="hsl(30 12% 11%)" stroke="hsl(38.2 78.6% 94.5%)" stroke-width="4" />
+      <path d="M-11 -16 L19 0 L-11 16Z" fill="hsl(38.2 78.6% 94.5%)" />
+    </g>
+  </svg>
+</body>
+</html>

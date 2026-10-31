@@ -1,13 +1,8 @@
-import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { LandingPage } from '@/components/marketing/LandingPage'
-
-export const metadata: Metadata = {
-  title: 'Looksee: spend less time deciding what to watch',
-}
 
 /**
  * Signed-in visitors (including the installed app, whose start_url is `/`)

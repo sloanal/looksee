@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion, useInView } from 'framer-motion'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PEOPLE, Person, pickFor } from './demo-data'
@@ -53,6 +53,15 @@ const LABEL_OFFSET: Record<Person, { dx: number; dy: number }> = {
 
 export function VennSection() {
   const [present, setPresent] = useState<Person[]>(ORDER)
+  const diagramRef = useRef<HTMLDivElement>(null)
+  const shown = useInView(diagramRef, { once: true, amount: 0.3 })
+  // True once the first build-in has played, so later toggles skip its stagger.
+  const [entered, setEntered] = useState(false)
+  useEffect(() => {
+    if (!shown) return
+    const id = window.setTimeout(() => setEntered(true), 1600)
+    return () => window.clearTimeout(id)
+  }, [shown])
   const pos = layout(present)
   const pick = pickFor(present)
   const center = present.reduce(
@@ -161,7 +170,13 @@ export function VennSection() {
         </div>
 
         <Reveal delay={0.05} y={40} className='relative'>
-          <div className='relative mx-auto aspect-[500/460] w-full max-w-[560px]'>
+          {/*
+            The entrance is triggered from this HTML wrapper and only animates
+            SVG attributes (r, cx, cy, x, y). WebKit is unreliable at observing
+            SVG children for scroll-into-view and at CSS-transforming them,
+            which left the circles invisible on iOS Safari.
+          */}
+          <div ref={diagramRef} className='relative mx-auto aspect-[500/460] w-full max-w-[560px]'>
             <svg viewBox='0 0 500 460' className='h-full w-full overflow-visible' role='img' aria-label='A Venn diagram of everyone’s watchlists, with tonight’s pick in the middle'>
               <defs>
                 <pattern id='venn-dots' width='6' height='6' patternUnits='userSpaceOnUse'>
@@ -169,23 +184,26 @@ export function VennSection() {
                 </pattern>
               </defs>
               {ORDER.map((p, i) => {
-                const on = present.includes(p)
+                const visible = shown && present.includes(p)
+                const r = visible ? R : 0
+                // Stagger only the first build-in; toggles respond at once.
+                const delay = entered ? 0 : 0.15 + i * 0.14
+                const circleMotion = {
+                  ...CIRCLE_MOTION,
+                  r: { ...CIRCLE_MOTION.r, duration: entered ? 0.6 : 1.1, delay },
+                  opacity: { ...CIRCLE_MOTION.opacity, delay },
+                }
+                const labelX = pos[p].cx + LABEL_OFFSET[p].dx * (present.length === 1 ? 0 : 1)
+                const labelY = pos[p].cy + (present.length === 1 ? -R - 18 : LABEL_OFFSET[p].dy)
                 return (
-                  <motion.g
-                    key={p}
-                    initial={{ opacity: 0, scale: 0.4 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true, amount: 0.4 }}
-                    transition={{ duration: 1.1, ease: EASE_OUT, delay: 0.15 + i * 0.12 }}
-                    style={{ transformOrigin: `${pos[p].cx}px ${pos[p].cy}px` }}
-                  >
+                  <g key={p}>
                     <motion.circle
                       initial={false}
                       cx={pos[p].cx}
                       cy={pos[p].cy}
-                      r={on ? R : 0}
-                      animate={{ cx: pos[p].cx, cy: pos[p].cy, r: on ? R : 0, opacity: on ? 1 : 0 }}
-                      transition={CIRCLE_MOTION}
+                      r={0}
+                      animate={{ cx: pos[p].cx, cy: pos[p].cy, r, opacity: visible ? 1 : 0 }}
+                      transition={circleMotion}
                       fill={PEOPLE[p].color}
                       style={{ mixBlendMode: 'multiply' }}
                     />
@@ -193,19 +211,23 @@ export function VennSection() {
                       initial={false}
                       cx={pos[p].cx}
                       cy={pos[p].cy}
-                      r={on ? R : 0}
-                      animate={{ cx: pos[p].cx, cy: pos[p].cy, r: on ? R : 0, opacity: on ? 1 : 0 }}
-                      transition={CIRCLE_MOTION}
+                      r={0}
+                      animate={{ cx: pos[p].cx, cy: pos[p].cy, r, opacity: visible ? 1 : 0 }}
+                      transition={circleMotion}
                       fill='url(#venn-dots)'
                     />
                     <motion.text
                       initial={false}
-                      animate={{
-                        x: pos[p].cx + LABEL_OFFSET[p].dx * (present.length === 1 ? 0 : 1),
-                        y: pos[p].cy + (present.length === 1 ? -R - 18 : LABEL_OFFSET[p].dy),
-                        opacity: on ? 1 : 0,
+                      x={labelX}
+                      y={labelY}
+                      opacity={0}
+                      animate={{ attrX: labelX, attrY: labelY, opacity: visible ? 1 : 0 }}
+                      transition={{
+                        type: 'spring',
+                        stiffness: 90,
+                        damping: 18,
+                        opacity: { duration: 0.5, delay: entered ? 0 : delay + 0.35 },
                       }}
-                      transition={{ type: 'spring', stiffness: 90, damping: 18 }}
                       textAnchor='middle'
                       className='font-display'
                       fontSize='22'
@@ -213,15 +235,21 @@ export function VennSection() {
                     >
                       {PEOPLE[p].name}
                     </motion.text>
-                  </motion.g>
+                  </g>
                 )
               })}
 
               {/* The play button lives where everything overlaps. */}
               <motion.g
                 initial={false}
-                animate={{ x: center.x, y: center.y }}
-                transition={{ type: 'spring', stiffness: 90, damping: 16 }}
+                opacity={0}
+                animate={{ x: center.x, y: center.y, opacity: shown ? 1 : 0 }}
+                transition={{
+                  type: 'spring',
+                  stiffness: 90,
+                  damping: 16,
+                  opacity: { duration: 0.5, delay: entered ? 0 : 0.7 },
+                }}
               >
                 <motion.circle
                   r={30}

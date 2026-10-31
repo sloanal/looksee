@@ -7,8 +7,10 @@ const siteUrl = process.env.NEXT_PUBLIC_APP_URL ??
   process.env.NEXTAUTH_URL ??
   'http://localhost:3000'
 
+const appTitle = 'Looksee: spend less time deciding what to watch'
+
 const appDescription =
-  'Looksee finds the overlap in your friends\' watchlists, making "what should we watch?" simple.'
+  'One shared watchlist for you and everyone you watch with. Hit one big button and get the pick the whole room actually wants.'
 
 // The width axis lets the marketing pages set Archivo expanded for display
 // type; everything else keeps the default width.
@@ -33,23 +35,20 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: 'Looksee - Collaborative Movie & Show Recommendations',
+  title: appTitle,
   description: appDescription,
+  // The preview image is app/opengraph-image.png (+ twitter-image.png), made by
+  // scripts/generate-og-image.js. There's deliberately no og:video: iMessage
+  // can prefer a video over the image, which would hide the card.
   openGraph: {
-    title: 'Looksee - Collaborative Movie & Show Recommendations',
+    title: appTitle,
     description: appDescription,
+    siteName: 'Looksee',
     type: 'website',
-    videos: [
-      {
-        url: '/welcome.mp4',
-        secureUrl: '/welcome.mp4',
-        type: 'video/mp4',
-      },
-    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Looksee - Collaborative Movie & Show Recommendations',
+    title: appTitle,
     description: appDescription,
   },
   icons: {

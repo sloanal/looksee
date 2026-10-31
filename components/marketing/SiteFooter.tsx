@@ -12,6 +12,7 @@ export function SiteFooter() {
         <nav aria-label='Footer' className='flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium'>
           <a href='#how' className='text-muted-foreground hover:text-foreground'>How it works</a>
           <a href='#features' className='text-muted-foreground hover:text-foreground'>Features</a>
+          <a href='#install' className='text-muted-foreground hover:text-foreground'>Get the app</a>
           <Link href='/auth/signin' className='text-muted-foreground hover:text-foreground'>Log in</Link>
           <Link href='/auth/signup' className='text-muted-foreground hover:text-foreground'>Sign up</Link>
         </nav>

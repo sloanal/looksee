@@ -4,6 +4,7 @@ import { MotionConfig } from 'framer-motion'
 import { FeatureGrid } from './FeatureGrid'
 import { FinalCta } from './FinalCta'
 import { Hero } from './Hero'
+import { InstallSection } from './InstallSection'
 import { HowItWorks } from './HowItWorks'
 import { Marquee } from './Marquee'
 import { SiteFooter } from './SiteFooter'
@@ -30,6 +31,7 @@ export function LandingPage() {
           <TroubleSection />
           <FeatureGrid />
           <FinalCta />
+          <InstallSection />
         </main>
         <SiteFooter />
       </div>

@@ -3,7 +3,9 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import {
+  Check,
   Film,
   Link as LinkIcon,
   Lock,
@@ -34,6 +36,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { MenuItem, MenuPanel, MenuTrigger } from '@/components/ui/menu'
+import { Notice } from '@/components/ui/notice'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { DuotoneIcon } from '@/components/DuotoneIcon'
@@ -134,6 +137,11 @@ export default function AddPage() {
   const [loading, setLoading] = useState(false)
   const [hasAutoSearched, setHasAutoSearched] = useState(false)
   const [lastSearchedQuery, setLastSearchedQuery] = useState<string>('')
+  // Adding keeps you on this tab so you can add several titles in a row:
+  // results already added are marked, and the last one gets a confirmation.
+  const [addedResultKeys, setAddedResultKeys] = useState<Set<string>>(() => new Set())
+  const [lastAddedTitle, setLastAddedTitle] = useState<string | null>(null)
+  const searchScrollYRef = useRef(0)
 
   // Sync search param to search query
   useEffect(() => {
@@ -191,6 +199,7 @@ export default function AddPage() {
 
     setLoading(true)
     setSearchResults([])
+    setLastAddedTitle(null)
     setLastSearchedQuery(searchQuery.trim())
     try {
       const res = await fetch(
@@ -235,7 +244,47 @@ export default function AddPage() {
     }
   }, [searchParam, hasAutoSearched, session, sessionStatus, searchQuery, handleSearch])
 
+  // Back on the results list, land where you were before opening a title.
+  useEffect(() => {
+    if (mode === 'search') window.scrollTo(0, searchScrollYRef.current)
+  }, [mode])
+
+  const resetForm = () => {
+    setSelectedResult(null)
+    setTitle('')
+    setType('movie')
+    setExternalUrl('')
+    setDescription('')
+    setGenres('')
+    setRecommendedByName('')
+    setRecommendationContext('')
+    setStatus('have_not_seen')
+    setExcitement(5)
+    setIsConfirmDetailsEditable(false)
+    setIsConfirmMenuOpen(false)
+  }
+
+  const handleAdded = () => {
+    notifyRoomsChanged()
+    if (selectedResult) {
+      const key = `${selectedResult.type}-${selectedResult.id}`
+      setAddedResultKeys((prev) => new Set(prev).add(key))
+    }
+    setLastAddedTitle(title || 'Title')
+    resetForm()
+    setMode('search')
+  }
+
+  const openManual = () => {
+    searchScrollYRef.current = window.scrollY
+    setLastAddedTitle(null)
+    if (searchQuery) setTitle(searchQuery)
+    setMode('manual')
+  }
+
   const handleSelectResult = async (result: TMDBResult) => {
+    searchScrollYRef.current = window.scrollY
+    setLastAddedTitle(null)
     setLoading(true)
     try {
       const res = await fetch(
@@ -297,8 +346,7 @@ export default function AddPage() {
         })
 
         if (res.ok) {
-          notifyRoomsChanged()
-          router.push(`/browse?roomId=all-rooms`)
+          handleAdded()
         } else {
           let errorMessage = 'Failed to add item'
           try {
@@ -323,9 +371,7 @@ export default function AddPage() {
         })
 
         if (res.ok) {
-          notifyRoomsChanged()
-          // A roomless title lands in the No rooms yet view, so stay there.
-          router.push(roomId === 'no-rooms' ? '/browse?roomId=no-rooms' : '/browse')
+          handleAdded()
         } else {
           let errorMessage = 'Failed to add item'
           try {
@@ -349,8 +395,7 @@ export default function AddPage() {
         })
 
         if (res.ok) {
-          notifyRoomsChanged()
-          router.push(`/browse?roomId=${roomId}`)
+          handleAdded()
         } else {
           let errorMessage = 'Failed to add item'
           try {
@@ -639,6 +684,18 @@ export default function AddPage() {
     )
   }
 
+  // A roomless title shows up in the No rooms yet view, so link there.
+  const browseHref = roomId === 'all-rooms'
+    ? '/browse?roomId=all-rooms'
+    : addsToNoRoom
+    ? (roomId === 'no-rooms' ? '/browse?roomId=no-rooms' : '/browse')
+    : `/browse?roomId=${roomId}`
+  const addedDestination = roomId === 'all-rooms'
+    ? 'all your rooms'
+    : addsToNoRoom
+    ? 'your stuff'
+    : selectedRoomName
+
   const showWelcome = !loading && searchResults.length === 0 &&
     !(lastSearchedQuery && searchQuery.trim() === lastSearchedQuery)
   const showNoResults = !loading && lastSearchedQuery && searchQuery.trim() === lastSearchedQuery &&
@@ -678,10 +735,7 @@ export default function AddPage() {
         </div>
         <button
           type='button'
-          onClick={() => {
-            if (searchQuery) setTitle(searchQuery)
-            setMode('manual')
-          }}
+          onClick={openManual}
           className='mt-2 min-h-[36px] text-sm font-medium text-primary underline-offset-4 hover:underline'
         >
           Or add manually
@@ -689,6 +743,18 @@ export default function AddPage() {
       </PageHeaderBar>
 
       <PageContent className='space-y-4'>
+        {lastAddedTitle && (
+          <Notice variant='success'>
+            Added <span className='font-semibold'>{lastAddedTitle}</span>
+            {addedDestination ? ` to ${addedDestination}` : ''}.{' '}
+            <Link
+              href={browseHref}
+              className='font-medium text-primary underline-offset-4 hover:underline'
+            >
+              View in Browse
+            </Link>
+          </Notice>
+        )}
         {showWelcome && (
           <div className='flex min-h-[calc(100vh-300px)] items-center justify-center'>
             <div className='w-full max-w-md text-center'>
@@ -716,12 +782,7 @@ export default function AddPage() {
             title='No results found'
             description="Can't find what you're looking for?"
             action={
-              <Button
-                onClick={() => {
-                  if (searchQuery) setTitle(searchQuery)
-                  setMode('manual')
-                }}
-              >
+              <Button onClick={openManual}>
                 Add &quot;{searchQuery}&quot; manually
               </Button>
             }
@@ -772,6 +833,12 @@ export default function AddPage() {
                         type={result.type}
                         releaseDate={result.releaseDate}
                       />
+                      {addedResultKeys.has(`${result.type}-${result.id}`) && (
+                        <Badge variant='primary' className='mb-1.5 mr-1.5' data-testid='added'>
+                          <Check className='h-3 w-3' strokeWidth={3} aria-hidden />
+                          Added
+                        </Badge>
+                      )}
                       {via && (
                         <Badge variant='muted' className='mb-1.5' data-testid='person-source'>
                           <DuotoneIcon icon={User} size={12} />

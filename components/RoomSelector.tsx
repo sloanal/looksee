@@ -7,7 +7,12 @@ import { formatTitleCount } from '@/lib/rooms'
 import { cn } from '@/lib/utils'
 import { useRooms } from '@/components/useRooms'
 
-export function RoomSelector() {
+interface RoomSelectorProps {
+  /** Where the menu opens under the pill. `center` suits a pill in a centered layout. */
+  menuAlign?: 'start' | 'center'
+}
+
+export function RoomSelector({ menuAlign = 'start' }: RoomSelectorProps = {}) {
   const { rooms, allRoomsCount, watchedCount, noRoomsCount, loaded } = useRooms()
   const loading = !loaded
   const [isOpen, setIsOpen] = useState(false)
@@ -96,7 +101,10 @@ export function RoomSelector() {
       {isOpen && (
         <div
           role='listbox'
-          className='absolute left-0 top-full z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-border bg-popover py-1 shadow-pop'
+          className={cn(
+            'absolute top-full z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-border bg-popover py-1 text-left shadow-pop',
+            menuAlign === 'center' ? 'left-1/2 -translate-x-1/2' : 'left-0',
+          )}
         >
           <RoomOption
             icon={Globe}

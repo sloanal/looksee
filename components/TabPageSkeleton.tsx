@@ -3,7 +3,7 @@ import { MediaCardSkeletonList } from '@/components/MediaCardSkeleton'
 import { Skeleton, SkeletonLine } from '@/components/ui/skeleton'
 
 interface TabPageSkeletonProps {
-  /** Search + filter row under the title (Browse, Add). */
+  /** Search + filter row under the title (Browse). */
   filters?: boolean
   cards?: number
   ratings?: number

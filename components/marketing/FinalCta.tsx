@@ -5,7 +5,7 @@ import { Reveal } from './Reveal'
 
 export function FinalCta() {
   return (
-    <section className='px-5 pb-20 pt-10 sm:px-8 sm:pb-28'>
+    <section className='px-5 pb-10 pt-10 sm:px-8 sm:pb-14'>
       <Reveal y={40} className='mx-auto max-w-6xl'>
         <div className='relative overflow-hidden rounded-[2rem] bg-canvas px-6 py-14 ring-2 ring-ink sm:px-12 sm:py-20'>
           <div aria-hidden className='halftone halftone-fade absolute -left-10 -top-10 h-72 w-72 rounded-full text-foreground/20' />

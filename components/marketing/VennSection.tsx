@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useInView } from 'framer-motion'
 import { Check } from 'lucide-react'
+import { BrandVideo } from '@/components/BrandVideo'
 import { cn } from '@/lib/utils'
 import { PEOPLE, Person, pickFor } from './demo-data'
 import { Poster } from './Poster'
@@ -239,31 +240,41 @@ export function VennSection() {
                 )
               })}
 
-              {/* The play button lives where everything overlaps. */}
-              <motion.g
-                initial={false}
-                opacity={0}
-                animate={{ x: center.x, y: center.y, opacity: shown ? 1 : 0 }}
-                transition={{
-                  type: 'spring',
-                  stiffness: 90,
-                  damping: 16,
-                  opacity: { duration: 0.5, delay: entered ? 0 : 0.7 },
-                }}
-              >
-                <motion.circle
-                  r={30}
-                  initial={{ r: 30, opacity: 0.9 }}
-                  fill='none'
-                  stroke='hsl(var(--canvas))'
-                  strokeWidth='2'
-                  animate={{ r: [30, 46], opacity: [0.9, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
-                />
-                <circle r='30' fill='hsl(var(--ink))' stroke='hsl(var(--canvas))' strokeWidth='3' />
-                <path d='M-8 -12 L14 0 L-8 12Z' fill='hsl(var(--canvas))' />
-              </motion.g>
             </svg>
+
+            {/*
+              The mark lives where everything overlaps: the welcome clip, playing
+              in a paper disc it dissolves into. HTML over the SVG rather than a
+              <foreignObject>, which Safari won't composite video inside.
+            */}
+            <motion.div
+              aria-hidden
+              initial={false}
+              className='pointer-events-none absolute aspect-square w-[23%]'
+              style={{ left: `${(center.x / 500) * 100}%`, top: `${(center.y / 460) * 100}%`, x: '-50%', y: '-50%' }}
+              animate={{
+                left: `${(center.x / 500) * 100}%`,
+                top: `${(center.y / 460) * 100}%`,
+                opacity: shown ? 1 : 0,
+                scale: shown ? 1 : 0.6,
+              }}
+              transition={{
+                type: 'spring',
+                stiffness: 90,
+                damping: 16,
+                opacity: { duration: 0.5, delay: entered ? 0 : 0.7 },
+                scale: { type: 'spring', stiffness: 220, damping: 16, delay: entered ? 0 : 0.7 },
+              }}
+            >
+              <motion.span
+                className='absolute inset-0 rounded-full border-2 border-canvas'
+                animate={{ scale: [1, 1.35], opacity: [0.8, 0] }}
+                transition={{ duration: 2.2, repeat: Infinity, ease: 'easeOut' }}
+              />
+              <div className='relative grid h-full w-full place-items-center overflow-hidden rounded-full bg-canvas shadow-pop ring-[3px] ring-ink'>
+                <BrandVideo className='aspect-[720/544] w-[82%]' />
+              </div>
+            </motion.div>
           </div>
           <ul className='mx-auto mt-6 grid max-w-md gap-2 text-sm text-muted-foreground sm:grid-cols-3 sm:text-center'>
             {['Most people interested wins', 'Then whoever’s most excited', 'Seen it? Out of the running'].map(
